@@ -18,7 +18,7 @@ Sistema SaaS para gestão de mapa estratégico e execução por ciclos OKR (Obje
 - PostgreSQL
 - npm ou yarn
 
-## Instalação
+## Instalação (macOS)
 
 1. Clone o repositório:
 ```bash
@@ -31,7 +31,11 @@ cd bscokr
 npm install
 ```
 
-3. Configure as variáveis de ambiente (veja seção abaixo)
+3. Configure as variáveis de ambiente:
+```bash
+cp .env.example .env
+# Edite .env com suas configurações do banco PostgreSQL
+```
 
 4. Configure o banco de dados:
 ```bash
@@ -39,13 +43,33 @@ npm install
 npm run db:generate
 
 # Executa as migrações
-npm run db:push
+npm run db:migrate
+
+# Executa o seed para criar usuário admin (APENAS DESENVOLVIMENTO)
+npm run db:seed
 ```
 
 5. Execute o projeto:
 ```bash
 npm run dev
 ```
+
+## Acesso Inicial
+
+Após executar o seed, você pode fazer login com:
+
+- **Email**: `admin@local.dev`
+- **Slug da Organização**: `local-dev`
+- **Senha**: Verificar no terminal após executar `npm run db:seed`
+
+## Funcionalidades da Etapa 2
+
+✅ **Seed de Desenvolvimento**: Cria tenant e usuário admin automaticamente
+✅ **CRUD Completo**: Interface para gerenciar todas as configurações
+✅ **Permissões**: Apenas admins acessam configuração
+✅ **Multi-tenant**: Isolamento completo por organização
+✅ **Validação**: Zod em todas as entradas
+✅ **UI Responsiva**: Interface moderna com shadcn/ui
 
 ## Variáveis de Ambiente
 

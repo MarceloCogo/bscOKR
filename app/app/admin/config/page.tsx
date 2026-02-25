@@ -3,6 +3,73 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ConfigTable } from '@/components/config/config-table'
+import {
+  listPerspectives,
+  createPerspective,
+  updatePerspective,
+  deletePerspective,
+} from '@/lib/actions/config/perspective'
+import {
+  listPillars,
+  createPillar,
+  updatePillar,
+  deletePillar,
+} from '@/lib/actions/config/pillar'
+import {
+  listOrgNodeTypes,
+  createOrgNodeType,
+  updateOrgNodeType,
+  deleteOrgNodeType,
+} from '@/lib/actions/config/org-node-type'
+import {
+  listObjectiveStatuses,
+  createObjectiveStatus,
+  updateObjectiveStatus,
+  deleteObjectiveStatus,
+} from '@/lib/actions/config/objective-status'
+import {
+  listCycleStatuses,
+  createCycleStatus,
+  updateCycleStatus,
+  deleteCycleStatus,
+} from '@/lib/actions/config/cycle-status'
+import {
+  listKRStatuses,
+  createKRStatus,
+  updateKRStatus,
+  deleteKRStatus,
+} from '@/lib/actions/config/kr-status'
+import {
+  listKRMetricTypes,
+  createKRMetricType,
+  updateKRMetricType,
+  deleteKRMetricType,
+} from '@/lib/actions/config/kr-metric-type'
+import {
+  listResponsibilityRoles,
+  createResponsibilityRole,
+  updateResponsibilityRole,
+  deleteResponsibilityRole,
+} from '@/lib/actions/config/responsibility-role'
+import {
+  listRoles,
+  createRole,
+  updateRole,
+  deleteRole,
+} from '@/lib/actions/config/role'
+import {
+  listScoreRules,
+  createScoreRule,
+  updateScoreRule,
+  deleteScoreRule,
+} from '@/lib/actions/config/score-rule'
+import { PerspectiveTab } from '@/components/config/perspective-tab'
+import { PillarTab } from '@/components/config/pillar-tab'
+import { OrgTypesTab } from '@/components/config/org-types-tab'
+import { StatusesTab } from '@/components/config/statuses-tab'
+import { RolesTab } from '@/components/config/roles-tab'
 
 async function getConfigCounts(tenantId: string) {
   const [
@@ -50,70 +117,55 @@ export default async function AdminConfigPage() {
     redirect('/login')
   }
 
-  const counts = await getConfigCounts(session.user.tenantId)
+  // Check if user is admin
+  const userRoles = await prisma.userRole.findMany({
+    where: { userId: session.user.id },
+    include: { role: true },
+  })
 
-  const configItems = [
-    { name: 'Funções (Roles)', count: counts.rolesCount, description: 'Funções de usuário no sistema' },
-    { name: 'Tipos de Nó Organizacional', count: counts.orgNodeTypesCount, description: 'Estrutura organizacional (Empresa, Diretoria, etc.)' },
-    { name: 'Perspectivas', count: counts.perspectivesCount, description: 'Perspectivas BSC (Financeira, Cliente, etc.)' },
-    { name: 'Pilares', count: counts.pillarsCount, description: 'Pilares estratégicos' },
-    { name: 'Status de Objetivos', count: counts.objectiveStatusesCount, description: 'Estados possíveis dos objetivos' },
-    { name: 'Status de Ciclos', count: counts.cycleStatusesCount, description: 'Estados dos ciclos OKR' },
-    { name: 'Status de KR', count: counts.krStatusesCount, description: 'Estados dos Key Results' },
-    { name: 'Tipos de Métrica KR', count: counts.krMetricTypesCount, description: 'Tipos de medição (Número, Percentual, etc.)' },
-    { name: 'Funções de Responsabilidade', count: counts.responsibilityRolesCount, description: 'Papéis em objetivos (Responsável, Dono, etc.)' },
-    { name: 'Regras de Pontuação', count: counts.scoreRulesCount, description: 'Regras de cálculo de progresso' },
-  ]
+  const isAdmin = userRoles.some((userRole: any) => userRole.role.key === 'admin')
+
+  if (!isAdmin) {
+    redirect('/app/dashboard')
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Configuração do Sistema</h1>
         <p className="text-gray-600">
-          Visão geral das configurações da organização: {session.user.tenantName}
+          Gerencie as configurações da organização: {session.user.tenantName}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {configItems.map((item) => (
-          <Card key={item.name}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {item.name}
-              </CardTitle>
-              <div className="text-2xl font-bold">{item.count}</div>
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="text-xs">
-                {item.description}
-              </CardDescription>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Tabs defaultValue="perspectives" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="structure">Estrutura</TabsTrigger>
+          <TabsTrigger value="statuses">Status</TabsTrigger>
+          <TabsTrigger value="roles">Funções</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Informações Técnicas</CardTitle>
-          <CardDescription>
-            Detalhes da configuração atual do sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-600">Tenant ID:</span>
-            <span className="text-sm font-mono">{session.user.tenantId}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-600">Slug:</span>
-            <span className="text-sm font-mono">{session.user.tenantSlug}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-600">Usuário:</span>
-            <span className="text-sm">{session.user.email}</span>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="structure" className="space-y-4">
+          <Tabs defaultValue="perspectives" className="w-full">
+            <TabsList>
+              <TabsTrigger value="perspectives">Perspectivas</TabsTrigger>
+              <TabsTrigger value="pillars">Pilares</TabsTrigger>
+              <TabsTrigger value="org-types">Tipos Org.</TabsTrigger>
+            </TabsList>
+            <TabsContent value="perspectives"><PerspectiveTab /></TabsContent>
+            <TabsContent value="pillars"><PillarTab /></TabsContent>
+            <TabsContent value="org-types"><OrgTypesTab /></TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="statuses" className="space-y-4">
+          <StatusesTab />
+        </TabsContent>
+
+        <TabsContent value="roles" className="space-y-4">
+          <RolesTab />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
