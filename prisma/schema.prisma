@@ -20,6 +20,9 @@ model Tenant {
   users             User[]
   roles             Role[]
   orgNodeTypes      OrgNodeType[]
+  orgNodes          OrgNode[]
+  orgNodeMemberships OrgNodeMembership[]
+  userPreferences   UserPreference[]
   perspectives      Perspective[]
   pillars           Pillar[]
   objectiveStatuses ObjectiveStatus[]
@@ -41,8 +44,11 @@ model User {
   createdAt    DateTime @default(now())
 
   // Relations
-  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userRoles  UserRole[]
+  tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles            UserRole[]
+  orgNodesAsLeader     OrgNode[]            @relation("OrgNodeLeader")
+  orgNodeMemberships   OrgNodeMembership[]
+  userPreference       UserPreference?
 
   @@unique([tenantId, email])
   @@map("users")
@@ -85,7 +91,8 @@ model OrgNodeType {
   order    Int
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orgNodes OrgNode[]
 
   @@unique([tenantId, key])
   @@map("org_node_types")
@@ -200,4 +207,60 @@ model ScoreRule {
 
   @@unique([tenantId, scope])
   @@map("score_rules")
+}
+
+model OrgNode {
+  id           String @id @default(cuid())
+  tenantId     String
+  name         String
+  typeId       String
+  parentId     String?
+  leaderUserId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type       OrgNodeType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  parent     OrgNode?   @relation("OrgNodeHierarchy", fields: [parentId], references: [id])
+  children   OrgNode[]  @relation("OrgNodeHierarchy")
+  leader     User?      @relation("OrgNodeLeader", fields: [leaderUserId], references: [id])
+  memberships OrgNodeMembership[]
+
+  @@map("org_nodes")
+}
+
+model OrgNodeMembership {
+  id        String @id @default(cuid())
+  tenantId  String
+  orgNodeId String
+  userId    String
+  isPrimary Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orgNode OrgNode @relation(fields: [orgNodeId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgNodeId, userId])
+  @@index([tenantId])
+  @@map("org_node_memberships")
+}
+
+model UserPreference {
+  id              String @id @default(cuid())
+  tenantId        String
+  userId          String
+  activeOrgNodeId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@unique([userId])
+  @@map("user_preferences")
 }

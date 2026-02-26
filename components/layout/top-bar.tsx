@@ -5,6 +5,7 @@ import { Session } from 'next-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { LogOut, Search, User } from 'lucide-react'
+import { OrgContextSelector } from './org-context-selector'
 
 interface TopBarProps {
   session: Session
@@ -18,8 +19,9 @@ export function TopBar({ session, title = 'Dashboard' }: TopBarProps) {
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
-      <div className="flex items-center">
+      <div className="flex items-center gap-4">
         <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+        <OrgContextSelector />
       </div>
 
       <div className="flex items-center gap-4">
