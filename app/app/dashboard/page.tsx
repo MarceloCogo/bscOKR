@@ -20,6 +20,8 @@ export default async function DashboardPage() {
     objectivesCount,
     activeObjectivesCount,
     usersCount,
+    recentObjectives,
+    recentOrgNodes,
   ] = await Promise.all([
     prisma.orgNode.count({ where: { tenantId: session.user.tenantId } }),
     prisma.strategicObjective.count({ where: { tenantId: session.user.tenantId } }),
@@ -30,6 +32,20 @@ export default async function DashboardPage() {
       }
     }),
     prisma.user.count({ where: { tenantId: session.user.tenantId } }),
+    // Recent objectives
+    prisma.strategicObjective.findMany({
+      where: { tenantId: session.user.tenantId },
+      include: { status: true },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+    }),
+    // Recent org nodes
+    prisma.orgNode.findMany({
+      where: { tenantId: session.user.tenantId },
+      include: { type: true },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+    }),
   ])
 
   const hasOrgStructure = orgNodesCount > 0
@@ -146,41 +162,47 @@ export default async function DashboardPage() {
               Atividades Recentes
             </h3>
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <div className="w-2 h-2 bg-primary rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    Sistema configurado com sucesso
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Todas as configurações padrão foram aplicadas
-                  </p>
+              {recentObjectives.map((objective) => (
+                <div key={`obj-${objective.id}`} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">
+                      Objetivo criado: {objective.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Status: {objective.status?.name} • {objective.createdAt.toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ))}
 
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <div className="w-2 h-2 bg-primary rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    Estrutura organizacional configurada
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Defina unidades e equipes para segmentação de objetivos
-                  </p>
+              {recentOrgNodes.map((orgNode) => (
+                <div key={`org-${orgNode.id}`} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">
+                      Unidade criada: {orgNode.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Tipo: {orgNode.type?.name} • {orgNode.createdAt.toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ))}
 
-              <div className="flex items-center gap-3 p-3 bg-primary rounded-lg">
-                <div className="w-2 h-2 bg-primary rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    Mapa estratégico pronto
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Visualize e crie objetivos por perspectivas BSC
-                  </p>
+              {recentObjectives.length === 0 && recentOrgNodes.length === 0 && (
+                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">
+                      Bem-vindo ao BSC OKR
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Comece configurando sua estrutura organizacional
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

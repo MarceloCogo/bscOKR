@@ -101,6 +101,8 @@ export function MapEditor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orgNodeId }),
       })
+      // Recarregar dados após mudança de contexto
+      await loadMap()
     } catch (error) {
       console.error('Error changing context:', error)
     }

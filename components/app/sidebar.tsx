@@ -11,8 +11,7 @@ const navigation = [
   { name: 'Mapa Estratégico', href: '/app/strategy/map', icon: Map },
   { name: 'Objetivos', href: '/app/strategy/objectives', icon: Target },
   { name: 'Estrutura Organizacional', href: '/app/organization', icon: Network },
-  { name: 'Administração', href: '/app/admin/config', icon: Settings },
-  { name: 'Usuários', href: '/app/admin/users', icon: Users },
+  { name: 'Configurações', href: '/app/admin/config', icon: Settings },
 ]
 
 export function AppSidebar() {
