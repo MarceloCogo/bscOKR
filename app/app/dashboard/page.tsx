@@ -1,5 +1,7 @@
+import Link from 'next/link'
 import { StatCard } from '@/components/layout/stat-card'
-import { Target, TrendingUp, Calendar, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Target, TrendingUp, Calendar, Users, Map, Network } from 'lucide-react'
 
 export default function DashboardPage() {
   return (
@@ -45,6 +47,36 @@ export default function DashboardPage() {
         />
       </div>
 
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Link href="/app/strategy/map">
+          <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
+            <Map className="h-6 w-6" />
+            <span>Ver Mapa Estratégico</span>
+          </Button>
+        </Link>
+
+        <Link href="/app/strategy/objectives">
+          <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
+            <Target className="h-6 w-6" />
+            <span>Gerenciar Objetivos</span>
+          </Button>
+        </Link>
+
+        <Link href="/app/organization">
+          <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
+            <Network className="h-6 w-6" />
+            <span>Estrutura Organizacional</span>
+          </Button>
+        </Link>
+
+        <Link href="/app/admin/config">
+          <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
+            <Users className="h-6 w-6" />
+            <span>Configurações</span>
+          </Button>
+        </Link>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="stat-card">
           <div className="p-6">
@@ -65,25 +97,25 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <div className="w-2 h-2 bg-secondary rounded-full"></div>
+                <div className="w-2 h-2 bg-primary rounded-full"></div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-foreground">
-                    Próxima etapa: Configurar perspectivas
+                    Estrutura organizacional configurada
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Personalize as perspectivas BSC da sua organização
+                    Defina unidades e equipes para segmentação de objetivos
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <div className="w-2 h-2 bg-secondary rounded-full"></div>
+              <div className="flex items-center gap-3 p-3 bg-primary rounded-lg">
+                <div className="w-2 h-2 bg-primary rounded-full"></div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-foreground">
-                    Em seguida: Criar primeiros objetivos
+                    Mapa estratégico pronto
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Comece a implementar a gestão OKR na prática
+                    Visualize e crie objetivos por perspectivas BSC
                   </p>
                 </div>
               </div>
