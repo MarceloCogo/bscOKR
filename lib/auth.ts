@@ -94,6 +94,14 @@ export const authOptions: NextAuthOptions = {
       }
       return session
     },
+    async redirect({ url, baseUrl }) {
+      // For sign-in, determine where to redirect based on user state
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        const { getPostLoginRedirect } = await import('@/lib/actions/auth')
+        return await getPostLoginRedirect()
+      }
+      return url
+    },
   },
   pages: {
     signIn: '/login',

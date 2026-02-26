@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ArrowUp, ArrowDown, Edit, Trash2, Plus, Settings } from 'lucide-react'
 import { getStrategyMap, createObjectiveInRegion, reorderObjective, upsertStrategyMapMeta } from '@/lib/actions/strategy'
 import { useRouter } from 'next/navigation'
+import { MapHints } from './map-hints'
+import { EmptyRegionCard } from './empty-region-card'
 
 interface StrategicObjective {
   id: string
@@ -40,6 +42,7 @@ export function MapEditor() {
   const [data, setData] = useState<any>(null)
   const [editMode, setEditMode] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [viewedHints, setViewedHints] = useState<string[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -50,10 +53,69 @@ export function MapEditor() {
     try {
       const mapData = await getStrategyMap()
       setData(mapData)
+
+      // Load user preferences for viewed hints
+      const response = await fetch('/api/user/preferences')
+      if (response.ok) {
+        const prefs = await response.json()
+        setViewedHints(prefs.viewedHints || [])
+      }
     } catch (error) {
       console.error('Error loading map:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const getVisibleHints = () => {
+    if (!data) return []
+
+    const hints = []
+
+    // Ambição hint - show if ambition is empty
+    if (!data.regions.ambition) {
+      hints.push('map.ambition')
+    }
+
+    // Growth focus hint - show if less than 3 growth focuses
+    if (data.regions.growthFocus.length < 3) {
+      hints.push('map.growth_focus')
+    }
+
+    // Value proposition hint - show if empty
+    if (!data.regions.valueProposition) {
+      hints.push('map.value_proposition')
+    }
+
+    // Pillars hint - show if any pillar region is empty
+    const hasPillars = data.regions.pillarOffer.length > 0 ||
+                      data.regions.pillarRevenue.length > 0 ||
+                      data.regions.pillarEfficiency.length > 0
+    if (!hasPillars) {
+      hints.push('map.pillars')
+    }
+
+    // People base hint - show if empty
+    if (data.regions.peopleBase.length === 0) {
+      hints.push('map.people_base')
+    }
+
+    return hints.filter(hint => !viewedHints.includes(hint))
+  }
+
+  const handleHintViewed = async (hintId: string) => {
+    const newViewedHints = [...viewedHints, hintId]
+    setViewedHints(newViewedHints)
+
+    // Save to server
+    try {
+      await fetch('/api/user/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ viewedHints: newViewedHints }),
+      })
+    } catch (error) {
+      console.error('Error saving hint preference:', error)
     }
   }
 
@@ -214,6 +276,12 @@ export function MapEditor() {
           )}
         </div>
       </div>
+
+      {/* Hints */}
+      <MapHints
+        visibleHints={getVisibleHints()}
+        onHintViewed={handleHintViewed}
+      />
 
       {/* Ambição Estratégica */}
       <div className="text-center mb-12">

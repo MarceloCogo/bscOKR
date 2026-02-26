@@ -349,6 +349,7 @@ model UserPreference {
   tenantId        String
   userId          String
   activeOrgNodeId String?
+  viewedHints     String[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
