@@ -2,24 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: var(--font-nunito);
+@layer base {
+  :root {
+    --font-nunito: 'Nunito', sans-serif;
+    --primary: 236 92 32;
+    --secondary: 241 243 244;
+    --muted: 248 249 250;
+    --background: 248 248 251;
+    --foreground: 33 37 41;
+    --border: 222 226 230;
+    --input: 222 226 230;
+    --ring: 236 92 32;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-nunito);
+  }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
+@layer components {
+  .stat-card {
+    @apply bg-white rounded-lg border border-border shadow-sm p-6 transition-all duration-200 hover:shadow-md;
+  }
 
-::-webkit-scrollbar-track {
-  background-color: hsl(241 243 244);
-}
+  .nav-item {
+    @apply flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200;
+  }
 
-::-webkit-scrollbar-thumb {
-  background-color: hsl(222 226 230);
-  border-radius: 4px;
-}
+  .nav-item-active {
+    @apply bg-primary/10 text-primary border-r-2 border-primary;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(108 117 125 / 0.5);
+  .nav-item-inactive {
+    @apply text-gray-600 hover:bg-gray-50 hover:text-gray-900;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary/90 shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-gray-900 hover:bg-secondary/80;
+  }
 }
