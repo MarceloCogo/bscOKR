@@ -478,6 +478,15 @@ export async function getStrategyMap() {
 
   const activeOrgNodeId = await getActiveOrgNode(session.user.id, session.user.tenantId)
 
+  // DEV-only logging for consistency checking
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[getStrategyMap] Context check:', {
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      activeOrgNodeId
+    })
+  }
+
   if (!activeOrgNodeId) {
     return {
       needsContext: true,
@@ -530,6 +539,15 @@ export async function getStrategyMap() {
     }),
   ])
 
+  // DEV-only logging for meta consistency
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[getStrategyMap] Meta lookup:', {
+      tenantId: session.user.tenantId,
+      activeOrgNodeId,
+      metaFound: !!meta
+    })
+  }
+
   // Group objectives by region
   const regions = {
     ambition: objectives.find(obj => obj.mapRegion === 'AMBITION') || null,
@@ -561,6 +579,15 @@ export async function upsertStrategyMapMeta(data: { ambitionText?: string; value
   const activeOrgNodeId = await getActiveOrgNode(session.user.id, session.user.tenantId)
   if (!activeOrgNodeId) {
     throw new Error('No active org node')
+  }
+
+  // DEV-only logging for consistency checking
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[upsertStrategyMapMeta] Save operation:', {
+      tenantId: session.user.tenantId,
+      activeOrgNodeId,
+      data
+    })
   }
 
   if (!(await canManageObjectives(session.user.id, session.user.tenantId, activeOrgNodeId))) {

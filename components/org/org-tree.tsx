@@ -7,8 +7,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface OrgNode {
   id: string
@@ -70,12 +71,13 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
       if (response.ok) {
         setShowCreateDialog(false)
         router.refresh()
+        toast.success('Unidade filha criada com sucesso!')
       } else {
-        alert('Erro ao criar unidade filha')
+        toast.error('Erro ao criar unidade filha')
       }
     } catch (error) {
       console.error('Error creating child:', error)
-      alert('Erro ao criar unidade filha')
+      toast.error('Erro ao criar unidade filha')
     } finally {
       setIsCreating(false)
     }
@@ -83,7 +85,7 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
 
   const handleEditNode = (nodeId: string) => {
     // TODO: Implementar modal/form para editar nó
-    alert('Funcionalidade editar nó será implementada')
+    toast.info('Funcionalidade editar nó será implementada em breve')
   }
 
   const handleSetActiveContext = async (nodeId: string) => {

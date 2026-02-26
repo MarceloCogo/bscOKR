@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { updateObjectivePartial, deleteObjective } from '@/lib/actions/strategy'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface Perspective {
   id: string
@@ -90,7 +91,7 @@ export function ObjectiveEditDialog({
     e.preventDefault()
 
     if (!formData.title.trim() || !formData.perspectiveId || !formData.statusId) {
-      alert('Preencha todos os campos obrigatórios')
+      toast.error('Preencha todos os campos obrigatórios')
       return
     }
 
@@ -108,9 +109,10 @@ export function ObjectiveEditDialog({
 
       onOpenChange(false)
       router.refresh()
+      toast.success('Objetivo atualizado com sucesso!')
     } catch (error) {
       console.error('Error updating objective:', error)
-      alert('Erro ao atualizar objetivo')
+      toast.error('Erro ao atualizar objetivo')
     } finally {
       setIsLoading(false)
     }
@@ -127,9 +129,10 @@ export function ObjectiveEditDialog({
       await deleteObjective(objective.id)
       onOpenChange(false)
       router.refresh()
+      toast.success('Objetivo excluído com sucesso!')
     } catch (error) {
       console.error('Error deleting objective:', error)
-      alert('Erro ao excluir objetivo')
+      toast.error('Erro ao excluir objetivo')
     } finally {
       setIsLoading(false)
     }

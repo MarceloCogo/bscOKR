@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ArrowUp, ArrowDown, Edit, Trash2, Plus, Settings } from 'lucide-react'
 import { getStrategyMap, createObjectiveInRegion, reorderObjective, upsertStrategyMapMeta, updateObjectivePartial, deleteObjective } from '@/lib/actions/strategy'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { ObjectiveFormDialog } from './objective-form-dialog'
 import { ObjectiveEditDialog } from './objective-edit-dialog'
 import { ContextSelector } from './context-selector'
@@ -57,6 +58,7 @@ export function MapEditor() {
   const [editingTitleValue, setEditingTitleValue] = useState('')
   const [editingMeta, setEditingMeta] = useState<string | null>(null)
   const [editingMetaValue, setEditingMetaValue] = useState('')
+  const [isSavingMeta, setIsSavingMeta] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -118,9 +120,10 @@ export function MapEditor() {
       })
       setCreatingInRegion(null)
       await loadMap()
+      toast.success('Objetivo criado com sucesso')
     } catch (error) {
       console.error('Error creating objective:', error)
-      alert(`Erro ao criar objetivo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+      toast.error(`Erro ao criar objetivo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     }
   }
 
@@ -160,16 +163,18 @@ export function MapEditor() {
   }
 
   const handleEditMeta = async (field: 'ambitionText' | 'valuePropositionText', value: string) => {
+    setIsSavingMeta(true)
     try {
       await upsertStrategyMapMeta({ [field]: value || undefined })
       setEditingMeta(null)
       setEditingMetaValue('')
       await loadMap()
-      // Feedback de sucesso
-      console.log(`${field} updated successfully`)
+      toast.success('Salvo com sucesso')
     } catch (error) {
       console.error('Error updating meta:', error)
-      alert(`Erro ao salvar ${field === 'ambitionText' ? 'ambição' : 'proposta de valor'}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+      toast.error(`Erro ao salvar ${field === 'ambitionText' ? 'ambição' : 'proposta de valor'}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+    } finally {
+      setIsSavingMeta(false)
     }
   }
 
@@ -270,21 +275,23 @@ export function MapEditor() {
                     placeholder="Digite o texto da ambição estratégica..."
                     autoFocus
                   />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleEditMeta('ambitionText', editingMetaValue)}
-                    >
-                      Salvar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditingMeta(null)}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        disabled={isSavingMeta}
+                        onClick={() => handleEditMeta('ambitionText', editingMetaValue)}
+                      >
+                        {isSavingMeta ? 'Salvando...' : 'Salvar'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isSavingMeta}
+                        onClick={() => setEditingMeta(null)}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
                 </div>
               ) : (
                 <div
@@ -409,13 +416,15 @@ export function MapEditor() {
                     <div className="flex gap-2">
                       <Button
                         size="sm"
+                        disabled={isSavingMeta}
                         onClick={() => handleEditMeta('valuePropositionText', editingMetaValue)}
                       >
-                        Salvar
+                        {isSavingMeta ? 'Salvando...' : 'Salvar'}
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
+                        disabled={isSavingMeta}
                         onClick={() => setEditingMeta(null)}
                       >
                         Cancelar

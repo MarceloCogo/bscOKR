@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -129,15 +130,15 @@ function UserRoleManager({ user, roles, currentUserId }: {
       })
 
       if (response.ok) {
-        alert('Função atualizada com sucesso!')
+        toast.success('Função atualizada com sucesso!')
         window.location.reload()
       } else {
         const error = await response.json()
-        alert(error.error || 'Erro ao atualizar função')
+        toast.error(error.error || 'Erro ao atualizar função')
       }
     } catch (error) {
       console.error('Error updating role:', error)
-      alert('Erro ao atualizar função')
+      toast.error('Erro ao atualizar função')
     } finally {
       setIsSaving(false)
     }
