@@ -16,17 +16,24 @@ interface StrategicObjective {
   status: { name: string; color?: string | null }
   sponsor: { name: string }
   weight: number
+  orgNode: { id: string; name: string; type: { name: string } }
 }
 
 interface StrategyMapProps {
   objectives: StrategicObjective[]
   perspectives: Perspective[]
+  activeOrgNodeId?: string | null
 }
 
-export function StrategyMap({ objectives, perspectives }: StrategyMapProps) {
+export function StrategyMap({ objectives, perspectives, activeOrgNodeId }: StrategyMapProps) {
+  // Filter objectives by active org node if specified
+  const filteredObjectives = activeOrgNodeId
+    ? objectives.filter(obj => obj.orgNode.id === activeOrgNodeId)
+    : objectives
+
   const objectivesByPerspective = perspectives.map(perspective => ({
     perspective,
-    objectives: objectives.filter(obj => obj.perspective.id === perspective.id),
+    objectives: filteredObjectives.filter(obj => obj.perspective.id === perspective.id),
   }))
 
   return (

@@ -426,3 +426,23 @@ export async function removeObjectiveLink(id: string) {
 
   revalidatePath('/app/strategy')
 }
+
+// Search functions
+export async function searchObjectives(query: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.tenantId) {
+    throw new Error('Unauthorized')
+  }
+
+  return await prisma.strategicObjective.findMany({
+    where: {
+      tenantId: session.user.tenantId,
+      title: { contains: query, mode: 'insensitive' },
+    },
+    select: {
+      id: true,
+      title: true,
+    },
+    take: 10,
+  })
+}

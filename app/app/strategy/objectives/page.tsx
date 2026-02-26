@@ -6,6 +6,7 @@ import { listPerspectives } from '@/lib/actions/config/perspective'
 import { listPillars } from '@/lib/actions/config/pillar'
 import { listObjectiveStatuses } from '@/lib/actions/config/objective-status'
 import { listOrgNodes } from '@/lib/actions/org'
+import { listResponsibilityRoles } from '@/lib/actions/config/responsibility-role'
 import { prisma } from '@/lib/db'
 import { ObjectivesList } from '@/components/strategy/objectives-list'
 import { CreateObjectiveDialog } from '@/components/strategy/create-objective-dialog'
@@ -17,7 +18,7 @@ export default async function ObjectivesPage() {
     redirect('/login')
   }
 
-  const [objectives, perspectives, pillars, statuses, orgNodes, users] = await Promise.all([
+  const [objectives, perspectives, pillars, statuses, orgNodes, users, roles] = await Promise.all([
     listObjectives(),
     listPerspectives(),
     listPillars(),
@@ -25,8 +26,9 @@ export default async function ObjectivesPage() {
     listOrgNodes(),
     prisma.user.findMany({
       where: { tenantId: session.user.tenantId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, email: true },
     }),
+    listResponsibilityRoles(),
   ])
 
   return (
@@ -38,10 +40,18 @@ export default async function ObjectivesPage() {
             Gerencie os objetivos estratégicos da organização: {session.user.tenantName}
           </p>
         </div>
-        <CreateObjectiveDialog perspectives={perspectives} pillars={pillars} statuses={statuses} orgNodes={orgNodes} />
+        <CreateObjectiveDialog perspectives={perspectives} pillars={pillars} statuses={statuses} orgNodes={orgNodes} users={users} />
       </div>
 
-      <ObjectivesList objectives={objectives} />
+      <ObjectivesList
+        objectives={objectives}
+        perspectives={perspectives}
+        pillars={pillars}
+        statuses={statuses}
+        orgNodes={orgNodes}
+        users={users}
+        roles={roles}
+      />
     </div>
   )
 }
