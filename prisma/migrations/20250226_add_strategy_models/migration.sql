@@ -1,4 +1,42 @@
 -- CreateTable
+CREATE TABLE "org_nodes" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "typeId" TEXT NOT NULL,
+    "parentId" TEXT,
+    "leaderUserId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "org_nodes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "org_node_memberships" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "orgNodeId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "isPrimary" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "org_node_memberships_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "user_preferences" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "activeOrgNodeId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "user_preferences_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "objective_link_types" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
@@ -53,6 +91,18 @@ CREATE TABLE "objective_links" (
 );
 
 -- CreateIndex
+CREATE INDEX "org_nodes_tenantId_idx" ON "org_nodes"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "org_node_memberships_tenantId_idx" ON "org_node_memberships"("tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_preferences_tenantId_userId_key" ON "user_preferences"("tenantId", "userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "org_node_memberships_orgNodeId_userId_key" ON "org_node_memberships"("orgNodeId", "userId");
+
+-- CreateIndex
 CREATE INDEX "strategic_objectives_tenantId_idx" ON "strategic_objectives"("tenantId");
 
 -- CreateIndex
@@ -66,6 +116,33 @@ CREATE UNIQUE INDEX "objective_responsibilities_objectiveId_entityType_entityId_
 
 -- CreateIndex
 CREATE UNIQUE INDEX "objective_links_fromObjectiveId_toObjectiveId_linkTypeId_key" ON "objective_links"("fromObjectiveId", "toObjectiveId", "linkTypeId");
+
+-- AddForeignKey
+ALTER TABLE "org_nodes" ADD CONSTRAINT "org_nodes_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "org_nodes" ADD CONSTRAINT "org_nodes_typeId_fkey" FOREIGN KEY ("typeId") REFERENCES "org_node_types"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "org_nodes" ADD CONSTRAINT "org_nodes_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "org_nodes"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "org_nodes" ADD CONSTRAINT "org_nodes_leaderUserId_fkey" FOREIGN KEY ("leaderUserId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "org_node_memberships" ADD CONSTRAINT "org_node_memberships_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "org_node_memberships" ADD CONSTRAINT "org_node_memberships_orgNodeId_fkey" FOREIGN KEY ("orgNodeId") REFERENCES "org_nodes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "org_node_memberships" ADD CONSTRAINT "org_node_memberships_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_preferences" ADD CONSTRAINT "user_preferences_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_preferences" ADD CONSTRAINT "user_preferences_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "objective_link_types" ADD CONSTRAINT "objective_link_types_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
