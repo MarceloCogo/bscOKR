@@ -117,9 +117,48 @@ npm run db:studio      # Abre Prisma Studio
 
 ## Deploy no Vercel
 
+### 1. Criar Banco no Neon
+
+1. Acesse [Neon](https://neon.tech) e crie uma conta gratuita
+2. Crie um novo projeto PostgreSQL
+3. Copie a **Connection String** (terá formato: `postgresql://user:pass@host/db?sslmode=require`)
+
+### 2. Configurar Vercel
+
 1. Conecte seu repositório no Vercel
-2. Configure as variáveis de ambiente no dashboard do Vercel
-3. O deploy será automático
+2. Vá em **Settings** → **Environment Variables** e adicione:
+
+```env
+# Database (do Neon)
+DATABASE_URL="postgresql://username:password@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require"
+
+# Auth (gerar com: openssl rand -base64 32)
+AUTH_SECRET="bWuWUs1od3oawUQbr1lTX5QUvrBwTdj7Nh5WyQ91P7w="
+
+# URL do app (SUBSTITUA pelo seu domínio Vercel)
+NEXTAUTH_URL="https://seu-projeto.vercel.app"
+
+# Ambiente
+NODE_ENV="production"
+```
+
+3. Deploy será automático após push
+
+### 3. Executar Migrações
+
+Após o primeiro deploy, execute as migrações no banco Neon:
+
+```bash
+# Localmente, configure o DATABASE_URL com a string do Neon
+export DATABASE_URL="postgresql://..."
+
+# Execute as migrações
+npm run db:migrate
+```
+
+Ou via dashboard do Neon:
+1. Vá em **Query Editor** no Neon
+2. Execute o SQL gerado pelo Prisma
 
 ### Configurações do Vercel
 

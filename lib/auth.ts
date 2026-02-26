@@ -12,6 +12,7 @@ const loginSchema = z.object({
 })
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     CredentialsProvider({
