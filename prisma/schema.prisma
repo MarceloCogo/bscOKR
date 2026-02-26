@@ -35,6 +35,7 @@ model Tenant {
   strategicObjectives StrategicObjective[]
   objectiveResponsibilities ObjectiveResponsibility[]
   objectiveLinks    ObjectiveLink[]
+  strategyMapMeta   StrategyMapMeta[]
 
   @@map("tenants")
 }
@@ -245,6 +246,8 @@ model StrategicObjective {
   sponsorUserId    String
   orgNodeId        String
   parentObjectiveId String?
+  mapRegion        String
+  orderIndex       Int    @default(0)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -318,6 +321,7 @@ model OrgNode {
   leader     User?      @relation("OrgNodeLeader", fields: [leaderUserId], references: [id])
   memberships OrgNodeMembership[]
   strategicObjectives StrategicObjective[]
+  strategyMapMeta StrategyMapMeta[]
 
   @@map("org_nodes")
 }
@@ -355,4 +359,21 @@ model UserPreference {
   @@unique([tenantId, userId])
   @@unique([userId])
   @@map("user_preferences")
+}
+
+model StrategyMapMeta {
+  id                     String @id @default(cuid())
+  tenantId               String
+  orgNodeId              String
+  ambitionText           String?
+  valuePropositionText   String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relations
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orgNode OrgNode @relation(fields: [orgNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, orgNodeId])
+  @@map("strategy_map_meta")
 }

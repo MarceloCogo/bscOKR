@@ -155,29 +155,7 @@ export async function getObjective(id: string) {
   })
 }
 
-export async function createObjective(data: z.infer<typeof objectiveSchema>) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.tenantId || !session.user.id) {
-    throw new Error('Unauthorized')
-  }
 
-  const canManage = await canManageObjectives(session.user.id, session.user.tenantId, data.orgNodeId)
-  if (!canManage) {
-    throw new Error('Insufficient permissions')
-  }
-
-  const validatedData = objectiveSchema.parse(data)
-
-  const result = await prisma.strategicObjective.create({
-    data: {
-      tenantId: session.user.tenantId,
-      ...validatedData,
-    },
-  })
-
-  revalidatePath('/app/strategy')
-  return result
-}
 
 export async function updateObjective(id: string, data: z.infer<typeof objectiveSchema>) {
   const session = await getServerSession(authOptions)
@@ -445,4 +423,245 @@ export async function searchObjectives(query: string) {
     },
     take: 10,
   })
+}
+
+// Map Editor functions
+export async function getStrategyMap() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.tenantId || !session.user.id) {
+    throw new Error('Unauthorized')
+  }
+
+  const activeOrgNodeId = await getActiveOrgNode(session.user.id, session.user.tenantId)
+
+  if (!activeOrgNodeId) {
+    return {
+      needsContext: true,
+      orgNode: null,
+      isEditAllowed: false,
+      meta: null,
+      regions: {
+        ambition: null,
+        growthFocus: [],
+        valueProposition: null,
+        pillarOffer: [],
+        pillarRevenue: [],
+        pillarEfficiency: [],
+        peopleBase: [],
+      },
+    }
+  }
+
+  const [objectives, meta, orgNode] = await Promise.all([
+    prisma.strategicObjective.findMany({
+      where: {
+        tenantId: session.user.tenantId,
+        orgNodeId: activeOrgNodeId,
+      },
+      include: {
+        perspective: true,
+        pillar: true,
+        status: true,
+        sponsor: { select: { id: true, name: true } },
+        responsibilities: {
+          include: {
+            responsibilityRole: true,
+          },
+        },
+      },
+      orderBy: { orderIndex: 'asc' },
+    }),
+    prisma.strategyMapMeta.findFirst({
+      where: {
+        tenantId: session.user.tenantId,
+        orgNodeId: activeOrgNodeId,
+      },
+    }),
+    prisma.orgNode.findFirst({
+      where: {
+        id: activeOrgNodeId,
+        tenantId: session.user.tenantId,
+      },
+      select: { id: true, name: true, type: { select: { name: true } } },
+    }),
+  ])
+
+  // Group objectives by region
+  const regions = {
+    ambition: objectives.find(obj => obj.mapRegion === 'AMBITION') || null,
+    growthFocus: objectives.filter(obj => obj.mapRegion === 'GROWTH_FOCUS'),
+    valueProposition: objectives.find(obj => obj.mapRegion === 'VALUE_PROPOSITION') || null,
+    pillarOffer: objectives.filter(obj => obj.mapRegion === 'PILLAR_OFFER'),
+    pillarRevenue: objectives.filter(obj => obj.mapRegion === 'PILLAR_REVENUE'),
+    pillarEfficiency: objectives.filter(obj => obj.mapRegion === 'PILLAR_EFFICIENCY'),
+    peopleBase: objectives.filter(obj => obj.mapRegion === 'PEOPLE_BASE'),
+  }
+
+  const isEditAllowed = await canManageObjectives(session.user.id, session.user.tenantId, activeOrgNodeId)
+
+  return {
+    needsContext: false,
+    orgNode,
+    isEditAllowed,
+    meta,
+    regions,
+  }
+}
+
+export async function upsertStrategyMapMeta(data: { ambitionText?: string; valuePropositionText?: string }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.tenantId || !session.user.id) {
+    throw new Error('Unauthorized')
+  }
+
+  const activeOrgNodeId = await getActiveOrgNode(session.user.id, session.user.tenantId)
+  if (!activeOrgNodeId) {
+    throw new Error('No active org node')
+  }
+
+  if (!(await canManageObjectives(session.user.id, session.user.tenantId, activeOrgNodeId))) {
+    throw new Error('Insufficient permissions')
+  }
+
+  const result = await prisma.strategyMapMeta.upsert({
+    where: {
+      tenantId_orgNodeId: {
+        tenantId: session.user.tenantId,
+        orgNodeId: activeOrgNodeId,
+      },
+    },
+    update: data,
+    create: {
+      tenantId: session.user.tenantId,
+      orgNodeId: activeOrgNodeId,
+      ...data,
+    },
+  })
+
+  revalidatePath('/app/strategy')
+  return result
+}
+
+export async function createObjectiveInRegion(data: {
+  mapRegion: string
+  title: string
+  description?: string
+  perspectiveId?: string
+  pillarId?: string
+  statusId?: string
+  sponsorUserId?: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.tenantId || !session.user.id) {
+    throw new Error('Unauthorized')
+  }
+
+  const activeOrgNodeId = await getActiveOrgNode(session.user.id, session.user.tenantId)
+  if (!activeOrgNodeId) {
+    throw new Error('No active org node')
+  }
+
+  if (!(await canManageObjectives(session.user.id, session.user.tenantId, activeOrgNodeId))) {
+    throw new Error('Insufficient permissions')
+  }
+
+  // Get max orderIndex for the region
+  const maxOrder = await prisma.strategicObjective.findFirst({
+    where: {
+      tenantId: session.user.tenantId,
+      orgNodeId: activeOrgNodeId,
+      mapRegion: data.mapRegion,
+    },
+    orderBy: { orderIndex: 'desc' },
+    select: { orderIndex: true },
+  })
+
+  const orderIndex = (maxOrder?.orderIndex ?? 0) + 1
+
+  // Set defaults if not provided
+  const perspectiveId = data.perspectiveId || (await prisma.perspective.findFirst({
+    where: { tenantId: session.user.tenantId },
+    select: { id: true },
+  }))?.id
+
+  const statusId = data.statusId || (await prisma.objectiveStatus.findFirst({
+    where: { tenantId: session.user.tenantId },
+    select: { id: true },
+  }))?.id
+
+  const sponsorUserId = data.sponsorUserId || session.user.id
+
+  if (!perspectiveId || !statusId) {
+    throw new Error('Missing required configuration: perspective or status')
+  }
+
+  const result = await prisma.strategicObjective.create({
+    data: {
+      tenantId: session.user.tenantId,
+      orgNodeId: activeOrgNodeId,
+      mapRegion: data.mapRegion,
+      orderIndex,
+      title: data.title,
+      description: data.description,
+      perspectiveId,
+      pillarId: data.pillarId,
+      statusId,
+      sponsorUserId,
+      weight: 100,
+    },
+    include: {
+      perspective: true,
+      pillar: true,
+      status: true,
+      sponsor: { select: { id: true, name: true } },
+    },
+  })
+
+  revalidatePath('/app/strategy')
+  return result
+}
+
+export async function reorderObjective(objectiveId: string, direction: 'up' | 'down') {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.tenantId || !session.user.id) {
+    throw new Error('Unauthorized')
+  }
+
+  const objective = await prisma.strategicObjective.findFirst({
+    where: {
+      id: objectiveId,
+      tenantId: session.user.tenantId,
+    },
+  })
+
+  if (!objective) throw new Error('Objective not found')
+
+  if (!(await canManageObjectives(session.user.id, session.user.tenantId, objective.orgNodeId))) {
+    throw new Error('Insufficient permissions')
+  }
+
+  const adjacentObjective = await prisma.strategicObjective.findFirst({
+    where: {
+      tenantId: session.user.tenantId,
+      orgNodeId: objective.orgNodeId,
+      mapRegion: objective.mapRegion,
+      orderIndex: direction === 'up' ? objective.orderIndex - 1 : objective.orderIndex + 1,
+    },
+  })
+
+  if (!adjacentObjective) return // Nothing to reorder
+
+  // Swap orderIndexes
+  await prisma.$transaction([
+    prisma.strategicObjective.update({
+      where: { id: objectiveId },
+      data: { orderIndex: adjacentObjective.orderIndex },
+    }),
+    prisma.strategicObjective.update({
+      where: { id: adjacentObjective.id },
+      data: { orderIndex: objective.orderIndex },
+    }),
+  ])
+
+  revalidatePath('/app/strategy')
 }

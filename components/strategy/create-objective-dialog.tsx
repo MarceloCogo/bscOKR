@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
-import { createObjective } from '@/lib/actions/strategy'
+import { createObjectiveInRegion } from '@/lib/actions/strategy'
 import { getUserOrgContext } from '@/lib/actions/org'
 import { useRouter } from 'next/navigation'
 
@@ -74,13 +74,12 @@ export function CreateObjectiveDialog({
       return
     }
 
-    createObjective({
+    createObjectiveInRegion({
+      mapRegion: 'GROWTH_FOCUS',
       title,
       perspectiveId,
       statusId,
       sponsorUserId,
-      orgNodeId,
-      weight: 100,
     }).then(() => {
       alert('Objetivo criado!')
       router.refresh()
