@@ -46,14 +46,19 @@ export function AppSidebar() {
             <h1 className="text-xl font-bold text-gray-900">BSC OKR</h1>
           </div>
           {activeContext ? (
-            <div className="mt-4 px-4 py-2 bg-gray-50 rounded-md">
-              <p className="text-xs text-gray-600">Contexto ativo</p>
-              <p className="text-sm font-medium text-gray-900">{activeContext.name}</p>
-              <p className="text-xs text-gray-500">{activeContext.type}</p>
+            <div className="mt-4 px-4 py-2 bg-blue-50 rounded-md border border-blue-200">
+              <p className="text-xs text-blue-600 font-medium">Contexto Ativo</p>
+              <p className="text-sm font-medium text-blue-900">{activeContext.name}</p>
+              <p className="text-xs text-blue-700">{activeContext.type}</p>
+              <button className="text-xs text-blue-600 hover:text-blue-800 underline mt-1">
+                Clique para trocar
+              </button>
             </div>
           ) : (
-            <div className="mt-4 px-4 py-2 bg-orange-50 rounded-md">
-              <p className="text-xs text-orange-600">Nenhum contexto selecionado</p>
+            <div className="mt-4 px-4 py-2 bg-orange-50 rounded-md border border-orange-200">
+              <p className="text-xs text-orange-600 font-medium">Atenção</p>
+              <p className="text-sm text-orange-800">Nenhum contexto selecionado</p>
+              <p className="text-xs text-orange-700">Configure na estrutura organizacional</p>
             </div>
           )}
           <nav className="mt-5 flex-1 px-2 space-y-1">

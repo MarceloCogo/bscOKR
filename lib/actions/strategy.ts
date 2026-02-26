@@ -189,6 +189,45 @@ export async function updateObjective(id: string, data: z.infer<typeof objective
   return result
 }
 
+export async function updateObjectivePartial(id: string, data: {
+  title?: string
+  description?: string
+  perspectiveId?: string
+  pillarId?: string
+  statusId?: string
+  sponsorUserId?: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.tenantId || !session.user.id) {
+    throw new Error('Unauthorized')
+  }
+
+  const existing = await prisma.strategicObjective.findFirst({
+    where: { id, tenantId: session.user.tenantId },
+  })
+  if (!existing) throw new Error('Objective not found')
+
+  const canManage = await canManageObjectives(session.user.id, session.user.tenantId, existing.orgNodeId)
+  if (!canManage) {
+    throw new Error('Insufficient permissions')
+  }
+
+  const result = await prisma.strategicObjective.update({
+    where: { id },
+    data: {
+      ...(data.title && { title: data.title }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(data.perspectiveId && { perspectiveId: data.perspectiveId }),
+      ...(data.pillarId !== undefined && { pillarId: data.pillarId }),
+      ...(data.statusId && { statusId: data.statusId }),
+      ...(data.sponsorUserId && { sponsorUserId: data.sponsorUserId }),
+    },
+  })
+
+  revalidatePath('/app/strategy')
+  return result
+}
+
 export async function deleteObjective(id: string) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.tenantId || !session.user.id) {

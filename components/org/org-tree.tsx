@@ -4,6 +4,10 @@ import { useState } from 'react'
 import { ChevronDown, ChevronRight, Plus, Edit, Trash2, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { useRouter } from 'next/navigation'
 
 interface OrgNode {
@@ -26,6 +30,10 @@ interface OrgTreeProps {
 
 export function OrgTree({ tree, userContext }: OrgTreeProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [parentNodeId, setParentNodeId] = useState<string>('')
+  const [childForm, setChildForm] = useState({ name: '', type: '' })
+  const [isCreating, setIsCreating] = useState(false)
   const router = useRouter()
 
   const toggleExpanded = (nodeId: string) => {
@@ -39,8 +47,38 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
   }
 
   const handleCreateChild = (parentId: string) => {
-    // TODO: Implementar modal/form para criar filho
-    alert('Funcionalidade criar filho será implementada')
+    setParentNodeId(parentId)
+    setChildForm({ name: '', type: '' })
+    setShowCreateDialog(true)
+  }
+
+  const handleCreateChildSubmit = async () => {
+    if (!childForm.name.trim() || !childForm.type) return
+
+    setIsCreating(true)
+    try {
+      const response = await fetch('/api/org/create-child', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parentId: parentNodeId,
+          name: childForm.name.trim(),
+          type: childForm.type,
+        }),
+      })
+
+      if (response.ok) {
+        setShowCreateDialog(false)
+        router.refresh()
+      } else {
+        alert('Erro ao criar unidade filha')
+      }
+    } catch (error) {
+      console.error('Error creating child:', error)
+      alert('Erro ao criar unidade filha')
+    } finally {
+      setIsCreating(false)
+    }
   }
 
   const handleEditNode = (nodeId: string) => {
@@ -98,38 +136,36 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
                   </div>
                 </div>
               </div>
-              <div className="flex space-x-1">
+              <div className="flex space-x-2 mt-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="p-1 h-6 w-6"
                   onClick={() => handleCreateChild(node.id)}
-                  title="Adicionar unidade abaixo"
                 >
-                  <Plus className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="p-1 h-6 w-6"
-                  onClick={() => handleEditNode(node.id)}
-                  title="Editar unidade"
-                >
-                  <Edit className="h-3 w-3" />
+                  <Plus className="h-3 w-3 mr-1" />
+                  Adicionar filho
                 </Button>
                 {!isActive && (
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="p-1 h-6 w-6 text-primary"
                     onClick={() => handleSetActiveContext(node.id)}
-                    title="Definir como contexto ativo"
                   >
-                    <Check className="h-3 w-3" />
+                    <Check className="h-3 w-3 mr-1" />
+                    Definir contexto
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" className="p-1 h-6 w-6 text-destructive" title="Excluir unidade">
-                  <Trash2 className="h-3 w-3" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEditNode(node.id)}
+                >
+                  <Edit className="h-3 w-3 mr-1" />
+                  Editar
+                </Button>
+                <Button variant="outline" size="sm" className="text-destructive border-destructive">
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Excluir
                 </Button>
               </div>
             </div>
@@ -176,6 +212,57 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
       {tree.map(node => (
         <TreeNode key={node.id} node={node} />
       ))}
+
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar Unidade Filha</DialogTitle>
+            <DialogDescription>
+              Adicione uma nova unidade abaixo da unidade selecionada.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="childName">Nome da Unidade</Label>
+              <Input
+                id="childName"
+                value={childForm.name}
+                onChange={(e) => setChildForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Digite o nome da unidade"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="childType">Tipo de Unidade</Label>
+              <Select value={childForm.type} onValueChange={(value) => setChildForm(prev => ({ ...prev, type: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="company">Empresa</SelectItem>
+                  <SelectItem value="directorate">Diretoria</SelectItem>
+                  <SelectItem value="management">Gerência</SelectItem>
+                  <SelectItem value="coordination">Coordenação</SelectItem>
+                  <SelectItem value="team">Equipe</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreateChildSubmit}
+              disabled={!childForm.name.trim() || !childForm.type || isCreating}
+            >
+              {isCreating ? 'Criando...' : 'Criar Unidade'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -7,6 +7,8 @@ import { ArrowUp, ArrowDown, Edit, Trash2, Plus, Settings } from 'lucide-react'
 import { getStrategyMap, createObjectiveInRegion, reorderObjective, upsertStrategyMapMeta } from '@/lib/actions/strategy'
 import { useRouter } from 'next/navigation'
 import { ObjectiveFormDialog } from './objective-form-dialog'
+import { ObjectiveEditDialog } from './objective-edit-dialog'
+import { ContextSelector } from './context-selector'
 
 interface StrategicObjective {
   id: string
@@ -45,8 +47,10 @@ export function MapEditor() {
   const [pillars, setPillars] = useState<any[]>([])
   const [statuses, setStatuses] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
+  const [orgNodes, setOrgNodes] = useState<any[]>([])
   const [selectedRegion, setSelectedRegion] = useState<string>('')
   const [showObjectiveDialog, setShowObjectiveDialog] = useState(false)
+  const [editingObjective, setEditingObjective] = useState<any>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -59,17 +63,19 @@ export function MapEditor() {
       setData(mapData)
 
       // Load required data for objective creation
-      const [perspectivesRes, pillarsRes, statusesRes, usersRes] = await Promise.all([
+      const [perspectivesRes, pillarsRes, statusesRes, usersRes, orgNodesRes] = await Promise.all([
         fetch('/api/config/perspectives'),
         fetch('/api/config/pillars'),
         fetch('/api/config/objective-statuses'),
         fetch('/api/users'),
+        fetch('/api/org'),
       ])
 
       if (perspectivesRes.ok) setPerspectives(await perspectivesRes.json())
       if (pillarsRes.ok) setPillars(await pillarsRes.json())
       if (statusesRes.ok) setStatuses(await statusesRes.json())
       if (usersRes.ok) setUsers(await usersRes.json())
+      if (orgNodesRes.ok) setOrgNodes(await orgNodesRes.json())
     } catch (error) {
       console.error('Error loading map:', error)
     } finally {
@@ -80,6 +86,18 @@ export function MapEditor() {
   const handleCreateObjective = (mapRegion: string) => {
     setSelectedRegion(mapRegion)
     setShowObjectiveDialog(true)
+  }
+
+  const handleContextChange = async (orgNodeId: string) => {
+    try {
+      await fetch('/api/org/set-active-context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgNodeId }),
+      })
+    } catch (error) {
+      console.error('Error changing context:', error)
+    }
   }
 
   if (loading) {
@@ -138,6 +156,12 @@ export function MapEditor() {
         </div>
       </div>
 
+      <ContextSelector
+        currentContext={data.orgNode}
+        allContexts={orgNodes}
+        onContextChange={handleContextChange}
+      />
+
       {/* Ambição Estratégica */}
       <div className="text-center mb-12">
         <h2 className="text-xl font-semibold mb-4">Ambição Estratégica</h2>
@@ -167,7 +191,7 @@ export function MapEditor() {
             return (
               <Card key={index} className="min-h-[120px]">
                 <CardContent className="p-4">
-                  <ObjectiveCard objective={objective} />
+                  <ObjectiveCard objective={objective} onEdit={() => setEditingObjective(objective)} />
                   {!objective && editMode && (
                     <div className="text-center py-4">
                       <Button variant="outline" onClick={() => handleCreateObjective('GROWTH_FOCUS')}>
@@ -275,7 +299,7 @@ export function MapEditor() {
                       {['Pessoas', 'Cultura', 'Talentos'][index]}
                     </span>
                   </div>
-                  <ObjectiveCard objective={objective} />
+                  <ObjectiveCard objective={objective} onEdit={() => setEditingObjective(objective)} />
                   {!objective && editMode && (
                     <div className="text-center py-4">
                       <Button variant="outline" size="sm" onClick={() => handleCreateObjective('PEOPLE_BASE')}>
@@ -305,23 +329,44 @@ export function MapEditor() {
         open={showObjectiveDialog}
         onOpenChange={setShowObjectiveDialog}
       />
+
+      {editingObjective && (
+        <ObjectiveEditDialog
+          objective={editingObjective}
+          perspectives={perspectives}
+          pillars={pillars}
+          statuses={statuses}
+          users={users}
+          open={!!editingObjective}
+          onOpenChange={(open) => !open && setEditingObjective(null)}
+        />
+      )}
     </div>
   )
 }
 
-function ObjectiveCard({ objective }: { objective: any }) {
+function ObjectiveCard({ objective, onEdit }: { objective: any, onEdit?: () => void }) {
   if (!objective) return null
 
   return (
     <Card className="mb-2">
       <CardContent className="p-3">
-        <h4 className="font-medium text-sm">{objective.title}</h4>
-        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-          <span>{objective.perspective.name}</span>
-          <span className={`px-2 py-1 rounded text-xs ${objective.status.color ? '' : 'bg-gray-100'}`}
-                style={objective.status.color ? { backgroundColor: objective.status.color } : {}}>
-            {objective.status.name}
-          </span>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h4 className="font-medium text-sm">{objective.title}</h4>
+            <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+              <span>{objective.perspective.name}</span>
+              <span className={`px-2 py-1 rounded text-xs ${objective.status.color ? '' : 'bg-gray-100'}`}
+                    style={objective.status.color ? { backgroundColor: objective.status.color } : {}}>
+                {objective.status.name}
+              </span>
+            </div>
+          </div>
+          {onEdit && (
+            <Button variant="ghost" size="sm" onClick={onEdit} className="ml-2 p-1 h-6 w-6">
+              <Edit className="h-3 w-3" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
