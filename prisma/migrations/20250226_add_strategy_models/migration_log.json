@@ -1,9 +1,0 @@
-{
-  "rolled_back": 0,
-  "previous_schema": "20250225000000_init",
-  "new_schema": "20250226_add_strategy_models",
-  "generated_at": "2025-02-26T00:00:00.000Z",
-  "rollback_sql": "",
-  "sql_hash": "abc123",
-  "finished_at": "2025-02-26T00:00:00.000Z"
-}

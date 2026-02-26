@@ -1,0 +1,7 @@
+{
+  "rolled_back": "20250226_add_strategy_models",
+  "previous_schema": "20250225000000_init",
+  "new_schema": "20250227_fix_org_structure",
+  "generated_at": "2025-02-27T00:00:00.000Z",
+  "finished_at": "2025-02-27T00:00:00.000Z"
+}
