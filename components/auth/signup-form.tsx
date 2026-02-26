@@ -73,10 +73,10 @@ export function SignupForm() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Informações da Conta</CardTitle>
-        <CardDescription>
+    <Card className="stat-card">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-center">Informações da Conta</CardTitle>
+        <CardDescription className="text-center">
           Preencha os dados para criar sua organização e conta de administrador.
         </CardDescription>
       </CardHeader>
@@ -90,7 +90,11 @@ export function SignupForm() {
                 <FormItem>
                   <FormLabel>Nome da Organização</FormLabel>
                   <FormControl>
-                    <Input placeholder="Minha Empresa Ltda" {...field} />
+                    <Input
+                      placeholder="Minha Empresa Ltda"
+                      className="h-11"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -104,7 +108,11 @@ export function SignupForm() {
                 <FormItem>
                   <FormLabel>Seu Nome</FormLabel>
                   <FormControl>
-                    <Input placeholder="João Silva" {...field} />
+                    <Input
+                      placeholder="João Silva"
+                      className="h-11"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -118,7 +126,12 @@ export function SignupForm() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="joao@empresa.com" {...field} />
+                    <Input
+                      type="email"
+                      placeholder="joao@empresa.com"
+                      className="h-11"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -132,7 +145,12 @@ export function SignupForm() {
                 <FormItem>
                   <FormLabel>Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      className="h-11"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -146,7 +164,12 @@ export function SignupForm() {
                 <FormItem>
                   <FormLabel>Confirmar Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      className="h-11"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -154,12 +177,12 @@ export function SignupForm() {
             />
 
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full h-11 btn-primary" disabled={isLoading}>
               {isLoading ? 'Criando conta...' : 'Criar Conta'}
             </Button>
           </form>

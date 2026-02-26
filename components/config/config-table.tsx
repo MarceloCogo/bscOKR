@@ -75,63 +75,71 @@ export function ConfigTable({
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+      <Card className="stat-card">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
           <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <CardTitle className="text-xl">{title}</CardTitle>
+            <CardDescription className="text-base">{description}</CardDescription>
           </div>
-          <Button onClick={handleCreate} size="sm">
+          <Button onClick={handleCreate} className="btn-primary">
             <Plus className="h-4 w-4 mr-2" />
             Novo
           </Button>
         </CardHeader>
         <CardContent>
           {data.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              Nenhum registro encontrado
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg">Nenhum registro encontrado</p>
+              <p className="text-muted-foreground/70 text-sm mt-2">
+                Clique em "Novo" para adicionar o primeiro registro
+              </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {columns.map((column) => (
-                    <TableHead key={column.key}>{column.label}</TableHead>
-                  ))}
-                  <TableHead className="w-24">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.map((item) => (
-                  <TableRow key={item.id}>
+            <div className="rounded-lg border border-border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
                     {columns.map((column) => (
-                      <TableCell key={column.key}>
-                        {column.render ? column.render(item[column.key], item) : item[column.key]}
-                      </TableCell>
+                      <TableHead key={column.key} className="font-semibold text-foreground">
+                        {column.label}
+                      </TableHead>
                     ))}
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(item)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(item.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    <TableHead className="w-24 font-semibold text-foreground">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {data.map((item) => (
+                    <TableRow key={item.id} className="hover:bg-muted/30">
+                      {columns.map((column) => (
+                        <TableCell key={column.key} className="py-4">
+                          {column.render ? column.render(item[column.key], item) : item[column.key]}
+                        </TableCell>
+                      ))}
+                      <TableCell className="py-4">
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(item)}
+                            className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(item.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

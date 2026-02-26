@@ -130,39 +130,69 @@ export default async function AdminConfigPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Configuração do Sistema</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-foreground">Configuração do Sistema</h1>
+        <p className="text-muted-foreground mt-2">
           Gerencie as configurações da organização: {session.user.tenantName}
         </p>
       </div>
 
       <Tabs defaultValue="perspectives" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="structure">Estrutura</TabsTrigger>
-          <TabsTrigger value="statuses">Status</TabsTrigger>
-          <TabsTrigger value="roles">Funções</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 h-12 bg-muted p-1 rounded-lg">
+          <TabsTrigger
+            value="structure"
+            className="rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm font-medium"
+          >
+            Estrutura
+          </TabsTrigger>
+          <TabsTrigger
+            value="statuses"
+            className="rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm font-medium"
+          >
+            Status
+          </TabsTrigger>
+          <TabsTrigger
+            value="roles"
+            className="rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm font-medium"
+          >
+            Funções
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="structure" className="space-y-4">
+        <TabsContent value="structure" className="space-y-6">
           <Tabs defaultValue="perspectives" className="w-full">
-            <TabsList>
-              <TabsTrigger value="perspectives">Perspectivas</TabsTrigger>
-              <TabsTrigger value="pillars">Pilares</TabsTrigger>
-              <TabsTrigger value="org-types">Tipos Org.</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 h-10 bg-muted/50 p-1 rounded-md">
+              <TabsTrigger
+                value="perspectives"
+                className="rounded data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
+              >
+                Perspectivas
+              </TabsTrigger>
+              <TabsTrigger
+                value="pillars"
+                className="rounded data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
+              >
+                Pilares
+              </TabsTrigger>
+              <TabsTrigger
+                value="org-types"
+                className="rounded data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
+              >
+                Tipos Org.
+              </TabsTrigger>
             </TabsList>
-            <TabsContent value="perspectives"><PerspectiveTab /></TabsContent>
-            <TabsContent value="pillars"><PillarTab /></TabsContent>
-            <TabsContent value="org-types"><OrgTypesTab /></TabsContent>
+            <TabsContent value="perspectives" className="mt-6"><PerspectiveTab /></TabsContent>
+            <TabsContent value="pillars" className="mt-6"><PillarTab /></TabsContent>
+            <TabsContent value="org-types" className="mt-6"><OrgTypesTab /></TabsContent>
           </Tabs>
         </TabsContent>
 
-        <TabsContent value="statuses" className="space-y-4">
+        <TabsContent value="statuses" className="space-y-6">
           <StatusesTab />
         </TabsContent>
 
-        <TabsContent value="roles" className="space-y-4">
+        <TabsContent value="roles" className="space-y-6">
           <RolesTab />
         </TabsContent>
       </Tabs>

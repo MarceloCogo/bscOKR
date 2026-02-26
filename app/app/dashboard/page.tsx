@@ -1,88 +1,122 @@
+import { StatCard } from '@/components/layout/stat-card'
+import { Target, TrendingUp, Calendar, Users } from 'lucide-react'
+
 export default function DashboardPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Bem-vindo ao sistema BSC OKR</p>
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground mt-2">
+          Bem-vindo ao sistema BSC OKR
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">O</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Objetivos Ativos
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">0</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Objetivos Ativos"
+          value="0"
+          description="Objetivos em andamento"
+          icon={Target}
+          trend={{ value: 0, label: "vs. mês anterior" }}
+        />
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">KR</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Key Results
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">0</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Key Results"
+          value="0"
+          description="Resultados-chave ativos"
+          icon={TrendingUp}
+          trend={{ value: 0, label: "vs. mês anterior" }}
+        />
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">C</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Ciclos Ativos
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">0</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Ciclos Ativos"
+          value="0"
+          description="Ciclos OKR em andamento"
+          icon={Calendar}
+          trend={{ value: 0, label: "vs. mês anterior" }}
+        />
+
+        <StatCard
+          title="Usuários Ativos"
+          value="1"
+          description="Usuários no sistema"
+          icon={Users}
+          trend={{ value: 100, label: "vs. mês anterior" }}
+        />
       </div>
 
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Próximos Passos
-          </h3>
-          <div className="space-y-3">
-            <p className="text-sm text-gray-600">
-              ✅ Sistema configurado com sucesso
-            </p>
-            <p className="text-sm text-gray-600">
-              🔄 Próxima etapa: Configurar tipos de objetivos e perspectivas
-            </p>
-            <p className="text-sm text-gray-600">
-              📊 Em seguida: Implementar criação de objetivos e KR's
-            </p>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="stat-card">
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
+              Atividades Recentes
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <div className="w-2 h-2 bg-primary rounded-full"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">
+                    Sistema configurado com sucesso
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Todas as configurações padrão foram aplicadas
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <div className="w-2 h-2 bg-secondary rounded-full"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">
+                    Próxima etapa: Configurar perspectivas
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Personalize as perspectivas BSC da sua organização
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <div className="w-2 h-2 bg-secondary rounded-full"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">
+                    Em seguida: Criar primeiros objetivos
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Comece a implementar a gestão OKR na prática
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
+              Status do Sistema
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Configurações</span>
+                <span className="text-sm font-medium text-green-600">Completo</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Banco de Dados</span>
+                <span className="text-sm font-medium text-green-600">Conectado</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Usuários</span>
+                <span className="text-sm font-medium text-blue-600">1 Admin</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Objetivos</span>
+                <span className="text-sm font-medium text-muted-foreground">Aguardando</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

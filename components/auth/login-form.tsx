@@ -67,10 +67,10 @@ export function LoginForm() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Entrar</CardTitle>
-        <CardDescription>
+    <Card className="stat-card">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-center">Entrar</CardTitle>
+        <CardDescription className="text-center">
           Digite suas credenciais para acessar o sistema.
         </CardDescription>
       </CardHeader>
@@ -84,7 +84,11 @@ export function LoginForm() {
                 <FormItem>
                   <FormLabel>Slug da Organização</FormLabel>
                   <FormControl>
-                    <Input placeholder="minha-empresa-ltda-abc123" {...field} />
+                    <Input
+                      placeholder="minha-empresa-ltda-abc123"
+                      className="h-11"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -98,7 +102,12 @@ export function LoginForm() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="joao@empresa.com" {...field} />
+                    <Input
+                      type="email"
+                      placeholder="joao@empresa.com"
+                      className="h-11"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -112,7 +121,12 @@ export function LoginForm() {
                 <FormItem>
                   <FormLabel>Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      className="h-11"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -120,18 +134,18 @@ export function LoginForm() {
             />
 
             {successMessage && (
-              <div className="text-sm text-green-600 bg-green-50 p-3 rounded-md">
+              <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg border border-green-200">
                 {successMessage}
               </div>
             )}
 
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full h-11 btn-primary" disabled={isLoading}>
               {isLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>

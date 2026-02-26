@@ -91,61 +91,68 @@ export function ConfigFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            Preencha os campos abaixo para {initialData ? 'editar' : 'criar'} o registro.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[500px] p-0 gap-0">
+        <div className="p-6 border-b border-border">
+          <DialogHeader>
+            <DialogTitle className="text-xl">{title}</DialogTitle>
+            <DialogDescription className="text-base">
+              Preencha os campos abaixo para {initialData ? 'editar' : 'criar'} o registro.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            {fields.map((field) => (
-              <FormField
-                key={field.name}
-                control={form.control}
-                name={field.name}
-                render={({ field: formField }) => (
-                  <FormItem>
-                    <FormLabel>{field.label}</FormLabel>
-                    <FormControl>
-                      {field.type === 'textarea' ? (
-                        <Textarea
-                          placeholder={field.placeholder}
-                          {...formField}
-                          onChange={(e) => formField.onChange(e.target.value)}
-                        />
-                      ) : field.type === 'number' ? (
-                        <Input
-                          type="number"
-                          placeholder={field.placeholder}
-                          {...formField}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => formField.onChange(Number(e.target.value))}
-                        />
-                      ) : (
-                        <Input
-                          placeholder={field.placeholder}
-                          {...formField}
-                        />
-                      )}
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ))}
+        <div className="p-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
+              {fields.map((field) => (
+                <FormField
+                  key={field.name}
+                  control={form.control}
+                  name={field.name}
+                  render={({ field: formField }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">{field.label}</FormLabel>
+                      <FormControl>
+                        {field.type === 'textarea' ? (
+                          <Textarea
+                            placeholder={field.placeholder}
+                            className="min-h-24 resize-none"
+                            {...formField}
+                            onChange={(e) => formField.onChange(e.target.value)}
+                          />
+                        ) : field.type === 'number' ? (
+                          <Input
+                            type="number"
+                            placeholder={field.placeholder}
+                            className="h-11"
+                            {...formField}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => formField.onChange(Number(e.target.value))}
+                          />
+                        ) : (
+                          <Input
+                            placeholder={field.placeholder}
+                            className="h-11"
+                            {...formField}
+                          />
+                        )}
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-muted/30">
+          <Button type="button" variant="outline" onClick={onClose} className="h-10">
+            Cancelar
+          </Button>
+          <Button type="submit" onClick={form.handleSubmit(handleSubmit)} disabled={isLoading} className="btn-primary h-10">
+            {isLoading ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   )
