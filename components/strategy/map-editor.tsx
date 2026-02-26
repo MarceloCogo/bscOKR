@@ -101,8 +101,8 @@ export function MapEditor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orgNodeId }),
       })
-      // Recarregar dados após mudança de contexto
-      await loadMap()
+      // Router.refresh() vai recarregar o componente server-side com novo contexto
+      router.refresh()
     } catch (error) {
       console.error('Error changing context:', error)
     }
@@ -120,6 +120,7 @@ export function MapEditor() {
       await loadMap()
     } catch (error) {
       console.error('Error creating objective:', error)
+      alert(`Erro ao criar objetivo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     }
   }
 
@@ -164,8 +165,11 @@ export function MapEditor() {
       setEditingMeta(null)
       setEditingMetaValue('')
       await loadMap()
+      // Feedback de sucesso
+      console.log(`${field} updated successfully`)
     } catch (error) {
       console.error('Error updating meta:', error)
+      alert(`Erro ao salvar ${field === 'ambitionText' ? 'ambição' : 'proposta de valor'}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     }
   }
 
@@ -227,7 +231,7 @@ export function MapEditor() {
               size="sm"
               onClick={() => {
                 // Scroll to first empty region or show guide
-                const firstEmptyIndex = data.regions.growthFocus.findIndex((obj: any) => !obj)
+                const firstEmptyIndex = data.regions?.growthFocus?.findIndex((obj: any) => !obj) ?? -1
                 if (firstEmptyIndex !== -1) {
                   setCreatingInRegion(`GROWTH_FOCUS_${firstEmptyIndex}`)
                   document.getElementById(`growth-focus-${firstEmptyIndex}`)?.scrollIntoView({ behavior: 'smooth' })
@@ -307,7 +311,7 @@ export function MapEditor() {
         <h2 className="text-xl font-semibold mb-6 text-center">Focos Estratégicos de Crescimento</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[0, 1, 2].map(index => {
-            const objective = data.regions.growthFocus[index]
+            const objective = data.regions?.growthFocus?.[index]
             return (
               <Card key={index} className="min-h-[120px]">
                 <CardContent className="p-4">
@@ -446,7 +450,7 @@ export function MapEditor() {
           <div>
             <h3 className="font-semibold mb-4 text-center">Oferta</h3>
             <div className="space-y-2" id="pillars-section">
-              {data.regions.pillarOffer.map((obj: any) => (
+              {data.regions?.pillarOffer?.map((obj: any) => (
                 <ObjectiveCard
                   key={obj.id}
                   objective={obj}
@@ -458,7 +462,7 @@ export function MapEditor() {
                   showControls={editMode}
                 />
               ))}
-              {data.regions.pillarOffer.length === 0 && editMode && (
+              {data.regions?.pillarOffer?.length === 0 && editMode && (
                 creatingInRegion === 'PILLAR_OFFER' ? (
                   <Card className="border-blue-300">
                     <CardContent className="p-4">
@@ -512,7 +516,7 @@ export function MapEditor() {
           <div>
             <h3 className="font-semibold mb-4 text-center">Receita</h3>
             <div className="space-y-2">
-              {data.regions.pillarRevenue.map((obj: any) => (
+              {data.regions?.pillarRevenue?.map((obj: any) => (
                 <ObjectiveCard
                   key={obj.id}
                   objective={obj}
@@ -524,7 +528,7 @@ export function MapEditor() {
                   showControls={editMode}
                 />
               ))}
-              {data.regions.pillarRevenue.length === 0 && editMode && (
+              {data.regions?.pillarRevenue?.length === 0 && editMode && (
                 creatingInRegion === 'PILLAR_REVENUE' ? (
                   <Card className="border-blue-300">
                     <CardContent className="p-4">
@@ -578,7 +582,7 @@ export function MapEditor() {
           <div>
             <h3 className="font-semibold mb-4 text-center">Eficiência</h3>
             <div className="space-y-2">
-              {data.regions.pillarEfficiency.map((obj: any) => (
+              {data.regions?.pillarEfficiency?.map((obj: any) => (
                 <ObjectiveCard
                   key={obj.id}
                   objective={obj}
@@ -590,7 +594,7 @@ export function MapEditor() {
                   showControls={editMode}
                 />
               ))}
-              {data.regions.pillarEfficiency.length === 0 && editMode && (
+              {data.regions?.pillarEfficiency?.length === 0 && editMode && (
                 creatingInRegion === 'PILLAR_EFFICIENCY' ? (
                   <Card className="border-blue-300">
                     <CardContent className="p-4">
@@ -648,7 +652,7 @@ export function MapEditor() {
         <h2 className="text-xl font-semibold mb-6 text-center">Base</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[0, 1, 2].map(index => {
-            const objective = data.regions.peopleBase[index]
+            const objective = data.regions?.peopleBase?.[index]
             return (
               <Card key={index} className="min-h-[120px]">
                 <CardContent className="p-4">

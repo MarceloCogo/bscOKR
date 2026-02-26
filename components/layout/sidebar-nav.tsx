@@ -7,7 +7,7 @@ import { BarChart3, Settings, Users, Target, Home } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/app/dashboard', icon: Home },
-  { name: 'Objetivos', href: '/app/objectives', icon: Target },
+  { name: 'Objetivos', href: '/app/strategy/objectives', icon: Target },
   { name: 'Administração', href: '/app/admin/config', icon: Settings },
   { name: 'Usuários', href: '/app/admin/users', icon: Users },
 ]
