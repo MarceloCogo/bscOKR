@@ -144,4 +144,12 @@ export async function bootstrapTenantConfig(tenantId: string): Promise<void> {
       }),
     },
   })
+
+  // Insert default objective link types
+  await prisma.objectiveLinkType.createMany({
+    data: [
+      { tenantId, key: 'depends_on', name: 'Depende de', order: 1 },
+      { tenantId, key: 'contributes_to', name: 'Contribui para', order: 2 },
+    ],
+  })
 }

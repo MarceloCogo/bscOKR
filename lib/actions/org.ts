@@ -349,7 +349,7 @@ export async function getUserOrgContext() {
         isPrimary: true,
       },
       include: {
-        orgNode: true,
+        orgNode: { include: { type: true, memberships: { include: { user: { select: { id: true, name: true } } } }, children: true } },
       },
     }),
   ])

@@ -19,7 +19,7 @@ interface OrgTreeProps {
   userContext: {
     activeOrgNodeId?: string | null
     memberships: any[]
-    primaryOrgNode?: OrgNode | null
+    primaryOrgNode?: any
   }
 }
 

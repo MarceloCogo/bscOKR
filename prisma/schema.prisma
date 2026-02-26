@@ -31,6 +31,10 @@ model Tenant {
   krMetricTypes     KRMetricType[]
   responsibilityRoles ResponsibilityRole[]
   scoreRules        ScoreRule[]
+  objectiveLinkTypes ObjectiveLinkType[]
+  strategicObjectives StrategicObjective[]
+  objectiveResponsibilities ObjectiveResponsibility[]
+  objectiveLinks    ObjectiveLink[]
 
   @@map("tenants")
 }
@@ -49,6 +53,7 @@ model User {
   orgNodesAsLeader     OrgNode[]            @relation("OrgNodeLeader")
   orgNodeMemberships   OrgNodeMembership[]
   userPreference       UserPreference?
+  sponsoredObjectives  StrategicObjective[] @relation("ObjectiveSponsor")
 
   @@unique([tenantId, email])
   @@map("users")
@@ -105,7 +110,8 @@ model Perspective {
   order    Int
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  strategicObjectives StrategicObjective[]
 
   @@map("perspectives")
 }
@@ -117,7 +123,8 @@ model Pillar {
   order    Int
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  strategicObjectives StrategicObjective[]
 
   @@map("pillars")
 }
@@ -131,7 +138,8 @@ model ObjectiveStatus {
   color    String?
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  strategicObjectives StrategicObjective[]
 
   @@unique([tenantId, key])
   @@map("objective_statuses")
@@ -189,7 +197,8 @@ model ResponsibilityRole {
   order     Int
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant               Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  objectiveResponsibilities ObjectiveResponsibility[]
 
   @@unique([tenantId, key])
   @@map("responsibility_roles")
@@ -209,6 +218,88 @@ model ScoreRule {
   @@map("score_rules")
 }
 
+model ObjectiveLinkType {
+  id       String @id @default(cuid())
+  tenantId String
+  key      String
+  name     String
+  order    Int
+
+  // Relations
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  objectiveLinks ObjectiveLink[]
+
+  @@unique([tenantId, key])
+  @@map("objective_link_types")
+}
+
+model StrategicObjective {
+  id               String @id @default(cuid())
+  tenantId         String
+  title            String
+  description      String?
+  perspectiveId    String
+  pillarId         String?
+  statusId         String
+  weight           Int    @default(100)
+  sponsorUserId    String
+  orgNodeId        String
+  parentObjectiveId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  perspective  Perspective           @relation(fields: [perspectiveId], references: [id], onDelete: Cascade)
+  pillar       Pillar?               @relation(fields: [pillarId], references: [id])
+  status       ObjectiveStatus       @relation(fields: [statusId], references: [id], onDelete: Cascade)
+  sponsor      User                  @relation("ObjectiveSponsor", fields: [sponsorUserId], references: [id], onDelete: Cascade)
+  orgNode      OrgNode               @relation(fields: [orgNodeId], references: [id], onDelete: Cascade)
+  parent       StrategicObjective?   @relation("ObjectiveHierarchy", fields: [parentObjectiveId], references: [id])
+  children     StrategicObjective[]  @relation("ObjectiveHierarchy")
+  responsibilities ObjectiveResponsibility[]
+  linksFrom    ObjectiveLink[]       @relation("ObjectiveLinkFrom")
+  linksTo      ObjectiveLink[]       @relation("ObjectiveLinkTo")
+
+  @@index([tenantId])
+  @@map("strategic_objectives")
+}
+
+model ObjectiveResponsibility {
+  id                String @id @default(cuid())
+  tenantId          String
+  objectiveId       String
+  entityType        String // "user" or "orgnode"
+  entityId          String
+  responsibilityRoleId String
+  contributionWeight Int
+
+  // Relations
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  objective         StrategicObjective  @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  responsibilityRole ResponsibilityRole @relation(fields: [responsibilityRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([objectiveId, entityType, entityId, responsibilityRoleId])
+  @@map("objective_responsibilities")
+}
+
+model ObjectiveLink {
+  id            String @id @default(cuid())
+  tenantId      String
+  fromObjectiveId String
+  toObjectiveId String
+  linkTypeId    String
+
+  // Relations
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fromObjective StrategicObjective @relation("ObjectiveLinkFrom", fields: [fromObjectiveId], references: [id], onDelete: Cascade)
+  toObjective   StrategicObjective @relation("ObjectiveLinkTo", fields: [toObjectiveId], references: [id], onDelete: Cascade)
+  linkType     ObjectiveLinkType  @relation(fields: [linkTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([fromObjectiveId, toObjectiveId, linkTypeId])
+  @@map("objective_links")
+}
+
 model OrgNode {
   id           String @id @default(cuid())
   tenantId     String
@@ -220,12 +311,13 @@ model OrgNode {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   type       OrgNodeType @relation(fields: [typeId], references: [id], onDelete: Cascade)
   parent     OrgNode?   @relation("OrgNodeHierarchy", fields: [parentId], references: [id])
   children   OrgNode[]  @relation("OrgNodeHierarchy")
   leader     User?      @relation("OrgNodeLeader", fields: [leaderUserId], references: [id])
   memberships OrgNodeMembership[]
+  strategicObjectives StrategicObjective[]
 
   @@map("org_nodes")
 }
