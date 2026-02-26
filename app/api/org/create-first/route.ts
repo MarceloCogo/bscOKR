@@ -82,7 +82,6 @@ export async function POST(request: NextRequest) {
         tenantId: session.user.tenantId,
         userId: session.user.id,
         activeOrgNodeId: orgNode.id,
-        viewedHints: [],
       },
     })
 

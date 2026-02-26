@@ -83,6 +83,11 @@ export async function listObjectives(filters?: {
   const activeOrgNodeId = await getActiveOrgNode(session.user.id, session.user.tenantId)
   const orgNodeFilter = filters?.orgNodeId || activeOrgNodeId
 
+  // If no active context and no specific orgNodeId filter, return empty array
+  if (!orgNodeFilter) {
+    return []
+  }
+
   const where: any = {
     tenantId: session.user.tenantId,
   }

@@ -17,20 +17,19 @@ export default async function OrganizationPage({
     redirect('/login')
   }
 
-  const isOnboarding = searchParams.onboarding === 'true'
+  const [orgTree, userContext] = await Promise.all([
+    getOrgTree(),
+    getUserOrgContext(),
+  ])
 
-  if (isOnboarding) {
+  // If no org nodes, show onboarding wizard automatically
+  if (orgTree.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <OrgOnboardingWizard />
       </div>
     )
   }
-
-  const [orgTree, userContext] = await Promise.all([
-    getOrgTree(),
-    getUserOrgContext(),
-  ])
 
   return (
     <div className="space-y-8">

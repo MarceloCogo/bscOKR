@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { BarChart3, Settings, Users, Target, Map, Network } from 'lucide-react'
 
@@ -16,6 +17,26 @@ const navigation = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const [activeContext, setActiveContext] = useState<{
+    name: string;
+    type: string;
+  } | null>(null)
+
+  useEffect(() => {
+    const fetchContext = async () => {
+      try {
+        const response = await fetch('/api/user/context')
+        if (response.ok) {
+          const data = await response.json()
+          setActiveContext(data.activeContext)
+        }
+      } catch (error) {
+        console.error('Error fetching context:', error)
+      }
+    }
+
+    fetchContext()
+  }, [])
 
   return (
     <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
@@ -24,6 +45,17 @@ export function AppSidebar() {
           <div className="flex items-center flex-shrink-0 px-4">
             <h1 className="text-xl font-bold text-gray-900">BSC OKR</h1>
           </div>
+          {activeContext ? (
+            <div className="mt-4 px-4 py-2 bg-gray-50 rounded-md">
+              <p className="text-xs text-gray-600">Contexto ativo</p>
+              <p className="text-sm font-medium text-gray-900">{activeContext.name}</p>
+              <p className="text-xs text-gray-500">{activeContext.type}</p>
+            </div>
+          ) : (
+            <div className="mt-4 px-4 py-2 bg-orange-50 rounded-md">
+              <p className="text-xs text-orange-600">Nenhum contexto selecionado</p>
+            </div>
+          )}
           <nav className="mt-5 flex-1 px-2 space-y-1">
             {navigation.map((item) => {
               const isActive = pathname === item.href

@@ -52,12 +52,11 @@ export async function getPostLoginRedirect() {
         update: {
           activeOrgNodeId: firstOrgNode.id,
         },
-        create: {
-          tenantId: session.user.tenantId,
-          userId: session.user.id,
-          activeOrgNodeId: firstOrgNode.id,
-          viewedHints: [],
-        },
+      create: {
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        activeOrgNodeId: firstOrgNode.id,
+      },
       })
     }
   }

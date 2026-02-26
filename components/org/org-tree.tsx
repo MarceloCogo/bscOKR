@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Plus, Edit, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Edit, Trash2, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { useRouter } from 'next/navigation'
 
 interface OrgNode {
   id: string
@@ -25,6 +26,7 @@ interface OrgTreeProps {
 
 export function OrgTree({ tree, userContext }: OrgTreeProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
+  const router = useRouter()
 
   const toggleExpanded = (nodeId: string) => {
     const newExpanded = new Set(expandedNodes)
@@ -34,6 +36,34 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
       newExpanded.add(nodeId)
     }
     setExpandedNodes(newExpanded)
+  }
+
+  const handleCreateChild = (parentId: string) => {
+    // TODO: Implementar modal/form para criar filho
+    alert('Funcionalidade criar filho será implementada')
+  }
+
+  const handleEditNode = (nodeId: string) => {
+    // TODO: Implementar modal/form para editar nó
+    alert('Funcionalidade editar nó será implementada')
+  }
+
+  const handleSetActiveContext = async (nodeId: string) => {
+    try {
+      await fetch('/api/org/set-active-context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgNodeId: nodeId }),
+      })
+      router.refresh()
+    } catch (error) {
+      console.error('Error setting active context:', error)
+    }
+  }
+
+  const handleCreateRootNode = () => {
+    // Redirect to onboarding wizard
+    router.push('/app/organization?onboarding=true')
   }
 
   const TreeNode = ({ node, level = 0 }: { node: OrgNode; level?: number }) => {
@@ -69,13 +99,36 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
                 </div>
               </div>
               <div className="flex space-x-1">
-                <Button variant="ghost" size="sm" className="p-1 h-6 w-6">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-1 h-6 w-6"
+                  onClick={() => handleCreateChild(node.id)}
+                  title="Adicionar unidade abaixo"
+                >
                   <Plus className="h-3 w-3" />
                 </Button>
-                <Button variant="ghost" size="sm" className="p-1 h-6 w-6">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-1 h-6 w-6"
+                  onClick={() => handleEditNode(node.id)}
+                  title="Editar unidade"
+                >
                   <Edit className="h-3 w-3" />
                 </Button>
-                <Button variant="ghost" size="sm" className="p-1 h-6 w-6 text-destructive">
+                {!isActive && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1 h-6 w-6 text-primary"
+                    onClick={() => handleSetActiveContext(node.id)}
+                    title="Definir como contexto ativo"
+                  >
+                    <Check className="h-3 w-3" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" className="p-1 h-6 w-6 text-destructive" title="Excluir unidade">
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
@@ -101,8 +154,18 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
   if (tree.length === 0) {
     return (
       <Card>
-        <CardContent className="p-6 text-center text-muted-foreground">
-          Nenhum nó organizacional encontrado. Comece criando um nó raiz.
+        <CardContent className="p-6 text-center">
+          <div className="space-y-4">
+            <div>
+              <p className="text-muted-foreground mb-4">
+                Nenhum nó organizacional encontrado. Comece criando um nó raiz.
+              </p>
+              <Button onClick={handleCreateRootNode}>
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Nó Raiz
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     )
