@@ -85,11 +85,39 @@ export function MapEditor() {
   }
 
   const handleCreateObjective = async (mapRegion: string) => {
-    const title = prompt('Título do objetivo:')
+    const title = prompt(`Novo objetivo${mapRegion ? ` para ${mapRegion}` : ''}:`)
     if (!title) return
 
+    let selectedRegion = mapRegion
+    if (!selectedRegion) {
+      const regions = [
+        { value: 'AMBITION', label: 'Ambição Estratégica', disabled: !!data.meta?.ambitionText },
+        { value: 'GROWTH_FOCUS', label: 'Focos Estratégicos de Crescimento' },
+        { value: 'VALUE_PROPOSITION', label: 'Proposta de Valor', disabled: !!data.meta?.valuePropositionText },
+        { value: 'PILLAR_OFFER', label: 'Pilar - Oferta' },
+        { value: 'PILLAR_REVENUE', label: 'Pilar - Receita' },
+        { value: 'PILLAR_EFFICIENCY', label: 'Pilar - Eficiência' },
+        { value: 'PEOPLE_BASE', label: 'Base - Pessoas/Cultura/Talentos' },
+      ]
+
+      const regionInput = prompt(
+        'Escolha a região:\n' + regions.map(r => `${r.value}: ${r.label}${r.disabled ? ' (já tem texto)' : ''}`).join('\n'),
+        'GROWTH_FOCUS'
+      )
+
+      if (!regionInput) return
+
+      const region = regions.find(r => r.value === regionInput)
+      if (region?.disabled) {
+        alert('Esta região já tem texto definido. Edite o texto existente.')
+        return
+      }
+
+      selectedRegion = regionInput
+    }
+
     try {
-      await createObjectiveInRegion({ mapRegion, title })
+      await createObjectiveInRegion({ mapRegion: selectedRegion, title })
       await loadMap()
     } catch (error) {
       console.error('Error creating objective:', error)
@@ -179,7 +207,7 @@ export function MapEditor() {
             </Button>
           </div>
           {editMode && (
-            <Button>
+            <Button onClick={() => handleCreateObjective('')}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar objetivo
             </Button>
