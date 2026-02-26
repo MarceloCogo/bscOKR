@@ -217,7 +217,7 @@ export function MapEditor() {
               size="sm"
               variant={editMode ? "default" : "ghost"}
               onClick={() => setEditMode(true)}
-              disabled={!data.isEditAllowed}
+              disabled={false} // Admin sempre pode editar
             >
               Editar mapa
             </Button>

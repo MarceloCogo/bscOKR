@@ -123,37 +123,35 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {hasOrgStructure && hasObjectives && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Link href="/app/strategy/map">
-            <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
-              <Map className="h-6 w-6" />
-              <span>Ver Mapa Estratégico</span>
-            </Button>
-          </Link>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Link href={hasOrgStructure ? "/app/strategy/map" : "/app/organization"}>
+          <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
+            <Map className="h-6 w-6" />
+            <span>Mapa Estratégico</span>
+          </Button>
+        </Link>
 
-          <Link href="/app/strategy/objectives">
-            <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
-              <Target className="h-6 w-6" />
-              <span>Gerenciar Objetivos</span>
-            </Button>
-          </Link>
+        <Link href={hasOrgStructure ? "/app/strategy/objectives" : "/app/organization"}>
+          <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
+            <Target className="h-6 w-6" />
+            <span>Objetivos</span>
+          </Button>
+        </Link>
 
-          <Link href="/app/organization">
-            <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
-              <Network className="h-6 w-6" />
-              <span>Estrutura Organizacional</span>
-            </Button>
-          </Link>
+        <Link href="/app/organization">
+          <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
+            <Network className="h-6 w-6" />
+            <span>Organização</span>
+          </Button>
+        </Link>
 
-          <Link href="/app/admin/config">
-            <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
-              <Users className="h-6 w-6" />
-              <span>Configurações</span>
-            </Button>
-          </Link>
-        </div>
-      )}
+        <Link href="/app/admin/config">
+          <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center space-y-2">
+            <Users className="h-6 w-6" />
+            <span>Admin</span>
+          </Button>
+        </Link>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="stat-card">

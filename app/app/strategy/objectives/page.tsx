@@ -9,7 +9,6 @@ import { listOrgNodes } from '@/lib/actions/org'
 import { listResponsibilityRoles } from '@/lib/actions/config/responsibility-role'
 import { prisma } from '@/lib/db'
 import { ObjectivesList } from '@/components/strategy/objectives-list'
-import { CreateObjectiveDialog } from '@/components/strategy/create-objective-dialog'
 
 export default async function ObjectivesPage() {
   const session = await getServerSession(authOptions)
@@ -33,14 +32,14 @@ export default async function ObjectivesPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Objetivos Estratégicos</h1>
-          <p className="text-muted-foreground mt-2">
-            Gerencie os objetivos estratégicos da organização: {session.user.tenantName}
-          </p>
-        </div>
-        <CreateObjectiveDialog perspectives={perspectives} pillars={pillars} statuses={statuses} orgNodes={orgNodes} users={users} />
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Objetivos Estratégicos</h1>
+        <p className="text-muted-foreground mt-2">
+          Visualize os objetivos estratégicos da organização: {session.user.tenantName}
+        </p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Para criar novos objetivos, use o Mapa Estratégico.
+        </p>
       </div>
 
       <ObjectivesList
