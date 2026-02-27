@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { updateObjective } from '@/lib/actions/strategy'
+import { updateObjectivePartial } from '@/lib/actions/strategy'
 import { useRouter } from 'next/navigation'
 
 interface Perspective {
@@ -97,13 +97,8 @@ export function ObjectiveDrawer({
     if (!title) return
 
     try {
-      await updateObjective(objective.id, {
+      await updateObjectivePartial(objective.id, {
         title,
-        perspectiveId: objective.perspective.id,
-        statusId: objective.status.id,
-        sponsorUserId: objective.sponsor.id,
-        orgNodeId: objective.orgNode.id,
-        weight: objective.weight,
       })
       alert('Objetivo atualizado!')
       router.refresh()

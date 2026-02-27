@@ -9,12 +9,23 @@ import { OrgOnboardingWizard } from '@/components/org/org-onboarding'
 export default async function OrganizationPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const session = await getServerSession(authOptions)
 
   if (!session) {
     redirect('/login')
+  }
+
+  const searchParamsResolved = await searchParams
+  const isOnboarding = searchParamsResolved.onboarding === 'true'
+
+  if (isOnboarding) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <OrgOnboardingWizard />
+      </div>
+    )
   }
 
   const [orgTree, userContext] = await Promise.all([
