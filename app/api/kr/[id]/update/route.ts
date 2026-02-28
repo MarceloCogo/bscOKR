@@ -116,34 +116,40 @@ export async function PATCH(
         },
       })
 
-      const monthlyHistory = await tx.kRUpdateHistory.upsert({
+      const existingMonthlyHistory = await tx.kRUpdateHistory.findFirst({
         where: {
-          tenantId_keyResultId_referenceMonth_eventType: {
-            tenantId: session.user.tenantId,
-            keyResultId: id,
-            referenceMonth: monthRef,
-            eventType: KRUpdateEventType.NUMERIC_UPDATE,
-          },
-        },
-        update: {
-          newValue: currentValue,
-          newProgress: nextMetrics.progress,
-          updatedByUserId: session.user.id,
-          ...(typeof notes === 'string' ? { notes } : {}),
-        },
-        create: {
           tenantId: session.user.tenantId,
           keyResultId: id,
-          updatedByUserId: session.user.id,
-          eventType: KRUpdateEventType.NUMERIC_UPDATE,
           referenceMonth: monthRef,
-          previousValue,
-          newValue: currentValue,
-          previousProgress: previousMetrics.progress,
-          newProgress: nextMetrics.progress,
-          notes: typeof notes === 'string' ? notes : null,
+          eventType: KRUpdateEventType.NUMERIC_UPDATE,
         },
+        orderBy: { createdAt: 'desc' },
       })
+
+      const monthlyHistory = existingMonthlyHistory
+        ? await tx.kRUpdateHistory.update({
+            where: { id: existingMonthlyHistory.id },
+            data: {
+              newValue: currentValue,
+              newProgress: nextMetrics.progress,
+              updatedByUserId: session.user.id,
+              ...(typeof notes === 'string' ? { notes } : {}),
+            },
+          })
+        : await tx.kRUpdateHistory.create({
+            data: {
+              tenantId: session.user.tenantId,
+              keyResultId: id,
+              updatedByUserId: session.user.id,
+              eventType: KRUpdateEventType.NUMERIC_UPDATE,
+              referenceMonth: monthRef,
+              previousValue,
+              newValue: currentValue,
+              previousProgress: previousMetrics.progress,
+              newProgress: nextMetrics.progress,
+              notes: typeof notes === 'string' ? notes : null,
+            },
+          })
 
       return { keyResult: updatedKR, history: monthlyHistory }
     })

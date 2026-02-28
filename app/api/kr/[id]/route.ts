@@ -217,67 +217,83 @@ export async function PATCH(
       })
 
       if (shouldCreateChecklistHistory) {
-        await tx.kRUpdateHistory.upsert({
+        const existingMonthlyChecklist = await tx.kRUpdateHistory.findFirst({
           where: {
-            tenantId_keyResultId_referenceMonth_eventType: {
-              tenantId: session.user.tenantId,
-              keyResultId: id,
-              referenceMonth: monthRef,
-              eventType: KRUpdateEventType.CHECKLIST_UPDATE,
-            },
-          },
-          update: {
-            newValue: nextMetrics.progress,
-            newProgress: nextMetrics.progress,
-            newItemsCount,
-            newDoneCount,
-            updatedByUserId: session.user.id,
-          },
-          create: {
             tenantId: session.user.tenantId,
             keyResultId: id,
-            updatedByUserId: session.user.id,
-            eventType: KRUpdateEventType.CHECKLIST_UPDATE,
             referenceMonth: monthRef,
-            previousValue: previousMetrics.progress,
-            newValue: nextMetrics.progress,
-            previousProgress: previousMetrics.progress,
-            newProgress: nextMetrics.progress,
-            previousItemsCount,
-            newItemsCount,
-            previousDoneCount,
-            newDoneCount,
+            eventType: KRUpdateEventType.CHECKLIST_UPDATE,
           },
+          orderBy: { createdAt: 'desc' },
         })
+
+        if (existingMonthlyChecklist) {
+          await tx.kRUpdateHistory.update({
+            where: { id: existingMonthlyChecklist.id },
+            data: {
+              newValue: nextMetrics.progress,
+              newProgress: nextMetrics.progress,
+              newItemsCount,
+              newDoneCount,
+              updatedByUserId: session.user.id,
+            },
+          })
+        } else {
+          await tx.kRUpdateHistory.create({
+            data: {
+              tenantId: session.user.tenantId,
+              keyResultId: id,
+              updatedByUserId: session.user.id,
+              eventType: KRUpdateEventType.CHECKLIST_UPDATE,
+              referenceMonth: monthRef,
+              previousValue: previousMetrics.progress,
+              newValue: nextMetrics.progress,
+              previousProgress: previousMetrics.progress,
+              newProgress: nextMetrics.progress,
+              previousItemsCount,
+              newItemsCount,
+              previousDoneCount,
+              newDoneCount,
+            },
+          })
+        }
       }
 
       if (shouldCreateNumericHistory) {
-        await tx.kRUpdateHistory.upsert({
+        const existingMonthlyNumeric = await tx.kRUpdateHistory.findFirst({
           where: {
-            tenantId_keyResultId_referenceMonth_eventType: {
-              tenantId: session.user.tenantId,
-              keyResultId: id,
-              referenceMonth: monthRef,
-              eventType: KRUpdateEventType.NUMERIC_UPDATE,
-            },
-          },
-          update: {
-            newValue: nextNumericValue ?? 0,
-            newProgress: nextMetrics.progress,
-            updatedByUserId: session.user.id,
-          },
-          create: {
             tenantId: session.user.tenantId,
             keyResultId: id,
-            updatedByUserId: session.user.id,
-            eventType: KRUpdateEventType.NUMERIC_UPDATE,
             referenceMonth: monthRef,
-            previousValue: previousNumericValue ?? 0,
-            newValue: nextNumericValue ?? 0,
-            previousProgress: previousMetrics.progress,
-            newProgress: nextMetrics.progress,
+            eventType: KRUpdateEventType.NUMERIC_UPDATE,
           },
+          orderBy: { createdAt: 'desc' },
         })
+
+        if (existingMonthlyNumeric) {
+          await tx.kRUpdateHistory.update({
+            where: { id: existingMonthlyNumeric.id },
+            data: {
+              newValue: nextNumericValue ?? 0,
+              newProgress: nextMetrics.progress,
+              updatedByUserId: session.user.id,
+            },
+          })
+        } else {
+          await tx.kRUpdateHistory.create({
+            data: {
+              tenantId: session.user.tenantId,
+              keyResultId: id,
+              updatedByUserId: session.user.id,
+              eventType: KRUpdateEventType.NUMERIC_UPDATE,
+              referenceMonth: monthRef,
+              previousValue: previousNumericValue ?? 0,
+              newValue: nextNumericValue ?? 0,
+              previousProgress: previousMetrics.progress,
+              newProgress: nextMetrics.progress,
+            },
+          })
+        }
       }
     })
 
