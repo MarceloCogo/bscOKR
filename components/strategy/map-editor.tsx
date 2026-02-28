@@ -193,14 +193,16 @@ export function MapEditor() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F4F4] py-2">
-      <div className="max-w-[1280px] mx-auto px-3">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-2">
-          <div>
-            <h1 className="text-lg font-bold text-gray-800">Mapa Estratégico</h1>
-            <p className="text-gray-500 text-xs mt-0.5">Contexto: {data.orgNode?.name}</p>
-          </div>
+    <div className="min-h-screen bg-[#F4F4F4] py-1">
+      <div className="max-w-[1280px] mx-auto px-2">
+        {/* Header - Hide title in view mode, show in edit mode */}
+        <div className={`flex justify-between items-center mb-2 ${!editMode && data.orgNode ? 'justify-end' : ''}`}>
+          {editMode && (
+            <div>
+              <h1 className="text-sm font-bold text-gray-800">Mapa Estratégico</h1>
+              <p className="text-gray-500 text-[10px] mt-0.5">Contexto: {data.orgNode?.name}</p>
+            </div>
+          )}
           <div className="flex items-center space-x-3">
             <div className="flex bg-white rounded-lg p-1 border border-gray-200">
               <Button
@@ -249,10 +251,10 @@ export function MapEditor() {
         />
 
         {/* Ambição Estratégica */}
-        <div className="text-center mt-4 mb-4">
-          <h2 className="text-base font-bold text-gray-800">Ambição Estratégica</h2>
+        <div className="text-center mt-2 mb-2">
+          <h2 className="text-sm font-bold text-gray-800">Ambição Estratégica</h2>
           {editMode ? (
-            <div className="max-w-2xl mx-auto mt-2 bg-white rounded-md border border-gray-200 p-3">
+            <div className="max-w-2xl mx-auto mt-1 bg-white rounded-md border border-gray-200 p-2">
               {editingMeta === 'ambitionText' ? (
                 <div className="space-y-3">
                   <textarea
@@ -302,13 +304,13 @@ export function MapEditor() {
         </div>
 
         {/* Focos Estratégicos de Crescimento */}
-        <div className="mb-4">
-          <h2 className="text-base font-semibold mb-3 text-center text-gray-700">Focos Estratégicos de Crescimento</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="mb-2">
+          <h2 className="text-sm font-semibold mb-2 text-center text-gray-700">Focos de Crescimento</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             {[0, 1, 2].map(index => {
               const objective = data.regions?.growthFocus?.[index]
               return (
-                <div key={index} className="min-h-[60px] bg-white rounded-md border border-[#CFCFCF] p-2 shadow-sm">
+                <div key={index} className="bg-white rounded-md border border-[#CFCFCF] p-1.5 shadow-sm">
                   {objective ? (
                     <ObjectiveCard
                       objective={objective}
@@ -388,11 +390,11 @@ export function MapEditor() {
         </div>
 
         {/* Proposta de Valor */}
-        <div className="mb-4">
-          <h2 className="text-base font-semibold mb-3 text-center text-gray-700">Proposta de Valor</h2>
+        <div className="mb-2">
+          <h2 className="text-sm font-semibold mb-2 text-center text-gray-700">Proposta de Valor</h2>
           <div className="bg-white rounded-lg border border-[#CFCFCF] overflow-hidden shadow-sm">
-            <div className="h-[6px] bg-[#E87722]"></div>
-            <div className="p-3 text-center">
+            <div className="h-[4px] bg-[#E87722]"></div>
+            <div className="p-2 text-center">
               {editMode ? (
                 <div>
                   {editingMeta === 'valuePropositionText' ? (
@@ -446,13 +448,13 @@ export function MapEditor() {
         </div>
 
         {/* Pilares */}
-        <div className="mb-4">
-          <h2 className="text-base font-semibold mb-3 text-center text-gray-700">Pilares</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="mb-2">
+          <h2 className="text-sm font-semibold mb-2 text-center text-gray-700">Pilares</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
             {/* Oferta */}
-            <div className="bg-white rounded-lg border border-[#CFCFCF] p-2 shadow-sm">
-              <h3 className="font-semibold mb-2 text-center text-gray-700 pb-1 border-b border-gray-200">Oferta</h3>
-              <div className="space-y-2" id="pillars-section">
+            <div className="bg-white rounded-lg border border-[#CFCFCF] p-1.5 shadow-sm">
+              <h3 className="font-semibold mb-1 text-center text-gray-700 pb-1 border-b border-gray-200">Oferta</h3>
+              <div className="space-y-1" id="pillars-section">
                 {data.regions?.pillarOffer?.map((obj: any) => (
                   <ObjectiveCard
                     key={obj.id}
@@ -522,9 +524,9 @@ export function MapEditor() {
             </div>
 
             {/* Receita */}
-            <div className="bg-white rounded-lg border border-[#CFCFCF] p-2 shadow-sm">
-              <h3 className="font-semibold mb-2 text-center text-gray-700 pb-1 border-b border-gray-200">Receita</h3>
-              <div className="space-y-2">
+            <div className="bg-white rounded-lg border border-[#CFCFCF] p-1.5 shadow-sm">
+              <h3 className="font-semibold mb-1 text-center text-gray-700 pb-1 border-b border-gray-200">Receita</h3>
+              <div className="space-y-1">
                 {data.regions?.pillarRevenue?.map((obj: any) => (
                   <ObjectiveCard
                     key={obj.id}
@@ -594,9 +596,9 @@ export function MapEditor() {
             </div>
 
             {/* Eficiência */}
-            <div className="bg-white rounded-lg border border-[#CFCFCF] p-2 shadow-sm">
-              <h3 className="font-semibold mb-2 text-center text-gray-700 pb-1 border-b border-gray-200">Eficiência</h3>
-              <div className="space-y-2">
+            <div className="bg-white rounded-lg border border-[#CFCFCF] p-1.5 shadow-sm">
+              <h3 className="font-semibold mb-1 text-center text-gray-700 pb-1 border-b border-gray-200">Eficiência</h3>
+              <div className="space-y-1">
                 {data.regions?.pillarEfficiency?.map((obj: any) => (
                   <ObjectiveCard
                     key={obj.id}
@@ -668,16 +670,16 @@ export function MapEditor() {
         </div>
 
         {/* Base */}
-        <div className="mb-3">
-          <h2 className="text-base font-semibold mb-3 text-center text-gray-700">Base</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="mb-2">
+          <h2 className="text-sm font-semibold mb-2 text-center text-gray-700">Base</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             {[0, 1, 2].map(index => {
               const objective = data.regions?.peopleBase?.[index]
               const baseLabels = ['Pessoas', 'Cultura', 'Talentos']
               return (
-                <div key={index} className="min-h-[60px] bg-[#DCEFE8] rounded-lg p-2">
-                  <div className="text-center mb-4">
-                    <span className="text-sm font-semibold text-gray-700">
+                <div key={index} className="bg-[#DCEFE8] rounded-lg p-1.5">
+                  <div className="text-center mb-1">
+                    <span className="text-xs font-semibold text-gray-700">
                       {baseLabels[index]}
                     </span>
                   </div>
