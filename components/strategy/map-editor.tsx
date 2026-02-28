@@ -66,6 +66,9 @@ export function MapEditor() {
   const [objectiveKRStatus, setObjectiveKRStatus] = useState<Record<string, boolean>>({})
   const router = useRouter()
 
+  // Split view layout state
+  const sidebarWidth = 450
+
   useEffect(() => {
     loadMap()
   }, [])
@@ -219,8 +222,15 @@ export function MapEditor() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F4F4] py-1">
-      <div className="max-w-[1280px] mx-auto px-2">
+    <div className="flex min-h-screen bg-[#F4F4F4]">
+      {/* Map Area - Dynamic width */}
+      <div
+        className={`transition-all duration-250 ease-out ${
+          krPanelOpen ? `w-[calc(100%-450px)]` : 'w-full'
+        }`}
+      >
+        <div className="min-h-screen py-1">
+          <div className="max-w-[1280px] mx-auto px-2">
         {/* Header - Hide title in view mode, show in edit mode */}
         <div className={`flex justify-between items-center mb-2 ${!editMode && data.orgNode ? 'justify-end' : ''}`}>
           {editMode && (
@@ -806,6 +816,17 @@ export function MapEditor() {
           />
         )}
 
+        </div>
+        </div>
+      </div>
+
+      {/* Sidebar Area - Fixed width */}
+      <div
+        className={`fixed right-0 top-0 h-full w-[450px] bg-white border-l border-neutral-200 shadow-lg transition-transform duration-250 ease-out ${
+          krPanelOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+        style={{ zIndex: 40 }}
+      >
         <ObjectiveKRPanel
           objective={selectedObjectiveForKR}
           open={krPanelOpen}
