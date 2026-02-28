@@ -48,9 +48,16 @@ export async function GET(request: NextRequest) {
         updateHistories: {
           select: {
             id: true,
+            eventType: true,
             referenceMonth: true,
             previousValue: true,
             newValue: true,
+            previousProgress: true,
+            newProgress: true,
+            previousItemsCount: true,
+            newItemsCount: true,
+            previousDoneCount: true,
+            newDoneCount: true,
             createdAt: true,
           },
           orderBy: { createdAt: 'desc' },

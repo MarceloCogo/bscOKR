@@ -30,9 +30,16 @@ interface KeyResult {
   metricType: { id: string; name: string } | null
   updateHistories?: Array<{
     id: string
+    eventType: 'NUMERIC_UPDATE' | 'CHECKLIST_UPDATE'
     referenceMonth: string
     previousValue: number
     newValue: number
+    previousProgress: number | null
+    newProgress: number | null
+    previousItemsCount: number | null
+    newItemsCount: number | null
+    previousDoneCount: number | null
+    newDoneCount: number | null
     createdAt: string
   }>
 }

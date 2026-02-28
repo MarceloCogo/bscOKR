@@ -30,6 +30,11 @@ enum KRThresholdDirection {
   MINIMO
 }
 
+enum KRUpdateEventType {
+  NUMERIC_UPDATE
+  CHECKLIST_UPDATE
+}
+
 model Tenant {
   id        String   @id @default(cuid())
   name      String
@@ -361,9 +366,16 @@ model KRUpdateHistory {
   tenantId        String
   keyResultId     String
   updatedByUserId String
+  eventType       KRUpdateEventType @default(NUMERIC_UPDATE)
   referenceMonth  String   // YYYY-MM
   previousValue   Float
   newValue        Float
+  previousProgress Float?
+  newProgress      Float?
+  previousItemsCount Int?
+  newItemsCount      Int?
+  previousDoneCount  Int?
+  newDoneCount       Int?
   notes           String?
   createdAt       DateTime @default(now())
 

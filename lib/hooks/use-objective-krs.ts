@@ -24,11 +24,24 @@ export interface KeyResult {
   cycle?: { id: string; name: string } | null
   updateHistories?: Array<{
     id: string
+    eventType: 'NUMERIC_UPDATE' | 'CHECKLIST_UPDATE'
     referenceMonth: string
     previousValue: number
     newValue: number
+    previousProgress: number | null
+    newProgress: number | null
+    previousItemsCount: number | null
+    newItemsCount: number | null
+    previousDoneCount: number | null
+    newDoneCount: number | null
     createdAt: string
   }>
+}
+
+interface ChecklistItem {
+  id: string
+  title: string
+  done: boolean
 }
 
 export function useObjectiveKRs(objectiveId: string | null) {
@@ -77,6 +90,29 @@ export function useObjectiveKRs(objectiveId: string | null) {
     await loadKRs()
   }
 
+  const updateKRChecklist = async (krId: string, checklistJson: ChecklistItem[], referenceMonth?: string) => {
+    const monthRef =
+      typeof referenceMonth === 'string' && /^\d{4}-\d{2}$/.test(referenceMonth)
+        ? referenceMonth
+        : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+
+    const response = await fetch(`/api/kr/${krId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ checklistJson, referenceMonth: monthRef }),
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      throw new Error(data.error || 'Erro ao atualizar checklist do KR')
+    }
+
+    const data = await response.json()
+    const updatedKR = data.keyResult as KeyResult
+    setKrs((prev) => prev.map((kr) => (kr.id === krId ? updatedKR : kr)))
+    return updatedKR
+  }
+
   useEffect(() => {
     loadKRs()
   }, [objectiveId])
@@ -86,5 +122,6 @@ export function useObjectiveKRs(objectiveId: string | null) {
     loading,
     loadKRs,
     updateKRValue,
+    updateKRChecklist,
   }
 }

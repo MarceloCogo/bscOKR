@@ -1,12 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Target, X, TrendingUp, Check, Loader2 } from 'lucide-react'
+import { Target, X, TrendingUp, Check, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useObjectiveKRs } from '@/lib/hooks/use-objective-krs'
 import { toast } from 'sonner'
+
+interface ChecklistItem {
+  id: string
+  title: string
+  done: boolean
+}
 
 interface ObjectiveKRPanelProps {
   objective: {
@@ -18,17 +24,106 @@ interface ObjectiveKRPanelProps {
 }
 
 export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: ObjectiveKRPanelProps) {
-  const { krs, loading, updateKRValue } = useObjectiveKRs(objective?.id || null)
+  const { krs, loading, updateKRValue, updateKRChecklist } = useObjectiveKRs(objective?.id || null)
   const [editingKRId, setEditingKRId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [savingKRId, setSavingKRId] = useState<string | null>(null)
+  const [checklistDrafts, setChecklistDrafts] = useState<Record<string, ChecklistItem[]>>({})
+  const [checklistSaveState, setChecklistSaveState] = useState<Record<string, 'idle' | 'pending' | 'saving' | 'saved' | 'error'>>({})
+  const checklistTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const checklistInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
-  const handleUpdateKR = (kr: any) => {
-    if (kr.type === 'ENTREGAVEL') {
-      toast.error('KRs ENTREGAVEL devem ser atualizados por checklist')
-      return
+  useEffect(() => {
+    setChecklistDrafts((prev) => {
+      const next = { ...prev }
+      const validIds = new Set<string>()
+
+      krs.forEach((kr) => {
+        if (kr.type !== 'ENTREGAVEL') return
+        validIds.add(kr.id)
+
+        if (!next[kr.id]) {
+          const initialItems = Array.isArray(kr.checklistJson) && kr.checklistJson.length > 0
+            ? kr.checklistJson
+            : [{ id: crypto.randomUUID(), title: '', done: false }]
+          next[kr.id] = initialItems.map((item) => ({ id: item.id, title: item.title, done: item.done }))
+        }
+      })
+
+      Object.keys(next).forEach((krId) => {
+        if (!validIds.has(krId)) {
+          delete next[krId]
+        }
+      })
+
+      return next
+    })
+  }, [krs])
+
+  useEffect(() => {
+    return () => {
+      Object.values(checklistTimersRef.current).forEach((timer) => clearTimeout(timer))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!objective?.id) {
+      setChecklistDrafts({})
+      setChecklistSaveState({})
+      Object.values(checklistTimersRef.current).forEach((timer) => clearTimeout(timer))
+      checklistTimersRef.current = {}
+    }
+  }, [objective?.id])
+
+  const normalizeChecklist = (items: ChecklistItem[]) => {
+    return items
+      .map((item) => ({ ...item, title: item.title.trim() }))
+      .filter((item) => item.title.length > 0)
+  }
+
+  const scheduleChecklistAutosave = (krId: string, items: ChecklistItem[]) => {
+    if (checklistTimersRef.current[krId]) {
+      clearTimeout(checklistTimersRef.current[krId])
     }
 
+    setChecklistSaveState((prev) => ({ ...prev, [krId]: 'pending' }))
+    checklistTimersRef.current[krId] = setTimeout(async () => {
+      const normalized = normalizeChecklist(items)
+      if (normalized.length === 0) {
+        setChecklistSaveState((prev) => ({ ...prev, [krId]: 'error' }))
+        return
+      }
+
+      setChecklistSaveState((prev) => ({ ...prev, [krId]: 'saving' }))
+      try {
+        await updateKRChecklist(krId, normalized)
+        setChecklistSaveState((prev) => ({ ...prev, [krId]: 'saved' }))
+        setTimeout(() => {
+          setChecklistSaveState((prev) => ({ ...prev, [krId]: 'idle' }))
+        }, 1200)
+      } catch (error: any) {
+        setChecklistSaveState((prev) => ({ ...prev, [krId]: 'error' }))
+        toast.error(error?.message || 'Erro ao salvar checklist')
+      }
+    }, 500)
+  }
+
+  const updateChecklistDraft = (krId: string, updater: (current: ChecklistItem[]) => ChecklistItem[]) => {
+    setChecklistDrafts((prev) => {
+      const current = prev[krId] || [{ id: crypto.randomUUID(), title: '', done: false }]
+      const nextItems = updater(current)
+      scheduleChecklistAutosave(krId, nextItems)
+      return { ...prev, [krId]: nextItems }
+    })
+  }
+
+  const focusChecklistItem = (krId: string, itemId: string) => {
+    window.setTimeout(() => {
+      checklistInputRefs.current[`${krId}:${itemId}`]?.focus()
+    }, 0)
+  }
+
+  const handleUpdateKR = (kr: any) => {
     setEditingKRId(kr.id)
     setEditingValue(String(kr.currentValue ?? 0))
   }
@@ -36,14 +131,14 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
   const handleSaveUpdate = async (kr: any) => {
     const value = Number(editingValue)
     if (Number.isNaN(value) || value < 0) {
-      toast.error('Informe um valor numérico válido')
+      toast.error('Informe um valor numerico valido')
       return
     }
 
     setSavingKRId(kr.id)
     try {
       await updateKRValue(kr.id, value)
-      toast.success('Valor atualizado com histórico mensal')
+      toast.success('Valor atualizado com historico mensal')
       setEditingKRId(null)
       setEditingValue('')
     } catch (error: any) {
@@ -65,22 +160,21 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
   }
 
   const getStatusText = (progress: number) => {
-    if (progress >= 100) return '✅ Concluído'
-    if (progress >= 70) return '📈 No prazo'
-    if (progress >= 40) return '⚠️ Atenção'
-    return '🚨 Crítico'
+    if (progress >= 100) return 'Concluido'
+    if (progress >= 70) return 'No prazo'
+    if (progress >= 40) return 'Atencao'
+    return 'Critico'
   }
 
   return (
     <div
-      className="flex flex-col h-full bg-white border-l border-neutral-200"
+      className="flex h-full flex-col border-l border-neutral-200 bg-white"
       role="complementary"
       aria-label={`Painel de Key Results para ${objective?.title || 'objetivo'}`}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-neutral-200 bg-neutral-50">
-        <h2 className="font-semibold text-lg flex items-center gap-2" id="kr-panel-title">
-          <Target className="w-5 h-5" aria-hidden="true" />
+      <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 p-4">
+        <h2 className="flex items-center gap-2 text-lg font-semibold" id="kr-panel-title">
+          <Target className="h-5 w-5" aria-hidden="true" />
           {objective?.title || 'Key Results'}
         </h2>
         <div className="flex items-center gap-2">
@@ -100,12 +194,11 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
             onClick={() => onOpenChange(false)}
             aria-label="Fechar painel de Key Results"
           >
-            <X className="w-4 h-4" aria-hidden="true" />
+            <X className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </div>
 
-      {/* Content */}
       <div
         className="flex-1 overflow-y-auto p-4"
         role="region"
@@ -113,19 +206,15 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
         aria-live="polite"
       >
         {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="text-sm text-gray-500 mt-2">Carregando KRs...</p>
+          <div className="py-8 text-center">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500" />
+            <p className="mt-2 text-sm text-gray-500">Carregando KRs...</p>
           </div>
         ) : krs.length === 0 ? (
-          <div className="text-center py-12">
-            <Target className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Nenhum Key Result
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Crie KRs na aba do objetivo para acompanhar aqui.
-            </p>
+          <div className="py-12 text-center">
+            <Target className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+            <h3 className="mb-2 text-lg font-medium text-gray-900">Nenhum Key Result</h3>
+            <p className="mb-4 text-sm text-gray-500">Crie KRs na aba do objetivo para acompanhar aqui.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -133,40 +222,35 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
               const progress = getProgress(kr)
               const isEditing = editingKRId === kr.id
               const isSaving = savingKRId === kr.id
+              const checklistItems = checklistDrafts[kr.id] || [{ id: crypto.randomUUID(), title: '', done: false }]
 
               return (
                 <Card key={kr.id} className="border border-gray-200">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium leading-tight">
-                      {kr.title}
-                    </CardTitle>
+                    <CardTitle className="text-sm font-medium leading-tight">{kr.title}</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-3">
-                      {/* Progress Bar */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs text-gray-600">
-                          <span>
-                            {kr.type === 'ENTREGAVEL'
-                              ? `${Math.round(progress)}% concluido`
-                              : `${kr.currentValue ?? 0} / ${kr.targetValue ?? kr.thresholdValue ?? 0} ${kr.unit ?? ''}`}
-                          </span>
-                          <span>{Math.round(progress)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(progress)}`}
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                        <div className="text-xs text-gray-500 text-right">
-                          {getStatusText(progress)}
-                        </div>
+                  <CardContent className="space-y-3 pt-0">
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-gray-600">
+                        <span>
+                          {kr.type === 'ENTREGAVEL'
+                            ? `${Math.round(progress)}% concluido`
+                            : `${kr.currentValue ?? 0} / ${kr.targetValue ?? kr.thresholdValue ?? 0} ${kr.unit ?? ''}`}
+                        </span>
+                        <span>{Math.round(progress)}%</span>
                       </div>
+                      <div className="h-2 w-full rounded-full bg-gray-200">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(progress)}`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <div className="text-right text-xs text-gray-500">{getStatusText(progress)}</div>
+                    </div>
 
-                      {/* Actions */}
+                    {kr.type !== 'ENTREGAVEL' && (
                       <div className="flex gap-2">
-                        {kr.type !== 'ENTREGAVEL' && !isEditing && (
+                        {!isEditing ? (
                           <Button
                             size="sm"
                             variant="outline"
@@ -175,12 +259,10 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
                             disabled={isSaving}
                             aria-label={`Atualizar valor atual do Key Result: ${kr.title}`}
                           >
-                            <TrendingUp className="w-3 h-3 mr-1" aria-hidden="true" />
+                            <TrendingUp className="mr-1 h-3 w-3" aria-hidden="true" />
                             Atualizar
                           </Button>
-                        )}
-
-                        {kr.type !== 'ENTREGAVEL' && isEditing && (
+                        ) : (
                           <div className="flex w-full items-center gap-2">
                             <Input
                               type="number"
@@ -196,9 +278,13 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
                               size="sm"
                               onClick={() => handleSaveUpdate(kr)}
                               disabled={isSaving}
-                              aria-label={`Salvar atualização do Key Result: ${kr.title}`}
+                              aria-label={`Salvar atualizacao do Key Result: ${kr.title}`}
                             >
-                              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" /> : <Check className="w-3 h-3" aria-hidden="true" />}
+                              {isSaving ? (
+                                <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                              ) : (
+                                <Check className="h-3 w-3" aria-hidden="true" />
+                              )}
                             </Button>
                             <Button
                               size="sm"
@@ -208,27 +294,120 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
                                 setEditingValue('')
                               }}
                               disabled={isSaving}
-                              aria-label={`Cancelar atualização do Key Result: ${kr.title}`}
+                              aria-label={`Cancelar atualizacao do Key Result: ${kr.title}`}
                             >
                               Cancelar
                             </Button>
                           </div>
                         )}
                       </div>
+                    )}
 
-                      {kr.type !== 'ENTREGAVEL' && kr.updateHistories && kr.updateHistories.length > 0 && (
-                        <div className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1.5">
-                          <p className="text-[11px] font-medium text-neutral-700">Ultimas atualizacoes</p>
-                          <div className="mt-1 space-y-0.5">
-                            {kr.updateHistories.slice(0, 3).map((history: any) => (
-                              <p key={history.id} className="text-[11px] text-neutral-600">
-                                {history.referenceMonth}: {history.previousValue} → {history.newValue} {kr.unit ?? ''}
-                              </p>
-                            ))}
-                          </div>
+                    {kr.type === 'ENTREGAVEL' && (
+                      <div className="rounded-md border border-neutral-200 bg-neutral-50 p-2.5">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-600">Checklist</span>
+                          <span className="text-[11px] text-neutral-500">
+                            {checklistSaveState[kr.id] === 'saving' && 'Salvando...'}
+                            {checklistSaveState[kr.id] === 'pending' && 'Alteracoes pendentes'}
+                            {checklistSaveState[kr.id] === 'saved' && 'Salvo'}
+                            {checklistSaveState[kr.id] === 'error' && 'Adicione ao menos 1 item valido'}
+                          </span>
                         </div>
-                      )}
-                    </div>
+
+                        <div className="space-y-2">
+                          {checklistItems.map((item) => (
+                            <div key={item.id} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={item.done}
+                                className="h-4 w-4 rounded border-neutral-300"
+                                onChange={(e) =>
+                                  updateChecklistDraft(kr.id, (current) =>
+                                    current.map((currentItem) =>
+                                      currentItem.id === item.id ? { ...currentItem, done: e.target.checked } : currentItem
+                                    )
+                                  )
+                                }
+                              />
+                              <Input
+                                ref={(el) => {
+                                  checklistInputRefs.current[`${kr.id}:${item.id}`] = el
+                                }}
+                                value={item.title}
+                                placeholder="Descreva uma entrega"
+                                className="h-8 text-sm"
+                                onChange={(e) =>
+                                  updateChecklistDraft(kr.id, (current) =>
+                                    current.map((currentItem) =>
+                                      currentItem.id === item.id ? { ...currentItem, title: e.target.value } : currentItem
+                                    )
+                                  )
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    const newItemId = crypto.randomUUID()
+                                    updateChecklistDraft(kr.id, (current) => [
+                                      ...current,
+                                      { id: newItemId, title: '', done: false },
+                                    ])
+                                    focusChecklistItem(kr.id, newItemId)
+                                  }
+                                }}
+                              />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-red-500"
+                                onClick={() =>
+                                  updateChecklistDraft(kr.id, (current) => {
+                                    const next = current.filter((currentItem) => currentItem.id !== item.id)
+                                    return next.length > 0 ? next : [{ id: crypto.randomUUID(), title: '', done: false }]
+                                  })
+                                }
+                                title="Remover item"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2 h-8"
+                          onClick={() => {
+                            const newItemId = crypto.randomUUID()
+                            updateChecklistDraft(kr.id, (current) => [
+                              ...current,
+                              { id: newItemId, title: '', done: false },
+                            ])
+                            focusChecklistItem(kr.id, newItemId)
+                          }}
+                        >
+                          <Plus className="mr-1 h-3 w-3" />
+                          Adicionar item
+                        </Button>
+                      </div>
+                    )}
+
+                    {kr.updateHistories && kr.updateHistories.length > 0 && (
+                      <div className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1.5">
+                        <p className="text-[11px] font-medium text-neutral-700">Ultimas atualizacoes</p>
+                        <div className="mt-1 space-y-0.5">
+                          {kr.updateHistories.slice(0, 3).map((history) => (
+                            <p key={history.id} className="text-[11px] text-neutral-600">
+                              {history.referenceMonth}:{' '}
+                              {history.eventType === 'CHECKLIST_UPDATE'
+                                ? `${Math.round(history.previousProgress ?? history.previousValue)}% -> ${Math.round(history.newProgress ?? history.newValue)}% (${history.previousDoneCount ?? 0}/${history.previousItemsCount ?? 0} -> ${history.newDoneCount ?? 0}/${history.newItemsCount ?? 0})`
+                                : `${history.previousValue} -> ${history.newValue} ${kr.unit ?? ''}`}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )
@@ -236,7 +415,6 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
           </div>
         )}
       </div>
-
     </div>
   )
 }
