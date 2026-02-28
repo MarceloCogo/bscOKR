@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,6 +37,12 @@ interface KeyResult {
   }>
 }
 
+interface ChecklistItem {
+  id: string
+  title: string
+  done: boolean
+}
+
 interface KeyResultsTabProps {
   objectiveId: string
   isEditMode?: boolean
@@ -62,9 +68,12 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
     thresholdDirection: 'MAXIMO' as 'MAXIMO' | 'MINIMO',
     currentValue: '0',
     unit: 'PERCENTUAL' as 'PERCENTUAL' | 'BRL' | 'USD' | 'EUR' | 'UNIDADE',
-    checklistFirstItem: '',
+    checklistItems: [{ id: crypto.randomUUID(), title: '', done: false }] as ChecklistItem[],
   })
   const [editValues, setEditValues] = useState<{ [key: string]: { currentValue: string } }>({})
+  const [checklistDrafts, setChecklistDrafts] = useState<Record<string, ChecklistItem[]>>({})
+  const [checklistSaveState, setChecklistSaveState] = useState<Record<string, 'idle' | 'pending' | 'saving' | 'saved' | 'error'>>({})
+  const checklistTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   useEffect(() => {
     loadKeyResults()
@@ -75,6 +84,84 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
       setShowAddForm(true)
     }
   }, [autoOpenCreateForm, isEditMode, objectiveId])
+
+  useEffect(() => {
+    setChecklistDrafts((prev) => {
+      const next = { ...prev }
+      keyResults.forEach((kr) => {
+        if (kr.type !== 'ENTREGAVEL') return
+        const source = Array.isArray(kr.checklistJson) && kr.checklistJson.length > 0
+          ? kr.checklistJson
+          : [{ id: crypto.randomUUID(), title: '', done: false }]
+        next[kr.id] = source.map((item) => ({ id: item.id, title: item.title, done: item.done }))
+      })
+      return next
+    })
+  }, [keyResults])
+
+  useEffect(() => {
+    return () => {
+      Object.values(checklistTimersRef.current).forEach((timer) => clearTimeout(timer))
+    }
+  }, [])
+
+  const normalizeChecklist = (items: ChecklistItem[]) => {
+    return items
+      .map((item) => ({ ...item, title: item.title.trim() }))
+      .filter((item) => item.title.length > 0)
+  }
+
+  const persistChecklist = async (krId: string, items: ChecklistItem[]) => {
+    const normalized = normalizeChecklist(items)
+    if (normalized.length === 0) {
+      setChecklistSaveState((prev) => ({ ...prev, [krId]: 'error' }))
+      return
+    }
+
+    setChecklistSaveState((prev) => ({ ...prev, [krId]: 'saving' }))
+    try {
+      const response = await fetch(`/api/kr/${krId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checklistJson: normalized }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Erro ao salvar checklist')
+      }
+
+      await loadKeyResults()
+      setChecklistSaveState((prev) => ({ ...prev, [krId]: 'saved' }))
+      setTimeout(() => {
+        setChecklistSaveState((prev) => ({ ...prev, [krId]: 'idle' }))
+      }, 1200)
+    } catch (error) {
+      console.error('Error autosaving checklist:', error)
+      setChecklistSaveState((prev) => ({ ...prev, [krId]: 'error' }))
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar checklist')
+    }
+  }
+
+  const scheduleChecklistAutosave = (krId: string, items: ChecklistItem[]) => {
+    if (checklistTimersRef.current[krId]) {
+      clearTimeout(checklistTimersRef.current[krId])
+    }
+
+    setChecklistSaveState((prev) => ({ ...prev, [krId]: 'pending' }))
+    checklistTimersRef.current[krId] = setTimeout(() => {
+      persistChecklist(krId, items)
+    }, 500)
+  }
+
+  const updateChecklistDraft = (krId: string, updater: (current: ChecklistItem[]) => ChecklistItem[]) => {
+    setChecklistDrafts((prev) => {
+      const current = prev[krId] || [{ id: crypto.randomUUID(), title: '', done: false }]
+      const nextItems = updater(current)
+      scheduleChecklistAutosave(krId, nextItems)
+      return { ...prev, [krId]: nextItems }
+    })
+  }
 
   const loadKeyResults = async () => {
     try {
@@ -134,8 +221,8 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
       return
     }
 
-    if (newKR.type === 'ENTREGAVEL' && !newKR.checklistFirstItem.trim()) {
-      toast.error('Checklist inicial é obrigatório para KR Entregável')
+    if (newKR.type === 'ENTREGAVEL' && normalizeChecklist(newKR.checklistItems).length === 0) {
+      toast.error('Adicione pelo menos um item de checklist para KR Entregavel')
       return
     }
 
@@ -195,11 +282,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
       }
 
       if (newKR.type === 'ENTREGAVEL') {
-        payload.checklistJson = [{
-          id: crypto.randomUUID(),
-          title: newKR.checklistFirstItem,
-          done: false,
-        }]
+        payload.checklistJson = normalizeChecklist(newKR.checklistItems)
       }
 
       const response = await fetch('/api/kr', {
@@ -220,7 +303,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
           thresholdDirection: 'MAXIMO',
           currentValue: '0',
           unit: 'PERCENTUAL',
-          checklistFirstItem: '',
+          checklistItems: [{ id: crypto.randomUUID(), title: '', done: false }],
         })
         setShowAddForm(false)
         await loadKeyResults()
@@ -291,6 +374,30 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
     } finally {
       setDeletingId(null)
     }
+  }
+
+  const addNewKRChecklistItem = () => {
+    setNewKR((prev) => ({
+      ...prev,
+      checklistItems: [...prev.checklistItems, { id: crypto.randomUUID(), title: '', done: false }],
+    }))
+  }
+
+  const updateNewKRChecklistItem = (itemId: string, title: string) => {
+    setNewKR((prev) => ({
+      ...prev,
+      checklistItems: prev.checklistItems.map((item) => (item.id === itemId ? { ...item, title } : item)),
+    }))
+  }
+
+  const removeNewKRChecklistItem = (itemId: string) => {
+    setNewKR((prev) => {
+      const nextItems = prev.checklistItems.filter((item) => item.id !== itemId)
+      return {
+        ...prev,
+        checklistItems: nextItems.length > 0 ? nextItems : [{ id: crypto.randomUUID(), title: '', done: false }],
+      }
+    })
   }
 
   if (loading) {
@@ -373,7 +480,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
                       </div>
 
                       {/* Inline Edit Current Value */}
-                      {isEditMode && isEditing && (
+                      {isEditMode && kr.type !== 'ENTREGAVEL' && isEditing && (
                         <div className="mt-2 flex items-center gap-2">
                           <Input
                             type="number"
@@ -409,6 +516,97 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
                           >
                             <X className="h-4 w-4" />
                           </Button>
+                        </div>
+                      )}
+
+                      {kr.type === 'ENTREGAVEL' && (
+                        <div className="mt-3 rounded-md border border-neutral-200 bg-neutral-50 p-2.5">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-600">Checklist</span>
+                            <span className="text-[11px] text-neutral-500">
+                              {checklistSaveState[kr.id] === 'saving' && 'Salvando...'}
+                              {checklistSaveState[kr.id] === 'pending' && 'Alteracoes pendentes'}
+                              {checklistSaveState[kr.id] === 'saved' && 'Salvo'}
+                              {checklistSaveState[kr.id] === 'error' && 'Adicione ao menos 1 item valido'}
+                            </span>
+                          </div>
+
+                          <div className="space-y-2">
+                            {(checklistDrafts[kr.id] || [{ id: crypto.randomUUID(), title: '', done: false }]).map((item) => (
+                              <div key={item.id} className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={item.done}
+                                  disabled={!isEditMode}
+                                  className="h-4 w-4 rounded border-neutral-300"
+                                  onChange={(e) =>
+                                    updateChecklistDraft(kr.id, (current) =>
+                                      current.map((currentItem) =>
+                                        currentItem.id === item.id ? { ...currentItem, done: e.target.checked } : currentItem
+                                      )
+                                    )
+                                  }
+                                />
+                                <Input
+                                  value={item.title}
+                                  disabled={!isEditMode}
+                                  placeholder="Descreva uma entrega"
+                                  className="h-8 text-sm"
+                                  onChange={(e) =>
+                                    updateChecklistDraft(kr.id, (current) =>
+                                      current.map((currentItem) =>
+                                        currentItem.id === item.id ? { ...currentItem, title: e.target.value } : currentItem
+                                      )
+                                    )
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && isEditMode) {
+                                      e.preventDefault()
+                                      updateChecklistDraft(kr.id, (current) => [
+                                        ...current,
+                                        { id: crypto.randomUUID(), title: '', done: false },
+                                      ])
+                                    }
+                                  }}
+                                />
+                                {isEditMode && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 text-red-500"
+                                    onClick={() =>
+                                      updateChecklistDraft(kr.id, (current) => {
+                                        const nextItems = current.filter((currentItem) => currentItem.id !== item.id)
+                                        return nextItems.length > 0
+                                          ? nextItems
+                                          : [{ id: crypto.randomUUID(), title: '', done: false }]
+                                      })
+                                    }
+                                    title="Remover item"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {isEditMode && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mt-2 h-8"
+                              onClick={() =>
+                                updateChecklistDraft(kr.id, (current) => [
+                                  ...current,
+                                  { id: crypto.randomUUID(), title: '', done: false },
+                                ])
+                              }
+                            >
+                              <Plus className="mr-1 h-3 w-3" />
+                              Adicionar item
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -563,13 +761,42 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
             )}
 
             {newKR.type === 'ENTREGAVEL' && (
-              <div>
-                <label className="block text-xs font-medium mb-1">Primeiro item do checklist</label>
-                <Input
-                  placeholder="Ex: Entregar dashboard em produção"
-                  value={newKR.checklistFirstItem}
-                  onChange={(e) => setNewKR({ ...newKR, checklistFirstItem: e.target.value })}
-                />
+              <div className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium">Checklist do entregavel</label>
+                  <span className="text-[11px] text-neutral-500">Enter cria novo item</span>
+                </div>
+
+                {newKR.checklistItems.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2">
+                    <Input
+                      placeholder="Ex: Entregar dashboard em producao"
+                      value={item.title}
+                      onChange={(e) => updateNewKRChecklistItem(item.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          addNewKRChecklistItem()
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 w-9 p-0 text-red-500"
+                      onClick={() => removeNewKRChecklistItem(item.id)}
+                      title="Remover item"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+
+                <Button type="button" variant="outline" size="sm" onClick={addNewKRChecklistItem}>
+                  <Plus className="mr-1 h-3 w-3" />
+                  Adicionar item
+                </Button>
               </div>
             )}
             <div className="flex gap-2">
