@@ -21,9 +21,16 @@ interface KeyResult {
 interface KeyResultsTabProps {
   objectiveId: string
   isEditMode?: boolean
+  cycles?: { id: string; name: string; key: string }[]
 }
 
-export function KeyResultsTab({ objectiveId, isEditMode = true }: KeyResultsTabProps) {
+interface CycleOption {
+  id: string
+  name: string
+  key: string
+}
+
+export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: KeyResultsTabProps) {
   const router = useRouter()
   const [keyResults, setKeyResults] = useState<KeyResult[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,6 +41,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true }: KeyResultsTabP
     targetValue: '',
     currentValue: '0',
     unit: '%',
+    cycleId: '',
   })
   const [editValues, setEditValues] = useState<{ [key: string]: { currentValue: string } }>({})
 
@@ -73,11 +81,12 @@ export function KeyResultsTab({ objectiveId, isEditMode = true }: KeyResultsTabP
           targetValue: parseFloat(newKR.targetValue),
           currentValue: parseFloat(newKR.currentValue) || 0,
           unit: newKR.unit,
+          cycleId: newKR.cycleId || null,
         }),
       })
 
       if (response.ok) {
-        setNewKR({ title: '', targetValue: '', currentValue: '0', unit: '%' })
+        setNewKR({ title: '', targetValue: '', currentValue: '0', unit: '%', cycleId: '' })
         setShowAddForm(false)
         loadKeyResults()
         router.refresh()
@@ -299,6 +308,23 @@ export function KeyResultsTab({ objectiveId, isEditMode = true }: KeyResultsTabP
                 </select>
               </div>
             </div>
+            {cycles.length > 0 && (
+              <div>
+                <label className="block text-xs font-medium mb-1">Ciclo (opcional)</label>
+                <select
+                  className="w-full h-9 px-2 border rounded"
+                  value={newKR.cycleId}
+                  onChange={(e) => setNewKR({ ...newKR, cycleId: e.target.value })}
+                >
+                  <option value="">Nenhum</option>
+                  {cycles.map((cycle) => (
+                    <option key={cycle.id} value={cycle.id}>
+                      {cycle.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex gap-2">
               <Button size="sm" onClick={handleAddKR}>
                 <Plus className="h-4 w-4 mr-1" />

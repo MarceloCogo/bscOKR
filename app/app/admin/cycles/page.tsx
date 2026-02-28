@@ -12,7 +12,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Calendar, Flag } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Plus, Edit, Trash2, Calendar } from 'lucide-react'
 
 interface Cycle {
   id: string
@@ -20,13 +21,13 @@ interface Cycle {
   key: string
   startDate: string
   endDate: string
-  status: { id: string; name: string; color: string | null } | null
+  status: { id: string; name: string; key: string } | null
 }
 
 interface CycleStatus {
   id: string
   name: string
-  color: string | null
+  key: string
 }
 
 export default function CyclesPage() {
@@ -74,6 +75,11 @@ export default function CyclesPage() {
   }
 
   const handleSubmit = async () => {
+    if (!formData.name.trim() || !formData.key.trim()) {
+      toast.error('Preencha o nome e a chave')
+      return
+    }
+
     try {
       const url = editingCycle ? `/api/cycle/${editingCycle.id}` : '/api/cycle'
       const method = editingCycle ? 'PATCH' : 'POST'
@@ -146,11 +152,17 @@ export default function CyclesPage() {
     return new Date(date).toLocaleDateString('pt-BR')
   }
 
-  const isActive = (cycle: Cycle) => {
-    const now = new Date()
-    const start = new Date(cycle.startDate)
-    const end = new Date(cycle.endDate)
-    return now >= start && now <= end
+  const getStatusBadgeVariant = (key: string) => {
+    switch (key) {
+      case 'ACTIVE':
+        return 'default'
+      case 'PLANNING':
+        return 'secondary'
+      case 'COMPLETED':
+        return 'outline'
+      default:
+        return 'secondary'
+    }
   }
 
   if (loading) {
@@ -161,8 +173,11 @@ export default function CyclesPage() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Ciclos</h1>
-          <p className="text-muted-foreground">Gerencie os ciclos de OKR</p>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Calendar className="w-6 h-6" />
+            Ciclos
+          </h1>
+          <p className="text-muted-foreground">Gerencie os ciclos de OKR (trimestres, meses, anos)</p>
         </div>
         <Button onClick={openNewDialog}>
           <Plus className="w-4 h-4 mr-2" />
@@ -171,33 +186,30 @@ export default function CyclesPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Lista de Ciclos
-          </CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Lista de Ciclos</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Chave</TableHead>
-                <TableHead>Início</TableHead>
-                <TableHead>Fim</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-24">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {cycles.length === 0 ? (
+          {cycles.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">Nenhum ciclo encontrado</p>
+              <p className="text-sm">Crie seu primeiro ciclo para começar</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    Nenhum ciclo encontrado
-                  </TableCell>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Chave</TableHead>
+                  <TableHead>Início</TableHead>
+                  <TableHead>Fim</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-24">Ações</TableHead>
                 </TableRow>
-              ) : (
-                cycles.map(cycle => (
+              </TableHeader>
+              <TableBody>
+                {cycles.map(cycle => (
                   <TableRow key={cycle.id}>
                     <TableCell className="font-medium">{cycle.name}</TableCell>
                     <TableCell>
@@ -206,16 +218,12 @@ export default function CyclesPage() {
                     <TableCell>{formatDate(cycle.startDate)}</TableCell>
                     <TableCell>{formatDate(cycle.endDate)}</TableCell>
                     <TableCell>
-                      <Badge
-                        style={{
-                          backgroundColor: cycle.status?.color || '#888',
-                        }}
-                      >
+                      <Badge variant={getStatusBadgeVariant(cycle.status?.key || '')}>
                         {cycle.status?.name || 'Sem status'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -233,10 +241,10 @@ export default function CyclesPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -248,25 +256,28 @@ export default function CyclesPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium">Nome</label>
-              <Input
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Q1 2026"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Chave</label>
-              <Input
-                value={formData.key}
-                onChange={e => setFormData({ ...formData, key: e.target.value })}
-                placeholder="Ex: Q1"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Nome</label>
+                <Input
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Ex: Q1 2026"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Chave</label>
+                <Input
+                  value={formData.key}
+                  onChange={e => setFormData({ ...formData, key: e.target.value.toUpperCase() })}
+                  placeholder="Ex: Q1"
+                  maxLength={10}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium">Data Início</label>
+                <label className="text-sm font-medium mb-2 block">Data Início</label>
                 <Input
                   type="date"
                   value={formData.startDate}
@@ -274,7 +285,7 @@ export default function CyclesPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Data Fim</label>
+                <label className="text-sm font-medium mb-2 block">Data Fim</label>
                 <Input
                   type="date"
                   value={formData.endDate}
@@ -283,18 +294,22 @@ export default function CyclesPage() {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium">Status</label>
-              <select
-                className="w-full h-10 px-3 border rounded-md"
+              <label className="text-sm font-medium mb-2 block">Status</label>
+              <Select
                 value={formData.statusId}
-                onChange={e => setFormData({ ...formData, statusId: e.target.value })}
+                onValueChange={value => setFormData({ ...formData, statusId: value })}
               >
-                {statuses.map(status => (
-                  <option key={status.id} value={status.id}>
-                    {status.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map(status => (
+                    <SelectItem key={status.id} value={status.id}>
+                      {status.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

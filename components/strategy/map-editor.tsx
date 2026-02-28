@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { ObjectiveFormDialog } from './objective-form-dialog'
 import { ObjectiveEditDialog } from './objective-edit-dialog'
 import { ContextSelector } from './context-selector'
+import { ObjectiveDrawer } from './objective-drawer'
 
 interface StrategicObjective {
   id: string
@@ -58,6 +59,10 @@ export function MapEditor() {
   const [editingMetaValue, setEditingMetaValue] = useState('')
   const [isSavingMeta, setIsSavingMeta] = useState(false)
   const [inlineTitle, setInlineTitle] = useState('')
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [selectedObjective, setSelectedObjective] = useState<any>(null)
+  const [cycles, setCycles] = useState<any[]>([])
+  const [roles, setRoles] = useState<any[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -69,12 +74,14 @@ export function MapEditor() {
       const mapData = await getStrategyMap()
       setData(mapData)
 
-      const [perspectivesRes, pillarsRes, statusesRes, usersRes, orgNodesRes] = await Promise.all([
+      const [perspectivesRes, pillarsRes, statusesRes, usersRes, orgNodesRes, cyclesRes, rolesRes] = await Promise.all([
         fetch('/api/config/perspectives'),
         fetch('/api/config/pillars'),
         fetch('/api/config/objective-statuses'),
         fetch('/api/users'),
         fetch('/api/org'),
+        fetch('/api/cycle'),
+        fetch('/api/config/roles'),
       ])
 
       if (perspectivesRes.ok) setPerspectives(await perspectivesRes.json())
@@ -82,6 +89,14 @@ export function MapEditor() {
       if (statusesRes.ok) setStatuses(await statusesRes.json())
       if (usersRes.ok) setUsers(await usersRes.json())
       if (orgNodesRes.ok) setOrgNodes(await orgNodesRes.json())
+      if (cyclesRes.ok) {
+        const cyclesData = await cyclesRes.json()
+        setCycles(cyclesData.cycles || [])
+      }
+      if (rolesRes.ok) {
+        const rolesData = await rolesRes.json()
+        setRoles(rolesData.roles || [])
+      }
     } catch (error) {
       console.error('Error loading map:', error)
     } finally {
@@ -136,6 +151,11 @@ export function MapEditor() {
     } catch (error) {
       console.error('Error deleting objective:', error)
     }
+  }
+
+  const handleViewObjective = (objective: any) => {
+    setSelectedObjective(objective)
+    setDrawerOpen(true)
   }
 
   const handleReorderObjective = async (objectiveId: string, direction: 'up' | 'down') => {
@@ -298,6 +318,7 @@ export function MapEditor() {
                       objective={objective}
                       onEdit={() => setEditingObjective(objective)}
                       onDelete={() => handleDeleteObjective(objective.id)}
+                      onView={() => handleViewObjective(objective)}
                       canReorder={true}
                       onReorderUp={() => handleReorderObjective(objective.id, 'up')}
                       onReorderDown={() => handleReorderObjective(objective.id, 'down')}
@@ -443,6 +464,7 @@ export function MapEditor() {
                     objective={obj}
                     onEdit={() => setEditingObjective(obj)}
                     onDelete={() => handleDeleteObjective(obj.id)}
+                    onView={() => handleViewObjective(obj)}
                     canReorder={true}
                     onReorderUp={() => handleReorderObjective(obj.id, 'up')}
                     onReorderDown={() => handleReorderObjective(obj.id, 'down')}
@@ -515,6 +537,7 @@ export function MapEditor() {
                     objective={obj}
                     onEdit={() => setEditingObjective(obj)}
                     onDelete={() => handleDeleteObjective(obj.id)}
+                    onView={() => handleViewObjective(obj)}
                     canReorder={true}
                     onReorderUp={() => handleReorderObjective(obj.id, 'up')}
                     onReorderDown={() => handleReorderObjective(obj.id, 'down')}
@@ -587,6 +610,7 @@ export function MapEditor() {
                     objective={obj}
                     onEdit={() => setEditingObjective(obj)}
                     onDelete={() => handleDeleteObjective(obj.id)}
+                    onView={() => handleViewObjective(obj)}
                     canReorder={true}
                     onReorderUp={() => handleReorderObjective(obj.id, 'up')}
                     onReorderDown={() => handleReorderObjective(obj.id, 'down')}
@@ -670,6 +694,7 @@ export function MapEditor() {
                       objective={objective}
                       onEdit={() => setEditingObjective(objective)}
                       onDelete={() => handleDeleteObjective(objective.id)}
+                      onView={() => handleViewObjective(objective)}
                       canReorder={true}
                       onReorderUp={() => handleReorderObjective(objective.id, 'up')}
                       onReorderDown={() => handleReorderObjective(objective.id, 'down')}
@@ -764,6 +789,19 @@ export function MapEditor() {
             onOpenChange={(open) => !open && setEditingObjective(null)}
           />
         )}
+
+        <ObjectiveDrawer
+          objective={selectedObjective}
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          perspectives={perspectives}
+          pillars={pillars}
+          statuses={statuses}
+          orgNodes={orgNodes}
+          users={users}
+          roles={roles}
+          cycles={cycles}
+        />
       </div>
     </div>
   )
@@ -773,6 +811,7 @@ function ObjectiveCard({
   objective,
   onEdit,
   onDelete,
+  onView,
   canReorder,
   onReorderUp,
   onReorderDown,
@@ -782,6 +821,7 @@ function ObjectiveCard({
   objective: any,
   onEdit?: () => void,
   onDelete?: () => void,
+  onView?: () => void,
   canReorder?: boolean,
   onReorderUp?: () => void,
   onReorderDown?: () => void,
@@ -831,7 +871,10 @@ function ObjectiveCard({
   }
 
   return (
-    <div className={`${getContainerClass()} mb-1`}>
+    <div 
+      className={`${getContainerClass()} mb-1 ${!showControls ? 'cursor-pointer hover:ring-2 hover:ring-[#E87722]' : ''}`}
+      onClick={() => !showControls && onView?.()}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           {isEditingTitle ? (
