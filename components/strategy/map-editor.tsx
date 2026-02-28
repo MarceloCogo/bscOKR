@@ -450,7 +450,7 @@ export function MapEditor() {
                     style="pillar"
                   />
                 ))}
-                {data.regions?.pillarOffer?.editMode && (
+                {editMode && (
                   creatingInRegion === 'PILLAR_OFFER' ? (
                     <div className="border border-[#E87722] rounded-md p-4">
                       <input
@@ -522,7 +522,7 @@ export function MapEditor() {
                     style="pillar"
                   />
                 ))}
-                {data.regions?.pillarRevenue?.editMode && (
+                {editMode && (
                   creatingInRegion === 'PILLAR_REVENUE' ? (
                     <div className="border border-[#E87722] rounded-md p-4">
                       <input
@@ -594,7 +594,7 @@ export function MapEditor() {
                     style="pillar"
                   />
                 ))}
-                {data.regions?.pillarEfficiency?.editMode && (
+                {editMode && (
                   creatingInRegion === 'PILLAR_EFFICIENCY' ? (
                     <div className="border border-[#E87722] rounded-md p-4">
                       <input
