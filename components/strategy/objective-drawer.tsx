@@ -74,15 +74,6 @@ interface ObjectiveDrawerProps {
   orgNodes: OrgNode[]
   users: User[]
   roles: ResponsibilityRole[]
-  cycles?: Cycle[]
-}
-
-interface Cycle {
-  id: string
-  name: string
-  key: string
-  startDate: string
-  endDate: string
 }
 
 export function ObjectiveDrawer({
@@ -95,7 +86,6 @@ export function ObjectiveDrawer({
   orgNodes,
   users,
   roles,
-  cycles,
 }: ObjectiveDrawerProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('details')
@@ -209,7 +199,7 @@ export function ObjectiveDrawer({
           </TabsContent>
 
           <TabsContent value="keyresults" className="space-y-4">
-            <KeyResultsTab objectiveId={objective.id} isEditMode={true} cycles={cycles || []} />
+            <KeyResultsTab objectiveId={objective.id} isEditMode={true} />
           </TabsContent>
 
           <TabsContent value="responsibilities" className="space-y-4">

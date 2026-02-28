@@ -50,10 +50,24 @@ export function useObjectiveKRs(objectiveId: string | null) {
     }
   }
 
-  const updateKRValue = (krId: string, newValue: number) => {
-    setKrs(prev => prev.map(kr =>
-      kr.id === krId ? { ...kr, currentValue: newValue } : kr
-    ))
+  const updateKRValue = async (krId: string, newValue: number, referenceMonth?: string) => {
+    const monthRef =
+      typeof referenceMonth === 'string' && /^\d{4}-\d{2}$/.test(referenceMonth)
+        ? referenceMonth
+        : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+
+    const response = await fetch(`/api/kr/${krId}/update`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentValue: newValue, referenceMonth: monthRef }),
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      throw new Error(data.error || 'Erro ao atualizar KR')
+    }
+
+    await loadKRs()
   }
 
   useEffect(() => {

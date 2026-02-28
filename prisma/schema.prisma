@@ -58,6 +58,7 @@ model Tenant {
   objectiveLinks    ObjectiveLink[]
   strategyMapMeta   StrategyMapMeta[]
   keyResults        KeyResult[]
+  krUpdateHistories KRUpdateHistory[]
 
   @@map("tenants")
 }
@@ -77,6 +78,7 @@ model User {
   orgNodeMemberships   OrgNodeMembership[]
   userPreference       UserPreference?
   sponsoredObjectives  StrategicObjective[] @relation("ObjectiveSponsor")
+  krUpdateHistories    KRUpdateHistory[]
 
   @@unique([tenantId, email])
   @@map("users")
@@ -347,10 +349,33 @@ model KeyResult {
   metricType  KRMetricType?  @relation(fields: [metricTypeId], references: [id])
   status      KRStatus?      @relation(fields: [statusId], references: [id])
   cycle       Cycle?         @relation(fields: [cycleId], references: [id])
+  updateHistories KRUpdateHistory[]
 
   @@index([tenantId])
   @@index([objectiveId])
   @@map("key_results")
+}
+
+model KRUpdateHistory {
+  id              String   @id @default(cuid())
+  tenantId        String
+  keyResultId     String
+  updatedByUserId String
+  referenceMonth  String   // YYYY-MM
+  previousValue   Float
+  newValue        Float
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  // Relations
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  keyResult   KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  updatedBy   User      @relation(fields: [updatedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([keyResultId])
+  @@index([referenceMonth])
+  @@map("kr_update_history")
 }
 
 model ObjectiveResponsibility {

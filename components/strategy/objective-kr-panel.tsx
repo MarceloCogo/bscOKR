@@ -2,34 +2,53 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Target, X, TrendingUp } from 'lucide-react'
+import { Target, X, TrendingUp, Check, Loader2 } from 'lucide-react'
 import { useObjectiveKRs } from '@/lib/hooks/use-objective-krs'
-import { KRUpdateModal } from './kr-update-modal'
+import { toast } from 'sonner'
 
 interface ObjectiveKRPanelProps {
   objective: {
     id: string
     title: string
   } | null
-  open: boolean
   onOpenChange: (open: boolean) => void
-  cycles?: { id: string; name: string }[]
 }
 
-export function ObjectiveKRPanel({ objective, open, onOpenChange, cycles = [] }: ObjectiveKRPanelProps) {
+export function ObjectiveKRPanel({ objective, onOpenChange }: ObjectiveKRPanelProps) {
   const { krs, loading, updateKRValue } = useObjectiveKRs(objective?.id || null)
-  const [updateModalOpen, setUpdateModalOpen] = useState(false)
-  const [selectedKR, setSelectedKR] = useState<any>(null)
+  const [editingKRId, setEditingKRId] = useState<string | null>(null)
+  const [editingValue, setEditingValue] = useState('')
+  const [savingKRId, setSavingKRId] = useState<string | null>(null)
 
   const handleUpdateKR = (kr: any) => {
-    setSelectedKR(kr)
-    setUpdateModalOpen(true)
+    if (kr.type === 'ENTREGAVEL') {
+      toast.error('KRs ENTREGAVEL devem ser atualizados por checklist')
+      return
+    }
+
+    setEditingKRId(kr.id)
+    setEditingValue(String(kr.currentValue ?? 0))
   }
 
-  const handleUpdateComplete = (newValue: number) => {
-    if (selectedKR) {
-      updateKRValue(selectedKR.id, newValue)
+  const handleSaveUpdate = async (kr: any) => {
+    const value = Number(editingValue)
+    if (Number.isNaN(value) || value < 0) {
+      toast.error('Informe um valor numérico válido')
+      return
+    }
+
+    setSavingKRId(kr.id)
+    try {
+      await updateKRValue(kr.id, value)
+      toast.success('Valor atualizado com histórico mensal')
+      setEditingKRId(null)
+      setEditingValue('')
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao atualizar KR')
+    } finally {
+      setSavingKRId(null)
     }
   }
 
@@ -92,16 +111,16 @@ export function ObjectiveKRPanel({ objective, open, onOpenChange, cycles = [] }:
               Nenhum Key Result
             </h3>
             <p className="text-sm text-gray-500 mb-4">
-              Este objetivo ainda não tem Key Results definidos.
+              Crie KRs na aba do objetivo para acompanhar aqui.
             </p>
-            <Button size="sm">
-              Criar primeiro KR
-            </Button>
           </div>
         ) : (
           <div className="space-y-3">
             {krs.map((kr) => {
               const progress = getProgress(kr)
+              const isEditing = editingKRId === kr.id
+              const isSaving = savingKRId === kr.id
+
               return (
                 <Card key={kr.id} className="border border-gray-200">
                   <CardHeader className="pb-2">
@@ -134,17 +153,53 @@ export function ObjectiveKRPanel({ objective, open, onOpenChange, cycles = [] }:
 
                       {/* Actions */}
                       <div className="flex gap-2">
-                        {kr.type !== 'ENTREGAVEL' && (
+                        {kr.type !== 'ENTREGAVEL' && !isEditing && (
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleUpdateKR(kr)}
                             className="flex-1"
+                            disabled={isSaving}
                             aria-label={`Atualizar valor atual do Key Result: ${kr.title}`}
                           >
                             <TrendingUp className="w-3 h-3 mr-1" aria-hidden="true" />
                             Atualizar
                           </Button>
+                        )}
+
+                        {kr.type !== 'ENTREGAVEL' && isEditing && (
+                          <div className="flex w-full items-center gap-2">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={editingValue}
+                              onChange={(e) => setEditingValue(e.target.value)}
+                              className="h-8"
+                              disabled={isSaving}
+                              aria-label={`Novo valor atual para ${kr.title}`}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => handleSaveUpdate(kr)}
+                              disabled={isSaving}
+                              aria-label={`Salvar atualização do Key Result: ${kr.title}`}
+                            >
+                              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" /> : <Check className="w-3 h-3" aria-hidden="true" />}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingKRId(null)
+                                setEditingValue('')
+                              }}
+                              disabled={isSaving}
+                              aria-label={`Cancelar atualização do Key Result: ${kr.title}`}
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -156,15 +211,6 @@ export function ObjectiveKRPanel({ objective, open, onOpenChange, cycles = [] }:
         )}
       </div>
 
-      {/* Update Modal */}
-      {selectedKR && (
-        <KRUpdateModal
-          kr={selectedKR}
-          open={updateModalOpen}
-          onOpenChange={setUpdateModalOpen}
-          onUpdate={handleUpdateComplete}
-        />
-      )}
     </div>
   )
 }

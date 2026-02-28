@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Trash2, Edit, Check, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface KeyResult {
   id: string
@@ -32,21 +33,17 @@ interface KeyResult {
 interface KeyResultsTabProps {
   objectiveId: string
   isEditMode?: boolean
-  cycles?: { id: string; name: string; key: string }[]
 }
 
-interface CycleOption {
-  id: string
-  name: string
-  key: string
-}
-
-export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: KeyResultsTabProps) {
+export function KeyResultsTab({ objectiveId, isEditMode = true }: KeyResultsTabProps) {
   const router = useRouter()
   const [keyResults, setKeyResults] = useState<KeyResult[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [savingValueId, setSavingValueId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [newKR, setNewKR] = useState({
     type: 'AUMENTO' as 'AUMENTO' | 'REDUCAO' | 'ENTREGAVEL' | 'LIMIAR',
     title: '',
@@ -58,7 +55,6 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
     currentValue: '0',
     unit: 'PERCENTUAL' as 'PERCENTUAL' | 'BRL' | 'USD' | 'EUR' | 'UNIDADE',
     checklistFirstItem: '',
-    cycleId: '',
   })
   const [editValues, setEditValues] = useState<{ [key: string]: { currentValue: string } }>({})
 
@@ -72,9 +68,13 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
       if (response.ok) {
         const data = await response.json()
         setKeyResults(data.keyResults || [])
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Erro ao carregar Key Results')
       }
     } catch (error) {
       console.error('Error loading key results:', error)
+      toast.error('Erro ao carregar Key Results')
     } finally {
       setLoading(false)
     }
@@ -85,50 +85,97 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
   }
 
   const handleAddKR = async () => {
-    if (!newKR.title.trim() || !newKR.dueDate) return
+    if (!newKR.title.trim()) {
+      toast.error('Informe o título da Key Result')
+      return
+    }
+
+    if (!newKR.dueDate) {
+      toast.error('Informe a data limite')
+      return
+    }
 
     if ((newKR.type === 'AUMENTO' || newKR.type === 'REDUCAO' || newKR.type === 'LIMIAR') && !newKR.unit) {
+      toast.error('Selecione a unidade para KR numérica')
+      return
+    }
+
+    if (newKR.type === 'AUMENTO' && !newKR.targetValue) {
+      toast.error('Target é obrigatório para KR do tipo Aumento')
       return
     }
 
     if (newKR.type === 'REDUCAO' && !newKR.baselineValue) {
+      toast.error('Baseline é obrigatório para KR do tipo Redução')
+      return
+    }
+
+    if (newKR.type === 'REDUCAO' && !newKR.targetValue) {
+      toast.error('Target é obrigatório para KR do tipo Redução')
       return
     }
 
     if (newKR.type === 'LIMIAR' && !newKR.thresholdValue) {
+      toast.error('Valor limite é obrigatório para KR do tipo Limiar')
       return
     }
 
     if (newKR.type === 'ENTREGAVEL' && !newKR.checklistFirstItem.trim()) {
+      toast.error('Checklist inicial é obrigatório para KR Entregável')
       return
     }
 
+    setIsCreating(true)
     try {
       const payload: any = {
         objectiveId,
         type: newKR.type,
         title: newKR.title,
         dueDate: newKR.dueDate,
-        cycleId: newKR.cycleId || null,
       }
 
       if (newKR.type === 'AUMENTO') {
-        payload.targetValue = parseFloat(newKR.targetValue)
-        payload.currentValue = parseFloat(newKR.currentValue) || 0
+        const targetValue = parseFloat(newKR.targetValue)
+        const currentValue = parseFloat(newKR.currentValue) || 0
+        if (Number.isNaN(targetValue)) {
+          toast.error('Target inválido para KR do tipo Aumento')
+          setIsCreating(false)
+          return
+        }
+
+        payload.targetValue = targetValue
+        payload.currentValue = currentValue
         payload.unit = newKR.unit
         payload.baselineValue = newKR.baselineValue ? parseFloat(newKR.baselineValue) : null
       }
 
       if (newKR.type === 'REDUCAO') {
-        payload.baselineValue = parseFloat(newKR.baselineValue)
-        payload.targetValue = parseFloat(newKR.targetValue)
-        payload.currentValue = parseFloat(newKR.currentValue) || 0
+        const baselineValue = parseFloat(newKR.baselineValue)
+        const targetValue = parseFloat(newKR.targetValue)
+        const currentValue = parseFloat(newKR.currentValue) || 0
+        if (Number.isNaN(baselineValue) || Number.isNaN(targetValue)) {
+          toast.error('Baseline/Target inválido para KR do tipo Redução')
+          setIsCreating(false)
+          return
+        }
+
+        payload.baselineValue = baselineValue
+        payload.targetValue = targetValue
+        payload.currentValue = currentValue
         payload.unit = newKR.unit
       }
 
       if (newKR.type === 'LIMIAR') {
-        payload.thresholdValue = parseFloat(newKR.thresholdValue)
-        payload.currentValue = parseFloat(newKR.currentValue) || 0
+        const thresholdValue = parseFloat(newKR.thresholdValue)
+        const currentValue = parseFloat(newKR.currentValue) || 0
+        if (Number.isNaN(thresholdValue)) {
+          toast.error('Valor de limiar inválido')
+          setIsCreating(false)
+          return
+        }
+
+        payload.thresholdValue = thresholdValue
+        payload.currentValue = currentValue
         payload.unit = newKR.unit
         payload.thresholdDirection = newKR.thresholdDirection
       }
@@ -148,6 +195,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
       })
 
       if (response.ok) {
+        toast.success('Key Result criada com sucesso')
         setNewKR({
           type: 'AUMENTO',
           title: '',
@@ -159,40 +207,75 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
           currentValue: '0',
           unit: 'PERCENTUAL',
           checklistFirstItem: '',
-          cycleId: '',
         })
         setShowAddForm(false)
-        loadKeyResults()
+        await loadKeyResults()
         router.refresh()
+      } else {
+        const data = await response.json()
+        toast.error(data.error?.formErrors?.[0] || data.error || 'Erro ao criar KR')
       }
     } catch (error) {
       console.error('Error creating key result:', error)
+      toast.error('Erro ao criar KR')
+    } finally {
+      setIsCreating(false)
     }
   }
 
   const handleUpdateCurrentValue = async (krId: string, newValue: number) => {
+    if (Number.isNaN(newValue) || newValue < 0) {
+      toast.error('Informe um valor válido para atualização')
+      return false
+    }
+
+    setSavingValueId(krId)
     try {
-      await fetch(`/api/kr/${krId}`, {
+      const referenceMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+      const response = await fetch(`/api/kr/${krId}/update`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentValue: newValue }),
+        body: JSON.stringify({ currentValue: newValue, referenceMonth }),
       })
-      loadKeyResults()
-      router.refresh()
+
+      if (response.ok) {
+        toast.success('Valor atualizado e histórico mensal registrado')
+        await loadKeyResults()
+        router.refresh()
+        return true
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Erro ao atualizar KR')
+        return false
+      }
     } catch (error) {
       console.error('Error updating key result:', error)
+      toast.error('Erro ao atualizar KR')
+      return false
+    } finally {
+      setSavingValueId(null)
     }
   }
 
   const handleDeleteKR = async (krId: string) => {
     if (!confirm('Tem certeza que deseja excluir esta Key Result?')) return
 
+    setDeletingId(krId)
     try {
-      await fetch(`/api/kr/${krId}`, { method: 'DELETE' })
-      loadKeyResults()
-      router.refresh()
+      const response = await fetch(`/api/kr/${krId}`, { method: 'DELETE' })
+      if (response.ok) {
+        toast.success('Key Result excluída com sucesso')
+        await loadKeyResults()
+        router.refresh()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Erro ao excluir KR')
+      }
     } catch (error) {
       console.error('Error deleting key result:', error)
+      toast.error('Erro ao excluir KR')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -292,10 +375,13 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
                           <Button
                             size="sm"
                             className="h-8"
-                            onClick={() => {
+                            disabled={savingValueId === kr.id}
+                            onClick={async () => {
                               const value = parseFloat(editValues[kr.id]?.currentValue ?? '0')
-                              handleUpdateCurrentValue(kr.id, value)
-                              setEditingId(null)
+                              const ok = await handleUpdateCurrentValue(kr.id, value)
+                              if (ok) {
+                                setEditingId(null)
+                              }
                             }}
                           >
                             <Check className="h-4 w-4" />
@@ -304,6 +390,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
                             size="sm"
                             variant="outline"
                             className="h-8"
+                            disabled={savingValueId === kr.id}
                             onClick={() => setEditingId(null)}
                           >
                             <X className="h-4 w-4" />
@@ -315,22 +402,26 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
                     {/* Actions */}
                     {isEditMode && (
                       <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => {
-                            setEditingId(kr.id)
-                             setEditValues({ [kr.id]: { currentValue: String(kr.currentValue ?? 0) } })
-                          }}
-                          title="Atualizar valor atual"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
+                        {kr.type !== 'ENTREGAVEL' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            disabled={savingValueId === kr.id || deletingId === kr.id}
+                            onClick={() => {
+                              setEditingId(kr.id)
+                              setEditValues({ [kr.id]: { currentValue: String(kr.currentValue ?? 0) } })
+                            }}
+                            title="Atualizar valor atual"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0 text-red-500"
+                          disabled={deletingId === kr.id || savingValueId === kr.id}
                           onClick={() => handleDeleteKR(kr.id)}
                           title="Excluir"
                         >
@@ -467,29 +558,12 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
                 />
               </div>
             )}
-            {cycles.length > 0 && (
-              <div>
-                <label className="block text-xs font-medium mb-1">Ciclo (opcional)</label>
-                <select
-                  className="w-full h-9 px-2 border rounded"
-                  value={newKR.cycleId}
-                  onChange={(e) => setNewKR({ ...newKR, cycleId: e.target.value })}
-                >
-                  <option value="">Nenhum</option>
-                  {cycles.map((cycle) => (
-                    <option key={cycle.id} value={cycle.id}>
-                      {cycle.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
             <div className="flex gap-2">
-              <Button size="sm" onClick={handleAddKR}>
+              <Button size="sm" onClick={handleAddKR} disabled={isCreating}>
                 <Plus className="h-4 w-4 mr-1" />
-                Adicionar
+                {isCreating ? 'Adicionando...' : 'Adicionar'}
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setShowAddForm(false)}>
+              <Button size="sm" variant="outline" disabled={isCreating} onClick={() => setShowAddForm(false)}>
                 Cancelar
               </Button>
             </div>

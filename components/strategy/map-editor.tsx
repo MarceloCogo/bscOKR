@@ -845,9 +845,7 @@ export function MapEditor() {
       >
         <ObjectiveKRPanel
           objective={selectedObjectiveForKR}
-          open={krPanelOpen}
           onOpenChange={setKrPanelOpen}
-          cycles={cycles}
         />
       </div>
     </div>

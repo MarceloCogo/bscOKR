@@ -32,7 +32,7 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json()
-    const { currentValue } = body
+    const { currentValue, referenceMonth, notes } = body
 
     if (typeof currentValue !== 'number' || currentValue < 0) {
       return NextResponse.json(
@@ -40,6 +40,10 @@ export async function PATCH(
         { status: 400 }
       )
     }
+
+    const monthRef = typeof referenceMonth === 'string' && /^\d{4}-\d{2}$/.test(referenceMonth)
+      ? referenceMonth
+      : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
 
     // Verify key result belongs to tenant
     const existing = await prisma.keyResult.findFirst({
@@ -70,22 +74,37 @@ export async function PATCH(
       )
     }
 
-    const keyResult = await prisma.keyResult.update({
-      where: { id },
-      data: { currentValue },
-      include: {
-        metricType: true,
-        status: true,
-        objective: {
-          select: {
-            id: true,
-            title: true,
+    const previousValue = (existing as any).currentValue ?? 0
+
+    const [keyResult, history] = await prisma.$transaction([
+      prisma.keyResult.update({
+        where: { id },
+        data: { currentValue },
+        include: {
+          metricType: true,
+          status: true,
+          objective: {
+            select: {
+              id: true,
+              title: true,
+            },
           },
         },
-      },
-    })
+      }),
+      prisma.kRUpdateHistory.create({
+        data: {
+          tenantId: session.user.tenantId,
+          keyResultId: id,
+          updatedByUserId: session.user.id,
+          referenceMonth: monthRef,
+          previousValue,
+          newValue: currentValue,
+          notes: typeof notes === 'string' ? notes : null,
+        },
+      }),
+    ])
 
-    return NextResponse.json({ keyResult })
+    return NextResponse.json({ keyResult, history })
   } catch (error) {
     console.error('Error updating key result value:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
