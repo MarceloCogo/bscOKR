@@ -193,13 +193,13 @@ export function MapEditor() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F4F4] py-4">
-      <div className="max-w-[1280px] mx-auto px-4">
+    <div className="min-h-screen bg-[#F4F4F4] py-2">
+      <div className="max-w-[1280px] mx-auto px-3">
         {/* Header */}
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex justify-between items-center mb-2">
           <div>
-            <h1 className="text-xl font-bold text-gray-800">Mapa Estratégico</h1>
-            <p className="text-gray-500 text-sm mt-0.5">Contexto: {data.orgNode?.name}</p>
+            <h1 className="text-lg font-bold text-gray-800">Mapa Estratégico</h1>
+            <p className="text-gray-500 text-xs mt-0.5">Contexto: {data.orgNode?.name}</p>
           </div>
           <div className="flex items-center space-x-3">
             <div className="flex bg-white rounded-lg p-1 border border-gray-200">
@@ -249,10 +249,10 @@ export function MapEditor() {
         />
 
         {/* Ambição Estratégica */}
-        <div className="text-center mt-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-800">Ambição Estratégica</h2>
+        <div className="text-center mt-4 mb-4">
+          <h2 className="text-base font-bold text-gray-800">Ambição Estratégica</h2>
           {editMode ? (
-            <div className="max-w-2xl mx-auto mt-3 bg-white rounded-md border border-gray-200 p-4">
+            <div className="max-w-2xl mx-auto mt-2 bg-white rounded-md border border-gray-200 p-3">
               {editingMeta === 'ambitionText' ? (
                 <div className="space-y-3">
                   <textarea
@@ -302,13 +302,13 @@ export function MapEditor() {
         </div>
 
         {/* Focos Estratégicos de Crescimento */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-4 text-center text-gray-700">Focos Estratégicos de Crescimento</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mb-4">
+          <h2 className="text-base font-semibold mb-3 text-center text-gray-700">Focos Estratégicos de Crescimento</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[0, 1, 2].map(index => {
               const objective = data.regions?.growthFocus?.[index]
               return (
-                <div key={index} className="min-h-[80px] bg-white rounded-md border border-[#CFCFCF] p-3 shadow-sm">
+                <div key={index} className="min-h-[60px] bg-white rounded-md border border-[#CFCFCF] p-2 shadow-sm">
                   {objective ? (
                     <ObjectiveCard
                       objective={objective}
@@ -388,11 +388,11 @@ export function MapEditor() {
         </div>
 
         {/* Proposta de Valor */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-4 text-center text-gray-700">Proposta de Valor</h2>
+        <div className="mb-4">
+          <h2 className="text-base font-semibold mb-3 text-center text-gray-700">Proposta de Valor</h2>
           <div className="bg-white rounded-lg border border-[#CFCFCF] overflow-hidden shadow-sm">
-            <div className="h-[8px] bg-[#E87722]"></div>
-            <div className="p-4 text-center">
+            <div className="h-[6px] bg-[#E87722]"></div>
+            <div className="p-3 text-center">
               {editMode ? (
                 <div>
                   {editingMeta === 'valuePropositionText' ? (
@@ -446,13 +446,13 @@ export function MapEditor() {
         </div>
 
         {/* Pilares */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-4 text-center text-gray-700">Pilares</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="mb-4">
+          <h2 className="text-base font-semibold mb-3 text-center text-gray-700">Pilares</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             {/* Oferta */}
-            <div className="bg-white rounded-lg border border-[#CFCFCF] p-3 shadow-sm">
-              <h3 className="font-semibold mb-3 text-center text-gray-700 pb-2 border-b border-gray-200">Oferta</h3>
-              <div className="space-y-3" id="pillars-section">
+            <div className="bg-white rounded-lg border border-[#CFCFCF] p-2 shadow-sm">
+              <h3 className="font-semibold mb-2 text-center text-gray-700 pb-1 border-b border-gray-200">Oferta</h3>
+              <div className="space-y-2" id="pillars-section">
                 {data.regions?.pillarOffer?.map((obj: any) => (
                   <ObjectiveCard
                     key={obj.id}
@@ -522,9 +522,9 @@ export function MapEditor() {
             </div>
 
             {/* Receita */}
-            <div className="bg-white rounded-lg border border-[#CFCFCF] p-3 shadow-sm">
-              <h3 className="font-semibold mb-3 text-center text-gray-700 pb-2 border-b border-gray-200">Receita</h3>
-              <div className="space-y-3">
+            <div className="bg-white rounded-lg border border-[#CFCFCF] p-2 shadow-sm">
+              <h3 className="font-semibold mb-2 text-center text-gray-700 pb-1 border-b border-gray-200">Receita</h3>
+              <div className="space-y-2">
                 {data.regions?.pillarRevenue?.map((obj: any) => (
                   <ObjectiveCard
                     key={obj.id}
@@ -594,9 +594,9 @@ export function MapEditor() {
             </div>
 
             {/* Eficiência */}
-            <div className="bg-white rounded-lg border border-[#CFCFCF] p-3 shadow-sm">
-              <h3 className="font-semibold mb-3 text-center text-gray-700 pb-2 border-b border-gray-200">Eficiência</h3>
-              <div className="space-y-3">
+            <div className="bg-white rounded-lg border border-[#CFCFCF] p-2 shadow-sm">
+              <h3 className="font-semibold mb-2 text-center text-gray-700 pb-1 border-b border-gray-200">Eficiência</h3>
+              <div className="space-y-2">
                 {data.regions?.pillarEfficiency?.map((obj: any) => (
                   <ObjectiveCard
                     key={obj.id}
@@ -668,14 +668,14 @@ export function MapEditor() {
         </div>
 
         {/* Base */}
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold mb-4 text-center text-gray-700">Base</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mb-3">
+          <h2 className="text-base font-semibold mb-3 text-center text-gray-700">Base</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[0, 1, 2].map(index => {
               const objective = data.regions?.peopleBase?.[index]
               const baseLabels = ['Pessoas', 'Cultura', 'Talentos']
               return (
-                <div key={index} className="min-h-[80px] bg-[#DCEFE8] rounded-lg p-3">
+                <div key={index} className="min-h-[60px] bg-[#DCEFE8] rounded-lg p-2">
                   <div className="text-center mb-4">
                     <span className="text-sm font-semibold text-gray-700">
                       {baseLabels[index]}
@@ -838,23 +838,23 @@ function ObjectiveCard({
   const getContainerClass = () => {
     switch (style) {
       case 'pillar':
-        return 'bg-[#F2C7A8] rounded-md p-3'
+        return 'bg-[#F2C7A8] rounded-md p-2'
       case 'base':
-        return 'bg-white/60 rounded-md p-3'
+        return 'bg-white/60 rounded-md p-2'
       default:
-        return 'bg-white border border-gray-200 rounded-md p-3'
+        return 'bg-white border border-gray-200 rounded-md p-2'
     }
   }
 
   return (
-    <div className={`${getContainerClass()} mb-2`}>
+    <div className={`${getContainerClass()} mb-1`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           {isEditingTitle ? (
-            <div className="space-y-2">
+            <div className="space-y-1">
               <input
                 type="text"
-                className="w-full p-1 border rounded text-sm"
+                className="w-full p-1 border rounded text-xs"
                 value={titleValue}
                 onChange={(e) => setTitleValue(e.target.value)}
                 onKeyDown={(e) => {
@@ -864,50 +864,50 @@ function ObjectiveCard({
                 autoFocus
               />
               <div className="flex gap-1">
-                <Button size="sm" variant="ghost" className="h-6 px-2" onClick={handleTitleSave}>
+                <Button size="sm" variant="ghost" className="h-5 px-1 text-xs" onClick={handleTitleSave}>
                   ✓
                 </Button>
-                <Button size="sm" variant="ghost" className="h-6 px-2" onClick={handleTitleCancel}>
+                <Button size="sm" variant="ghost" className="h-5 px-1 text-xs" onClick={handleTitleCancel}>
                   ✕
                 </Button>
               </div>
             </div>
           ) : (
             <h4
-              className={`font-medium text-sm ${showControls ? 'cursor-pointer hover:text-[#E87722]' : ''}`}
+              className={`font-medium text-xs ${showControls ? 'cursor-pointer hover:text-[#E87722]' : ''}`}
               onClick={handleTitleClick}
             >
               {objective.title}
             </h4>
           )}
-          <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+          <div className="flex items-center justify-between mt-1 text-[10px] text-gray-500">
             <span>{objective.perspective.name}</span>
-            <span className={`px-2 py-1 rounded text-xs ${objective.status.color ? '' : 'bg-gray-100'}`}
+            <span className={`px-1 py-0.5 rounded text-[10px] ${objective.status.color ? '' : 'bg-gray-100'}`}
                   style={objective.status.color ? { backgroundColor: objective.status.color } : {}}>
               {objective.status.name}
             </span>
           </div>
         </div>
         {showControls && (
-          <div className="flex items-center gap-1 ml-2">
+          <div className="flex items-center gap-0.5 ml-1">
             {canReorder && (
               <>
-                <Button variant="ghost" size="sm" onClick={onReorderUp} className="p-1 h-6 w-6">
-                  <ArrowUp className="h-3 w-3" />
+                <Button variant="ghost" size="sm" onClick={onReorderUp} className="p-0.5 h-5 w-5">
+                  <ArrowUp className="h-2.5 w-2.5" />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={onReorderDown} className="p-1 h-6 w-6">
-                  <ArrowDown className="h-3 w-3" />
+                <Button variant="ghost" size="sm" onClick={onReorderDown} className="p-0.5 h-5 w-5">
+                  <ArrowDown className="h-2.5 w-2.5" />
                 </Button>
               </>
             )}
             {onEdit && (
-              <Button variant="ghost" size="sm" onClick={onEdit} className="p-1 h-6 w-6">
-                <Edit className="h-3 w-3" />
+              <Button variant="ghost" size="sm" onClick={onEdit} className="p-0.5 h-5 w-5">
+                <Edit className="h-2.5 w-2.5" />
               </Button>
             )}
             {onDelete && (
-              <Button variant="ghost" size="sm" onClick={onDelete} className="p-1 h-6 w-6 text-red-600">
-                <Trash2 className="h-3 w-3" />
+              <Button variant="ghost" size="sm" onClick={onDelete} className="p-0.5 h-5 w-5 text-red-600">
+                <Trash2 className="h-2.5 w-2.5" />
               </Button>
             )}
           </div>
