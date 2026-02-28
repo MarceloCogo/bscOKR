@@ -79,6 +79,41 @@ export async function POST(request: NextRequest) {
     // Always bootstrap tenant configuration (creates roles, perspectives, etc.)
     await bootstrapTenantConfig(tenant.id)
 
+    // Create first organizational node (company)
+    const companyType = await prisma.orgNodeType.findFirst({
+      where: {
+        tenantId: tenant.id,
+        key: 'company',
+      },
+    })
+
+    let firstOrgNode = null
+    if (companyType) {
+      firstOrgNode = await prisma.orgNode.create({
+        data: {
+          tenantId: tenant.id,
+          name: tenantName,
+          typeId: companyType.id,
+        },
+      })
+
+      // Add user as primary member and leader of the company
+      await prisma.orgNodeMembership.create({
+        data: {
+          tenantId: tenant.id,
+          orgNodeId: firstOrgNode.id,
+          userId: user.id,
+          isPrimary: true,
+        },
+      })
+
+      // Set user as leader
+      await prisma.orgNode.update({
+        where: { id: firstOrgNode.id },
+        data: { leaderUserId: user.id },
+      })
+    }
+
     // Get appropriate role
     const roleKey = isAdmin ? 'admin' : 'member'
     const role = await prisma.role.findFirst({
@@ -94,6 +129,26 @@ export async function POST(request: NextRequest) {
         data: {
           userId: user.id,
           roleId: role.id,
+        },
+      })
+    }
+
+    // Set active context for the user
+    if (firstOrgNode) {
+      await prisma.userPreference.upsert({
+        where: {
+          tenantId_userId: {
+            tenantId: tenant.id,
+            userId: user.id,
+          },
+        },
+        update: {
+          activeOrgNodeId: firstOrgNode.id,
+        },
+        create: {
+          tenantId: tenant.id,
+          userId: user.id,
+          activeOrgNodeId: firstOrgNode.id,
         },
       })
     }

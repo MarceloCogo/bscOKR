@@ -30,7 +30,6 @@ export function ContextSelector({ currentContext, allContexts, onContextChange }
   const handleContextChange = async (orgNodeId: string) => {
     setSelectedContext(orgNodeId)
     await onContextChange(orgNodeId)
-    router.refresh()
   }
 
   if (allContexts.length <= 1) {

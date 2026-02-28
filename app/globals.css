@@ -13,6 +13,13 @@
     --border: 222 226 230;
     --input: 222 226 230;
     --ring: 236 92 32;
+    /* Cores semânticas do shadcn/ui */
+    --popover: 0 0 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --card: 0 0 100%;
+    --card-foreground: 240 10% 3.9%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
   }
 
   * {

@@ -57,6 +57,7 @@ export function MapEditor() {
   const [editingMeta, setEditingMeta] = useState<string | null>(null)
   const [editingMetaValue, setEditingMetaValue] = useState('')
   const [isSavingMeta, setIsSavingMeta] = useState(false)
+  const [inlineTitle, setInlineTitle] = useState('')
   const router = useRouter()
 
   useEffect(() => {
@@ -100,14 +101,14 @@ export function MapEditor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orgNodeId }),
       })
-      router.refresh()
+      await loadMap()
     } catch (error) {
       console.error('Error changing context:', error)
     }
   }
 
   const handleCreateInline = async (region: string, title: string) => {
-    if (!title.trim()) return
+    if (!title?.trim()) return
 
     try {
       await createObjectiveInRegion({
@@ -115,6 +116,7 @@ export function MapEditor() {
         title: title.trim(),
       })
       setCreatingInRegion(null)
+      setInlineTitle('')
       await loadMap()
       toast.success('Objetivo criado com sucesso')
     } catch (error) {
@@ -327,11 +329,14 @@ export function MapEditor() {
                           className="w-full p-2 border rounded text-sm"
                           placeholder="Digite o título do foco estratégico..."
                           autoFocus
+                          value={inlineTitle}
+                          onChange={(e) => setInlineTitle(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
-                              handleCreateInline('GROWTH_FOCUS', (e.target as HTMLInputElement).value)
+                              handleCreateInline('GROWTH_FOCUS', inlineTitle)
                             } else if (e.key === 'Escape') {
                               setCreatingInRegion(null)
+                              setInlineTitle('')
                             }
                           }}
                         />
@@ -339,10 +344,9 @@ export function MapEditor() {
                           <Button
                             size="sm"
                             className="bg-[#E87722] hover:bg-[#d06a1e]"
-                            onClick={(e) => {
-                              const input = (e.target as HTMLElement).closest('div')?.querySelector('input') as HTMLInputElement
-                              if (input?.value) {
-                                handleCreateInline('GROWTH_FOCUS', input.value)
+                            onClick={() => {
+                              if (inlineTitle.trim()) {
+                                handleCreateInline('GROWTH_FOCUS', inlineTitle.trim())
                               }
                             }}
                           >
@@ -351,7 +355,10 @@ export function MapEditor() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setCreatingInRegion(null)}
+                            onClick={() => {
+                              setCreatingInRegion(null)
+                              setInlineTitle('')
+                            }}
                           >
                             Cancelar
                           </Button>
@@ -468,11 +475,14 @@ export function MapEditor() {
                         className="w-full p-2 border rounded text-sm"
                         placeholder="Digite o título do objetivo..."
                         autoFocus
+                        value={inlineTitle}
+                        onChange={(e) => setInlineTitle(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            handleCreateInline('PILLAR_OFFER', (e.target as HTMLInputElement).value)
+                            handleCreateInline('PILLAR_OFFER', inlineTitle)
                           } else if (e.key === 'Escape') {
                             setCreatingInRegion(null)
+                            setInlineTitle('')
                           }
                         }}
                       />
@@ -480,10 +490,9 @@ export function MapEditor() {
                         <Button
                           size="sm"
                           className="bg-[#E87722] hover:bg-[#d06a1e]"
-                          onClick={(e) => {
-                            const input = (e.target as HTMLElement).closest('div')?.querySelector('input') as HTMLInputElement
-                            if (input?.value) {
-                              handleCreateInline('PILLAR_OFFER', input.value)
+                          onClick={() => {
+                            if (inlineTitle.trim()) {
+                              handleCreateInline('PILLAR_OFFER', inlineTitle.trim())
                             }
                           }}
                         >
@@ -492,7 +501,10 @@ export function MapEditor() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setCreatingInRegion(null)}
+                          onClick={() => {
+                            setCreatingInRegion(null)
+                            setInlineTitle('')
+                          }}
                         >
                           Cancelar
                         </Button>
@@ -535,11 +547,14 @@ export function MapEditor() {
                         className="w-full p-2 border rounded text-sm"
                         placeholder="Digite o título do objetivo..."
                         autoFocus
+                        value={inlineTitle}
+                        onChange={(e) => setInlineTitle(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            handleCreateInline('PILLAR_REVENUE', (e.target as HTMLInputElement).value)
+                            handleCreateInline('PILLAR_REVENUE', inlineTitle)
                           } else if (e.key === 'Escape') {
                             setCreatingInRegion(null)
+                            setInlineTitle('')
                           }
                         }}
                       />
@@ -547,10 +562,9 @@ export function MapEditor() {
                         <Button
                           size="sm"
                           className="bg-[#E87722] hover:bg-[#d06a1e]"
-                          onClick={(e) => {
-                            const input = (e.target as HTMLElement).closest('div')?.querySelector('input') as HTMLInputElement
-                            if (input?.value) {
-                              handleCreateInline('PILLAR_REVENUE', input.value)
+                          onClick={() => {
+                            if (inlineTitle.trim()) {
+                              handleCreateInline('PILLAR_REVENUE', inlineTitle.trim())
                             }
                           }}
                         >
@@ -559,7 +573,10 @@ export function MapEditor() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setCreatingInRegion(null)}
+                          onClick={() => {
+                            setCreatingInRegion(null)
+                            setInlineTitle('')
+                          }}
                         >
                           Cancelar
                         </Button>
@@ -602,11 +619,14 @@ export function MapEditor() {
                         className="w-full p-2 border rounded text-sm"
                         placeholder="Digite o título do objetivo..."
                         autoFocus
+                        value={inlineTitle}
+                        onChange={(e) => setInlineTitle(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            handleCreateInline('PILLAR_EFFICIENCY', (e.target as HTMLInputElement).value)
+                            handleCreateInline('PILLAR_EFFICIENCY', inlineTitle)
                           } else if (e.key === 'Escape') {
                             setCreatingInRegion(null)
+                            setInlineTitle('')
                           }
                         }}
                       />
@@ -614,10 +634,9 @@ export function MapEditor() {
                         <Button
                           size="sm"
                           className="bg-[#E87722] hover:bg-[#d06a1e]"
-                          onClick={(e) => {
-                            const input = (e.target as HTMLElement).closest('div')?.querySelector('input') as HTMLInputElement
-                            if (input?.value) {
-                              handleCreateInline('PILLAR_EFFICIENCY', input.value)
+                          onClick={() => {
+                            if (inlineTitle.trim()) {
+                              handleCreateInline('PILLAR_EFFICIENCY', inlineTitle.trim())
                             }
                           }}
                         >
@@ -626,7 +645,10 @@ export function MapEditor() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setCreatingInRegion(null)}
+                          onClick={() => {
+                            setCreatingInRegion(null)
+                            setInlineTitle('')
+                          }}
                         >
                           Cancelar
                         </Button>
@@ -679,11 +701,14 @@ export function MapEditor() {
                           className="w-full p-2 border rounded text-sm"
                           placeholder="Digite o título do objetivo..."
                           autoFocus
+                          value={inlineTitle}
+                          onChange={(e) => setInlineTitle(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
-                              handleCreateInline('PEOPLE_BASE', (e.target as HTMLInputElement).value)
+                              handleCreateInline('PEOPLE_BASE', inlineTitle)
                             } else if (e.key === 'Escape') {
                               setCreatingInRegion(null)
+                              setInlineTitle('')
                             }
                           }}
                         />
@@ -691,10 +716,9 @@ export function MapEditor() {
                           <Button
                             size="sm"
                             className="bg-[#E87722] hover:bg-[#d06a1e]"
-                            onClick={(e) => {
-                              const input = (e.target as HTMLElement).closest('div')?.querySelector('input') as HTMLInputElement
-                              if (input?.value) {
-                                handleCreateInline('PEOPLE_BASE', input.value)
+                            onClick={() => {
+                              if (inlineTitle.trim()) {
+                                handleCreateInline('PEOPLE_BASE', inlineTitle.trim())
                               }
                             }}
                           >
@@ -703,7 +727,10 @@ export function MapEditor() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setCreatingInRegion(null)}
+                            onClick={() => {
+                              setCreatingInRegion(null)
+                              setInlineTitle('')
+                            }}
                           >
                             Cancelar
                           </Button>

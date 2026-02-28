@@ -20,6 +20,19 @@ module.exports = {
         border: '#DEE2E6',
         input: '#DEE2E6',
         ring: '#EC5C20',
+        // Cores semânticas do shadcn/ui
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))'
+        },
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))'
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))'
+        },
       }
     },
   },
