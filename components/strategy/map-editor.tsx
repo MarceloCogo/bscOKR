@@ -223,24 +223,6 @@ export function MapEditor() {
                 Editar mapa
               </Button>
             </div>
-            {editMode && (
-              <Button
-                size="sm"
-                onClick={() => {
-                  const firstEmptyIndex = data.regions?.growthFocus?.findIndex((obj: any) => !obj) ?? -1
-                  if (firstEmptyIndex !== -1) {
-                    setCreatingInRegion(`GROWTH_FOCUS_${firstEmptyIndex}`)
-                    document.getElementById(`growth-focus-${firstEmptyIndex}`)?.scrollIntoView({ behavior: 'smooth' })
-                  } else {
-                    document.getElementById('pillars-section')?.scrollIntoView({ behavior: 'smooth' })
-                  }
-                }}
-                className="bg-[#E87722] hover:bg-[#d06a1e]"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Novo
-              </Button>
-            )}
           </div>
         </div>
 
@@ -468,7 +450,7 @@ export function MapEditor() {
                     style="pillar"
                   />
                 ))}
-                {data.regions?.pillarOffer?.length === 0 && editMode && (
+                {data.regions?.pillarOffer?.editMode && (
                   creatingInRegion === 'PILLAR_OFFER' ? (
                     <div className="border border-[#E87722] rounded-md p-4">
                       <input
@@ -540,7 +522,7 @@ export function MapEditor() {
                     style="pillar"
                   />
                 ))}
-                {data.regions?.pillarRevenue?.length === 0 && editMode && (
+                {data.regions?.pillarRevenue?.editMode && (
                   creatingInRegion === 'PILLAR_REVENUE' ? (
                     <div className="border border-[#E87722] rounded-md p-4">
                       <input
@@ -612,7 +594,7 @@ export function MapEditor() {
                     style="pillar"
                   />
                 ))}
-                {data.regions?.pillarEfficiency?.length === 0 && editMode && (
+                {data.regions?.pillarEfficiency?.editMode && (
                   creatingInRegion === 'PILLAR_EFFICIENCY' ? (
                     <div className="border border-[#E87722] rounded-md p-4">
                       <input
