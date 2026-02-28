@@ -66,6 +66,7 @@ export function MapEditor() {
   const [selectedObjectiveForKR, setSelectedObjectiveForKR] = useState<any>(null)
   const [krPanelOpen, setKrPanelOpen] = useState(false)
   const [objectiveKRStatus, setObjectiveKRStatus] = useState<Record<string, boolean>>({})
+  const [krRefreshToken, setKrRefreshToken] = useState(0)
   const [prevKrPanelOpen, setPrevKrPanelOpen] = useState(false)
   const router = useRouter()
 
@@ -195,6 +196,23 @@ export function MapEditor() {
     setObjectiveModalInitialTab(options?.initialTab || 'details')
     setObjectiveModalAutoOpenCreateKR(Boolean(options?.autoOpenCreateKR))
     setEditingObjective(objective)
+  }
+
+  const refreshObjectiveKRStatus = async () => {
+    const response = await fetch('/api/objectives/kr-count')
+    if (!response.ok) {
+      throw new Error('Erro ao atualizar indicador de KRs')
+    }
+
+    const krData = await response.json()
+    setObjectiveKRStatus(krData.krStatusMap || {})
+  }
+
+  const handleKRMutation = async ({ action }: { objectiveId: string; action: 'create' | 'edit' | 'delete' }) => {
+    if (action === 'create' || action === 'delete') {
+      await refreshObjectiveKRStatus()
+    }
+    setKrRefreshToken((prev) => prev + 1)
   }
 
   const handleReorderObjective = async (objectiveId: string, direction: 'up' | 'down') => {
@@ -853,6 +871,7 @@ export function MapEditor() {
             roles={roles}
             initialTab={objectiveModalInitialTab}
             autoOpenCreateKR={objectiveModalAutoOpenCreateKR}
+            onKRMutation={handleKRMutation}
           />
         )}
 
@@ -871,6 +890,8 @@ export function MapEditor() {
           objective={selectedObjectiveForKR}
           onOpenChange={setKrPanelOpen}
           canEdit={Boolean(data?.isEditAllowed)}
+          krRefreshToken={krRefreshToken}
+          onKRMutation={handleKRMutation}
           onCreateKR={(objective) => {
             handleOpenObjectiveModal(objective, { initialTab: 'keyresults', autoOpenCreateKR: true })
           }}

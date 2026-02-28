@@ -54,9 +54,10 @@ interface KeyResultsTabProps {
   objectiveId: string
   isEditMode?: boolean
   autoOpenCreateForm?: boolean
+  onKRMutation?: (payload: { objectiveId: string; action: 'create' | 'edit' | 'delete' }) => void | Promise<void>
 }
 
-export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateForm = false }: KeyResultsTabProps) {
+export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateForm = false, onKRMutation }: KeyResultsTabProps) {
   const router = useRouter()
   const [keyResults, setKeyResults] = useState<KeyResult[]>([])
   const [loading, setLoading] = useState(true)
@@ -331,6 +332,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
         })
         setShowAddForm(false)
         await loadKeyResults()
+        await onKRMutation?.({ objectiveId, action: 'create' })
         router.refresh()
       } else {
         const data = await response.json()
@@ -362,6 +364,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
       if (response.ok) {
         toast.success('Valor atualizado e histórico mensal registrado')
         await loadKeyResults()
+        await onKRMutation?.({ objectiveId, action: 'edit' })
         router.refresh()
         return true
       } else {
@@ -387,6 +390,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
       if (response.ok) {
         toast.success('Key Result excluída com sucesso')
         await loadKeyResults()
+        await onKRMutation?.({ objectiveId, action: 'delete' })
         router.refresh()
       } else {
         const data = await response.json()

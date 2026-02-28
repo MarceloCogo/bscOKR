@@ -77,6 +77,7 @@ interface ObjectiveDrawerProps {
   roles: ResponsibilityRole[]
   initialTab?: 'details' | 'keyresults' | 'responsibilities' | 'links'
   autoOpenCreateKR?: boolean
+  onKRMutation?: (payload: { objectiveId: string; action: 'create' | 'edit' | 'delete' }) => void | Promise<void>
 }
 
 export function ObjectiveDrawer({
@@ -89,6 +90,7 @@ export function ObjectiveDrawer({
   users,
   initialTab = 'details',
   autoOpenCreateKR = false,
+  onKRMutation,
 }: ObjectiveDrawerProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'details' | 'keyresults' | 'responsibilities' | 'links'>(initialTab)
@@ -285,6 +287,7 @@ export function ObjectiveDrawer({
               objectiveId={objective.id}
               isEditMode={true}
               autoOpenCreateForm={autoOpenCreateKR && activeTab === 'keyresults'}
+              onKRMutation={onKRMutation}
             />
           </TabsContent>
 

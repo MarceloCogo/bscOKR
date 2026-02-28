@@ -25,9 +25,18 @@ interface ObjectiveKRPanelProps {
   onOpenChange: (open: boolean) => void
   onCreateKR?: (objective: { id: string; title: string }) => void
   canEdit?: boolean
+  krRefreshToken?: number
+  onKRMutation?: (payload: { objectiveId: string; action: 'create' | 'edit' | 'delete' }) => void | Promise<void>
 }
 
-export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit = false }: ObjectiveKRPanelProps) {
+export function ObjectiveKRPanel({
+  objective,
+  onOpenChange,
+  onCreateKR,
+  canEdit = false,
+  krRefreshToken = 0,
+  onKRMutation,
+}: ObjectiveKRPanelProps) {
   const { krs, loading, loadKRs, updateKRValue, updateKRChecklist } = useObjectiveKRs(objective?.id || null)
   const [editingKRId, setEditingKRId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
@@ -83,6 +92,11 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit 
       checklistVersionRef.current = {}
     }
   }, [objective?.id])
+
+  useEffect(() => {
+    if (!objective?.id) return
+    loadKRs()
+  }, [krRefreshToken, objective?.id])
 
   const normalizeChecklist = (items: ChecklistItem[]) => {
     return items
@@ -162,6 +176,7 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit 
     setSavingKRId(kr.id)
     try {
       await updateKRValue(kr.id, value)
+      await onKRMutation?.({ objectiveId: objective?.id || '', action: 'edit' })
       toast.success('Valor atualizado com historico mensal')
       setEditingKRId(null)
       setEditingValue('')
@@ -204,6 +219,7 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit 
       toast.success('KR excluida com sucesso')
       setDeletingKR(null)
       await loadKRs()
+      await onKRMutation?.({ objectiveId: objective?.id || '', action: 'delete' })
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao excluir KR')
     } finally {
@@ -498,7 +514,10 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit 
         onOpenChange={(open) => {
           if (!open) setEditingKR(null)
         }}
-        onSaved={loadKRs}
+        onSaved={async () => {
+          await loadKRs()
+          await onKRMutation?.({ objectiveId: objective?.id || '', action: 'edit' })
+        }}
       />
 
       <Dialog open={!!deletingKR} onOpenChange={(open) => !open && setDeletingKR(null)}>
