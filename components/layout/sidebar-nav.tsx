@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Settings, Users, Target, Home, Map, Network, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react'
+import { Settings, Users, Target, Home, Map, Network, ChevronLeft, ChevronRight, BarChart3, Calendar } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/app/dashboard', icon: Home },
@@ -12,6 +12,7 @@ const navigation = [
   { name: 'Key Results', href: '/app/krs', icon: BarChart3 },
   { name: 'Estrutura Organizacional', href: '/app/organization', icon: Network },
   { name: 'Administração', href: '/app/admin/config', icon: Settings },
+  { name: 'Ciclos', href: '/app/admin/cycles', icon: Calendar },
   { name: 'Usuários', href: '/app/admin/users', icon: Users },
 ]
 
