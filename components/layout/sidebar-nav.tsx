@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Settings, Users, Target, Home, Map, Network, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Settings, Users, Target, Home, Map, Network, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/app/dashboard', icon: Home },
   { name: 'Mapa Estratégico', href: '/app/strategy/map', icon: Map },
   { name: 'Objetivos', href: '/app/strategy/objectives', icon: Target },
+  { name: 'Key Results', href: '/app/krs', icon: BarChart3 },
   { name: 'Estrutura Organizacional', href: '/app/organization', icon: Network },
   { name: 'Administração', href: '/app/admin/config', icon: Settings },
   { name: 'Usuários', href: '/app/admin/users', icon: Users },
