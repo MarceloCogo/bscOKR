@@ -131,6 +131,28 @@ export async function bootstrapTenantConfig(tenantId: string): Promise<void> {
     ],
   })
 
+  // Insert default perspectives (BSC)
+  await prisma.perspective.createMany({
+    data: [
+      { tenantId, name: 'Financeiro', order: 1 },
+      { tenantId, name: 'Cliente', order: 2 },
+      { tenantId, name: 'Processos Internos', order: 3 },
+      { tenantId, name: 'Aprendizagem e Crescimento', order: 4 },
+    ],
+  })
+
+  // Insert default pillars
+  await prisma.pillar.createMany({
+    data: [
+      { tenantId, name: 'Oferta', order: 1 },
+      { tenantId, name: 'Receita', order: 2 },
+      { tenantId, name: 'Eficiência', order: 3 },
+      { tenantId, name: 'Pessoas', order: 4 },
+      { tenantId, name: 'Cultura', order: 5 },
+      { tenantId, name: 'Talentos', order: 6 },
+    ],
+  })
+
   // Insert default score rule
   await prisma.scoreRule.create({
     data: {
