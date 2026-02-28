@@ -64,6 +64,7 @@ export function MapEditor() {
   const [selectedObjectiveForKR, setSelectedObjectiveForKR] = useState<any>(null)
   const [krPanelOpen, setKrPanelOpen] = useState(false)
   const [objectiveKRStatus, setObjectiveKRStatus] = useState<Record<string, boolean>>({})
+  const [prevKrPanelOpen, setPrevKrPanelOpen] = useState(false)
   const router = useRouter()
 
   // Split view layout state
@@ -72,6 +73,21 @@ export function MapEditor() {
   useEffect(() => {
     loadMap()
   }, [])
+
+  // Handle map resize when sidebar opens/closes
+  useEffect(() => {
+    if (prevKrPanelOpen !== krPanelOpen) {
+      // Wait for CSS animation to complete (250ms) before resizing
+      const timer = setTimeout(() => {
+        // Trigger map resize - this would need to be implemented in the map library
+        // For now, we'll trigger a window resize event as fallback
+        window.dispatchEvent(new Event('resize'))
+      }, 250)
+
+      setPrevKrPanelOpen(krPanelOpen)
+      return () => clearTimeout(timer)
+    }
+  }, [krPanelOpen, prevKrPanelOpen])
 
   const loadMap = async () => {
     try {

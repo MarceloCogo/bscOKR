@@ -63,29 +63,30 @@ export function KRUpdateModal({ kr, open, onOpenChange, onUpdate }: KRUpdateModa
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="kr-update-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
+            <TrendingUp className="w-5 h-5" aria-hidden="true" />
             Atualizar Key Result
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">
+            <label className="block text-sm font-medium mb-1">
               {kr.title}
             </label>
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-gray-500 mb-3" id="kr-update-description">
               Valor atual: {kr.currentValue} {kr.unit}
             </p>
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">
+            <label htmlFor="kr-value-input" className="text-sm font-medium mb-2 block">
               Novo valor atual ({kr.unit})
             </label>
             <Input
+              id="kr-value-input"
               type="number"
               step="0.01"
               min="0"
@@ -93,6 +94,7 @@ export function KRUpdateModal({ kr, open, onOpenChange, onUpdate }: KRUpdateModa
               onChange={(e) => setCurrentValue(e.target.value)}
               placeholder={`Ex: ${kr.currentValue + 10}`}
               className="text-center text-lg"
+              aria-describedby="kr-update-description"
             />
           </div>
         </div>
@@ -102,12 +104,14 @@ export function KRUpdateModal({ kr, open, onOpenChange, onUpdate }: KRUpdateModa
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={loading}
+            aria-label="Cancelar atualização"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={loading}
+            aria-label="Confirmar atualização do Key Result"
           >
             {loading ? 'Atualizando...' : 'Atualizar'}
           </Button>
