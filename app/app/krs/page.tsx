@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Search, Filter, BarChart3, Target, CheckCircle, AlertCircle, Clock } from 'lucide-react'
 
+interface KeyResult {
   id: string
   title: string
   description: string | null
