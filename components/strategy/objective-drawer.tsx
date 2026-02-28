@@ -75,6 +75,8 @@ interface ObjectiveDrawerProps {
   orgNodes: OrgNode[]
   users: User[]
   roles: ResponsibilityRole[]
+  initialTab?: 'details' | 'keyresults' | 'responsibilities' | 'links'
+  autoOpenCreateKR?: boolean
 }
 
 export function ObjectiveDrawer({
@@ -85,9 +87,11 @@ export function ObjectiveDrawer({
   pillars,
   statuses,
   users,
+  initialTab = 'details',
+  autoOpenCreateKR = false,
 }: ObjectiveDrawerProps) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'keyresults' | 'responsibilities' | 'links'>(initialTab)
   const [isSavingDetails, setIsSavingDetails] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
@@ -110,6 +114,12 @@ export function ObjectiveDrawer({
       sponsorUserId: objective.sponsor.id,
     })
   }, [objective])
+
+  useEffect(() => {
+    if (open) {
+      setActiveTab(initialTab)
+    }
+  }, [open, initialTab, objective?.id])
 
   if (!objective) return null
 
@@ -157,7 +167,11 @@ export function ObjectiveDrawer({
           </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="px-6 pb-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as 'details' | 'keyresults' | 'responsibilities' | 'links')}
+          className="px-6 pb-6"
+        >
           <TabsList className="mt-4 grid w-full grid-cols-4 bg-neutral-100">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="keyresults">KRs</TabsTrigger>
@@ -267,7 +281,11 @@ export function ObjectiveDrawer({
           </TabsContent>
 
           <TabsContent value="keyresults" className="space-y-4">
-            <KeyResultsTab objectiveId={objective.id} isEditMode={true} />
+            <KeyResultsTab
+              objectiveId={objective.id}
+              isEditMode={true}
+              autoOpenCreateForm={autoOpenCreateKR && activeTab === 'keyresults'}
+            />
           </TabsContent>
 
           <TabsContent value="responsibilities" className="space-y-4">

@@ -7,7 +7,7 @@ import { getStrategyMap, createObjectiveInRegion, reorderObjective, updateObject
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ObjectiveFormDialog } from './objective-form-dialog'
-import { ObjectiveEditDialog } from './objective-edit-dialog'
+import { ObjectiveDrawer } from './objective-drawer'
 import { ContextSelector } from './context-selector'
 import { ObjectiveKRPanel } from './objective-kr-panel'
 
@@ -54,6 +54,8 @@ export function MapEditor() {
   const [selectedRegion, setSelectedRegion] = useState<string>('')
   const [showObjectiveDialog, setShowObjectiveDialog] = useState(false)
   const [editingObjective, setEditingObjective] = useState<any>(null)
+  const [objectiveModalInitialTab, setObjectiveModalInitialTab] = useState<'details' | 'keyresults' | 'responsibilities' | 'links'>('details')
+  const [objectiveModalAutoOpenCreateKR, setObjectiveModalAutoOpenCreateKR] = useState(false)
   const [creatingInRegion, setCreatingInRegion] = useState<string | null>(null)
   const [editingMeta, setEditingMeta] = useState<string | null>(null)
   const [editingMetaValue, setEditingMetaValue] = useState('')
@@ -181,6 +183,18 @@ export function MapEditor() {
   const handleOpenKRPanel = (objective: any) => {
     setSelectedObjectiveForKR(objective)
     setKrPanelOpen(true)
+  }
+
+  const handleOpenObjectiveModal = (
+    objective: any,
+    options?: {
+      initialTab?: 'details' | 'keyresults' | 'responsibilities' | 'links'
+      autoOpenCreateKR?: boolean
+    }
+  ) => {
+    setObjectiveModalInitialTab(options?.initialTab || 'details')
+    setObjectiveModalAutoOpenCreateKR(Boolean(options?.autoOpenCreateKR))
+    setEditingObjective(objective)
   }
 
   const handleReorderObjective = async (objectiveId: string, direction: 'up' | 'down') => {
@@ -348,7 +362,7 @@ export function MapEditor() {
                   {objective ? (
                     <ObjectiveCard
                       objective={objective}
-                      onEdit={() => setEditingObjective(objective)}
+                      onEdit={() => handleOpenObjectiveModal(objective)}
                       onDelete={() => handleDeleteObjective(objective.id)}
                       onView={() => handleOpenKRPanel(objective)}
                       canReorder={true}
@@ -496,7 +510,7 @@ export function MapEditor() {
                   <ObjectiveCard
                     key={obj.id}
                     objective={obj}
-                    onEdit={() => setEditingObjective(obj)}
+                    onEdit={() => handleOpenObjectiveModal(obj)}
                     onDelete={() => handleDeleteObjective(obj.id)}
                     onView={() => handleOpenKRPanel(obj)}
                     canReorder={true}
@@ -571,7 +585,7 @@ export function MapEditor() {
                   <ObjectiveCard
                     key={obj.id}
                     objective={obj}
-                    onEdit={() => setEditingObjective(obj)}
+                    onEdit={() => handleOpenObjectiveModal(obj)}
                     onDelete={() => handleDeleteObjective(obj.id)}
                     onView={() => handleOpenKRPanel(obj)}
                     canReorder={true}
@@ -646,7 +660,7 @@ export function MapEditor() {
                   <ObjectiveCard
                     key={obj.id}
                     objective={obj}
-                    onEdit={() => setEditingObjective(obj)}
+                    onEdit={() => handleOpenObjectiveModal(obj)}
                     onDelete={() => handleDeleteObjective(obj.id)}
                     onView={() => handleOpenKRPanel(obj)}
                     canReorder={true}
@@ -732,7 +746,7 @@ export function MapEditor() {
                   {objective ? (
                     <ObjectiveCard
                       objective={objective}
-                      onEdit={() => setEditingObjective(objective)}
+                      onEdit={() => handleOpenObjectiveModal(objective)}
                       onDelete={() => handleDeleteObjective(objective.id)}
                       onView={() => handleOpenKRPanel(objective)}
                       canReorder={true}
@@ -821,14 +835,24 @@ export function MapEditor() {
         />
 
         {editingObjective && (
-          <ObjectiveEditDialog
+          <ObjectiveDrawer
             objective={editingObjective}
+            open={!!editingObjective}
+            onOpenChange={(open) => {
+              if (!open) {
+                setEditingObjective(null)
+                setObjectiveModalInitialTab('details')
+                setObjectiveModalAutoOpenCreateKR(false)
+              }
+            }}
             perspectives={perspectives}
             pillars={pillars}
             statuses={statuses}
+            orgNodes={orgNodes}
             users={users}
-            open={!!editingObjective}
-            onOpenChange={(open) => !open && setEditingObjective(null)}
+            roles={roles}
+            initialTab={objectiveModalInitialTab}
+            autoOpenCreateKR={objectiveModalAutoOpenCreateKR}
           />
         )}
 
@@ -846,6 +870,9 @@ export function MapEditor() {
         <ObjectiveKRPanel
           objective={selectedObjectiveForKR}
           onOpenChange={setKrPanelOpen}
+          onCreateKR={(objective) => {
+            handleOpenObjectiveModal(objective, { initialTab: 'keyresults', autoOpenCreateKR: true })
+          }}
         />
       </div>
     </div>

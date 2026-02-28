@@ -40,9 +40,10 @@ interface KeyResult {
 interface KeyResultsTabProps {
   objectiveId: string
   isEditMode?: boolean
+  autoOpenCreateForm?: boolean
 }
 
-export function KeyResultsTab({ objectiveId, isEditMode = true }: KeyResultsTabProps) {
+export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateForm = false }: KeyResultsTabProps) {
   const router = useRouter()
   const [keyResults, setKeyResults] = useState<KeyResult[]>([])
   const [loading, setLoading] = useState(true)
@@ -68,6 +69,12 @@ export function KeyResultsTab({ objectiveId, isEditMode = true }: KeyResultsTabP
   useEffect(() => {
     loadKeyResults()
   }, [objectiveId])
+
+  useEffect(() => {
+    if (autoOpenCreateForm && isEditMode) {
+      setShowAddForm(true)
+    }
+  }, [autoOpenCreateForm, isEditMode, objectiveId])
 
   const loadKeyResults = async () => {
     try {

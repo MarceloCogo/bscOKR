@@ -14,9 +14,10 @@ interface ObjectiveKRPanelProps {
     title: string
   } | null
   onOpenChange: (open: boolean) => void
+  onCreateKR?: (objective: { id: string; title: string }) => void
 }
 
-export function ObjectiveKRPanel({ objective, onOpenChange }: ObjectiveKRPanelProps) {
+export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: ObjectiveKRPanelProps) {
   const { krs, loading, updateKRValue } = useObjectiveKRs(objective?.id || null)
   const [editingKRId, setEditingKRId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
@@ -82,14 +83,26 @@ export function ObjectiveKRPanel({ objective, onOpenChange }: ObjectiveKRPanelPr
           <Target className="w-5 h-5" aria-hidden="true" />
           {objective?.title || 'Key Results'}
         </h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onOpenChange(false)}
-          aria-label="Fechar painel de Key Results"
-        >
-          <X className="w-4 h-4" aria-hidden="true" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {objective && onCreateKR && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onCreateKR(objective)}
+              className="border-neutral-300 bg-white"
+            >
+              Criar KR
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            aria-label="Fechar painel de Key Results"
+          >
+            <X className="w-4 h-4" aria-hidden="true" />
+          </Button>
+        </div>
       </div>
 
       {/* Content */}
