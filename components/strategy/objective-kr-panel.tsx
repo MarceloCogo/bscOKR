@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Target, X, TrendingUp, Check, Loader2, Plus, Trash2 } from 'lucide-react'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Target, X, TrendingUp, Check, Loader2, Plus, Trash2, Pencil } from 'lucide-react'
 import { useObjectiveKRs } from '@/lib/hooks/use-objective-krs'
 import { toast } from 'sonner'
+import { KREditDialog } from './kr-edit-dialog'
 
 interface ChecklistItem {
   id: string
@@ -21,15 +23,19 @@ interface ObjectiveKRPanelProps {
   } | null
   onOpenChange: (open: boolean) => void
   onCreateKR?: (objective: { id: string; title: string }) => void
+  canEdit?: boolean
 }
 
-export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: ObjectiveKRPanelProps) {
-  const { krs, loading, updateKRValue, updateKRChecklist } = useObjectiveKRs(objective?.id || null)
+export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit = false }: ObjectiveKRPanelProps) {
+  const { krs, loading, loadKRs, updateKRValue, updateKRChecklist } = useObjectiveKRs(objective?.id || null)
   const [editingKRId, setEditingKRId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [savingKRId, setSavingKRId] = useState<string | null>(null)
   const [checklistDrafts, setChecklistDrafts] = useState<Record<string, ChecklistItem[]>>({})
   const [checklistSaveState, setChecklistSaveState] = useState<Record<string, 'idle' | 'pending' | 'saving' | 'saved' | 'error'>>({})
+  const [editingKR, setEditingKR] = useState<any | null>(null)
+  const [deletingKR, setDeletingKR] = useState<any | null>(null)
+  const [deletingKRId, setDeletingKRId] = useState<string | null>(null)
   const checklistTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const checklistInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -124,11 +130,13 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
   }
 
   const handleUpdateKR = (kr: any) => {
+    if (!canEdit) return
     setEditingKRId(kr.id)
     setEditingValue(String(kr.currentValue ?? 0))
   }
 
   const handleSaveUpdate = async (kr: any) => {
+    if (!canEdit) return
     const value = Number(editingValue)
     if (Number.isNaN(value) || value < 0) {
       toast.error('Informe um valor numerico valido')
@@ -164,6 +172,27 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
     if (progress >= 70) return 'No prazo'
     if (progress >= 40) return 'Atencao'
     return 'Critico'
+  }
+
+  const handleDeleteKR = async (krId: string) => {
+    if (!canEdit) return
+
+    setDeletingKRId(krId)
+    try {
+      const response = await fetch(`/api/kr/${krId}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Erro ao excluir KR')
+      }
+
+      toast.success('KR excluida com sucesso')
+      setDeletingKR(null)
+      await loadKRs()
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao excluir KR')
+    } finally {
+      setDeletingKRId(null)
+    }
   }
 
   return (
@@ -248,7 +277,7 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
                       <div className="text-right text-xs text-gray-500">{getStatusText(progress)}</div>
                     </div>
 
-                    {kr.type !== 'ENTREGAVEL' && (
+                    {kr.type !== 'ENTREGAVEL' && canEdit && (
                       <div className="flex gap-2">
                         {!isEditing ? (
                           <Button
@@ -321,6 +350,7 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
                               <input
                                 type="checkbox"
                                 checked={item.done}
+                                disabled={!canEdit}
                                 className="h-4 w-4 rounded border-neutral-300"
                                 onChange={(e) =>
                                   updateChecklistDraft(kr.id, (current) =>
@@ -330,22 +360,24 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
                                   )
                                 }
                               />
-                              <Input
+                                <Input
                                 ref={(el) => {
                                   checklistInputRefs.current[`${kr.id}:${item.id}`] = el
                                 }}
                                 value={item.title}
                                 placeholder="Descreva uma entrega"
-                                className="h-8 text-sm"
-                                onChange={(e) =>
-                                  updateChecklistDraft(kr.id, (current) =>
-                                    current.map((currentItem) =>
+                                  className="h-8 text-sm"
+                                  disabled={!canEdit}
+                                  onChange={(e) =>
+                                    updateChecklistDraft(kr.id, (current) =>
+                                      current.map((currentItem) =>
                                       currentItem.id === item.id ? { ...currentItem, title: e.target.value } : currentItem
                                     )
                                   )
                                 }
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
+                                  onKeyDown={(e) => {
+                                    if (!canEdit) return
+                                    if (e.key === 'Enter') {
                                     e.preventDefault()
                                     const newItemId = crypto.randomUUID()
                                     updateChecklistDraft(kr.id, (current) => [
@@ -356,39 +388,67 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
                                   }
                                 }}
                               />
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-red-500"
-                                onClick={() =>
-                                  updateChecklistDraft(kr.id, (current) => {
-                                    const next = current.filter((currentItem) => currentItem.id !== item.id)
-                                    return next.length > 0 ? next : [{ id: crypto.randomUUID(), title: '', done: false }]
-                                  })
-                                }
-                                title="Remover item"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              {canEdit && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-red-500"
+                                  onClick={() =>
+                                    updateChecklistDraft(kr.id, (current) => {
+                                      const next = current.filter((currentItem) => currentItem.id !== item.id)
+                                      return next.length > 0 ? next : [{ id: crypto.randomUUID(), title: '', done: false }]
+                                    })
+                                  }
+                                  title="Remover item"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
                             </div>
                           ))}
                         </div>
 
+                        {canEdit && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 h-8"
+                            onClick={() => {
+                              const newItemId = crypto.randomUUID()
+                              updateChecklistDraft(kr.id, (current) => [
+                                ...current,
+                                { id: newItemId, title: '', done: false },
+                              ])
+                              focusChecklistItem(kr.id, newItemId)
+                            }}
+                          >
+                            <Plus className="mr-1 h-3 w-3" />
+                            Adicionar item
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {canEdit && (
+                      <div className="flex justify-end gap-1">
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          className="mt-2 h-8"
-                          onClick={() => {
-                            const newItemId = crypto.randomUUID()
-                            updateChecklistDraft(kr.id, (current) => [
-                              ...current,
-                              { id: newItemId, title: '', done: false },
-                            ])
-                            focusChecklistItem(kr.id, newItemId)
-                          }}
+                          className="h-8 px-2 text-neutral-600"
+                          onClick={() => setEditingKR(kr)}
                         >
-                          <Plus className="mr-1 h-3 w-3" />
-                          Adicionar item
+                          <Pencil className="mr-1 h-3 w-3" />
+                          Editar KR
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-red-600"
+                          disabled={deletingKRId === kr.id}
+                          onClick={() => setDeletingKR(kr)}
+                        >
+                          <Trash2 className="mr-1 h-3 w-3" />
+                          Excluir KR
                         </Button>
                       </div>
                     )}
@@ -415,6 +475,38 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR }: Object
           </div>
         )}
       </div>
+
+      <KREditDialog
+        kr={editingKR}
+        open={!!editingKR}
+        onOpenChange={(open) => {
+          if (!open) setEditingKR(null)
+        }}
+        onSaved={loadKRs}
+      />
+
+      <Dialog open={!!deletingKR} onOpenChange={(open) => !open && setDeletingKR(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir KR</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-neutral-600">
+            Tem certeza que deseja excluir a KR <span className="font-medium text-neutral-900">{deletingKR?.title}</span>? Essa acao nao pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingKR(null)} disabled={!!deletingKRId}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletingKR?.id && handleDeleteKR(deletingKR.id)}
+              disabled={!!deletingKRId}
+            >
+              {deletingKRId ? 'Excluindo...' : 'Excluir KR'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

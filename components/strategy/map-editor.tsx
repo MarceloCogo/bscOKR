@@ -870,6 +870,7 @@ export function MapEditor() {
         <ObjectiveKRPanel
           objective={selectedObjectiveForKR}
           onOpenChange={setKrPanelOpen}
+          canEdit={Boolean(data?.isEditAllowed)}
           onCreateKR={(objective) => {
             handleOpenObjectiveModal(objective, { initialTab: 'keyresults', autoOpenCreateKR: true })
           }}
