@@ -81,6 +81,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
   const [checklistDrafts, setChecklistDrafts] = useState<Record<string, ChecklistItem[]>>({})
   const [checklistSaveState, setChecklistSaveState] = useState<Record<string, 'idle' | 'pending' | 'saving' | 'saved' | 'error'>>({})
   const checklistTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const checklistVersionRef = useRef<Record<string, number>>({})
 
   useEffect(() => {
     loadKeyResults()
@@ -112,16 +113,24 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
     }
   }, [])
 
+  useEffect(() => {
+    Object.values(checklistTimersRef.current).forEach((timer) => clearTimeout(timer))
+    checklistTimersRef.current = {}
+    checklistVersionRef.current = {}
+  }, [objectiveId])
+
   const normalizeChecklist = (items: ChecklistItem[]) => {
     return items
       .map((item) => ({ ...item, title: item.title.trim() }))
       .filter((item) => item.title.length > 0)
   }
 
-  const persistChecklist = async (krId: string, items: ChecklistItem[]) => {
+  const persistChecklist = async (krId: string, items: ChecklistItem[], version: number) => {
     const normalized = normalizeChecklist(items)
     if (normalized.length === 0) {
-      setChecklistSaveState((prev) => ({ ...prev, [krId]: 'error' }))
+      if ((checklistVersionRef.current[krId] ?? 0) === version) {
+        setChecklistSaveState((prev) => ({ ...prev, [krId]: 'error' }))
+      }
       return
     }
 
@@ -138,12 +147,18 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
         throw new Error(data.error || 'Erro ao salvar checklist')
       }
 
-      await loadKeyResults()
+      const data = await response.json()
+      if ((checklistVersionRef.current[krId] ?? 0) !== version) return
+
+      setKeyResults((prev) => prev.map((kr) => (kr.id === krId ? data.keyResult : kr)))
       setChecklistSaveState((prev) => ({ ...prev, [krId]: 'saved' }))
       setTimeout(() => {
-        setChecklistSaveState((prev) => ({ ...prev, [krId]: 'idle' }))
+        if ((checklistVersionRef.current[krId] ?? 0) === version) {
+          setChecklistSaveState((prev) => ({ ...prev, [krId]: 'idle' }))
+        }
       }, 1200)
     } catch (error) {
+      if ((checklistVersionRef.current[krId] ?? 0) !== version) return
       console.error('Error autosaving checklist:', error)
       setChecklistSaveState((prev) => ({ ...prev, [krId]: 'error' }))
       toast.error(error instanceof Error ? error.message : 'Erro ao salvar checklist')
@@ -155,9 +170,11 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
       clearTimeout(checklistTimersRef.current[krId])
     }
 
+    const nextVersion = (checklistVersionRef.current[krId] ?? 0) + 1
+    checklistVersionRef.current[krId] = nextVersion
     setChecklistSaveState((prev) => ({ ...prev, [krId]: 'pending' }))
     checklistTimersRef.current[krId] = setTimeout(() => {
-      persistChecklist(krId, items)
+      persistChecklist(krId, items, nextVersion)
     }, 500)
   }
 
@@ -539,7 +556,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
                           </div>
 
                           <div className="space-y-2">
-                            {(checklistDrafts[kr.id] || [{ id: crypto.randomUUID(), title: '', done: false }]).map((item) => (
+                            {(checklistDrafts[kr.id] || []).map((item) => (
                               <div key={item.id} className="flex items-center gap-2">
                                 <input
                                   type="checkbox"

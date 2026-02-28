@@ -3,23 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { KRUpdateEventType } from '@prisma/client'
 import { prisma } from '@/lib/db'
-
-async function canManageKR(userId: string, tenantId: string, orgNodeId: string) {
-  const userRoles = await prisma.userRole.findMany({
-    where: { userId },
-    include: { role: true },
-  })
-
-  const permissions = userRoles.flatMap(ur => JSON.parse(ur.role.permissionsJson))
-  const perms = permissions.reduce((acc, perm) => ({ ...acc, ...perm }), {}) as Record<string, boolean>
-  if (perms.canManageConfig || perms.canEditAll) return true
-
-  const isLeader = await prisma.orgNode.count({
-    where: { id: orgNodeId, tenantId, leaderUserId: userId },
-  })
-
-  return isLeader > 0
-}
+import { calculateKRMetrics } from '@/lib/domain/kr-metrics'
+import { canManageKR } from '@/lib/domain/kr-permissions'
 
 export async function PATCH(
   request: NextRequest,
@@ -68,14 +53,34 @@ export async function PATCH(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    if ((existing as any).type === 'ENTREGAVEL') {
+    if (existing.type === 'ENTREGAVEL') {
       return NextResponse.json(
         { error: 'KRs do tipo ENTREGAVEL devem ser atualizados via checklist' },
         { status: 400 }
       )
     }
 
-    const previousValue = (existing as any).currentValue ?? 0
+    const previousValue = existing.currentValue ?? 0
+
+    const previousMetrics = calculateKRMetrics({
+      type: existing.type,
+      targetValue: existing.targetValue,
+      baselineValue: existing.baselineValue,
+      thresholdValue: existing.thresholdValue,
+      thresholdDirection: existing.thresholdDirection,
+      currentValue: existing.currentValue,
+      checklistJson: existing.checklistJson,
+    })
+
+    const nextMetrics = calculateKRMetrics({
+      type: existing.type,
+      targetValue: existing.targetValue,
+      baselineValue: existing.baselineValue,
+      thresholdValue: existing.thresholdValue,
+      thresholdDirection: existing.thresholdDirection,
+      currentValue,
+      checklistJson: existing.checklistJson,
+    })
 
     const { keyResult, history } = await prisma.$transaction(async (tx) => {
       const updatedKR = await tx.keyResult.update({
@@ -111,40 +116,34 @@ export async function PATCH(
         },
       })
 
-      const existingMonthlyHistory = await tx.kRUpdateHistory.findFirst({
+      const monthlyHistory = await tx.kRUpdateHistory.upsert({
         where: {
+          tenantId_keyResultId_referenceMonth_eventType: {
+            tenantId: session.user.tenantId,
+            keyResultId: id,
+            referenceMonth: monthRef,
+            eventType: KRUpdateEventType.NUMERIC_UPDATE,
+          },
+        },
+        update: {
+          newValue: currentValue,
+          newProgress: nextMetrics.progress,
+          updatedByUserId: session.user.id,
+          ...(typeof notes === 'string' ? { notes } : {}),
+        },
+        create: {
           tenantId: session.user.tenantId,
           keyResultId: id,
-          referenceMonth: monthRef,
+          updatedByUserId: session.user.id,
           eventType: KRUpdateEventType.NUMERIC_UPDATE,
+          referenceMonth: monthRef,
+          previousValue,
+          newValue: currentValue,
+          previousProgress: previousMetrics.progress,
+          newProgress: nextMetrics.progress,
+          notes: typeof notes === 'string' ? notes : null,
         },
-        orderBy: { createdAt: 'desc' },
       })
-
-      const monthlyHistory = existingMonthlyHistory
-        ? await tx.kRUpdateHistory.update({
-            where: { id: existingMonthlyHistory.id },
-            data: {
-              newValue: currentValue,
-              newProgress: currentValue,
-              updatedByUserId: session.user.id,
-              notes: typeof notes === 'string' ? notes : existingMonthlyHistory.notes,
-            },
-          })
-        : await tx.kRUpdateHistory.create({
-            data: {
-              tenantId: session.user.tenantId,
-              keyResultId: id,
-              updatedByUserId: session.user.id,
-              eventType: KRUpdateEventType.NUMERIC_UPDATE,
-              referenceMonth: monthRef,
-              previousValue,
-              newValue: currentValue,
-              previousProgress: previousValue,
-              newProgress: currentValue,
-              notes: typeof notes === 'string' ? notes : null,
-            },
-          })
 
       return { keyResult: updatedKR, history: monthlyHistory }
     })

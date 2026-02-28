@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Target, X, TrendingUp, Check, Loader2, Plus, Trash2, Pencil } from 'lucide-react'
 import { useObjectiveKRs } from '@/lib/hooks/use-objective-krs'
+import type { KeyResult as ObjectiveKR } from '@/lib/hooks/use-objective-krs'
 import { toast } from 'sonner'
 import { KREditDialog } from './kr-edit-dialog'
 
@@ -33,11 +34,12 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit 
   const [savingKRId, setSavingKRId] = useState<string | null>(null)
   const [checklistDrafts, setChecklistDrafts] = useState<Record<string, ChecklistItem[]>>({})
   const [checklistSaveState, setChecklistSaveState] = useState<Record<string, 'idle' | 'pending' | 'saving' | 'saved' | 'error'>>({})
-  const [editingKR, setEditingKR] = useState<any | null>(null)
-  const [deletingKR, setDeletingKR] = useState<any | null>(null)
+  const [editingKR, setEditingKR] = useState<ObjectiveKR | null>(null)
+  const [deletingKR, setDeletingKR] = useState<ObjectiveKR | null>(null)
   const [deletingKRId, setDeletingKRId] = useState<string | null>(null)
   const checklistTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const checklistInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const checklistVersionRef = useRef<Record<string, number>>({})
 
   useEffect(() => {
     setChecklistDrafts((prev) => {
@@ -78,6 +80,7 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit 
       setChecklistSaveState({})
       Object.values(checklistTimersRef.current).forEach((timer) => clearTimeout(timer))
       checklistTimersRef.current = {}
+      checklistVersionRef.current = {}
     }
   }, [objective?.id])
 
@@ -87,30 +90,43 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit 
       .filter((item) => item.title.length > 0)
   }
 
+  const persistChecklist = async (krId: string, items: ChecklistItem[], version: number) => {
+    const normalized = normalizeChecklist(items)
+    if (normalized.length === 0) {
+      if ((checklistVersionRef.current[krId] ?? 0) === version) {
+        setChecklistSaveState((prev) => ({ ...prev, [krId]: 'error' }))
+      }
+      return
+    }
+
+    setChecklistSaveState((prev) => ({ ...prev, [krId]: 'saving' }))
+    try {
+      await updateKRChecklist(krId, normalized)
+      if ((checklistVersionRef.current[krId] ?? 0) !== version) return
+
+      setChecklistSaveState((prev) => ({ ...prev, [krId]: 'saved' }))
+      setTimeout(() => {
+        if ((checklistVersionRef.current[krId] ?? 0) === version) {
+          setChecklistSaveState((prev) => ({ ...prev, [krId]: 'idle' }))
+        }
+      }, 1200)
+    } catch (error: any) {
+      if ((checklistVersionRef.current[krId] ?? 0) !== version) return
+      setChecklistSaveState((prev) => ({ ...prev, [krId]: 'error' }))
+      toast.error(error?.message || 'Erro ao salvar checklist')
+    }
+  }
+
   const scheduleChecklistAutosave = (krId: string, items: ChecklistItem[]) => {
     if (checklistTimersRef.current[krId]) {
       clearTimeout(checklistTimersRef.current[krId])
     }
 
+    const nextVersion = (checklistVersionRef.current[krId] ?? 0) + 1
+    checklistVersionRef.current[krId] = nextVersion
     setChecklistSaveState((prev) => ({ ...prev, [krId]: 'pending' }))
-    checklistTimersRef.current[krId] = setTimeout(async () => {
-      const normalized = normalizeChecklist(items)
-      if (normalized.length === 0) {
-        setChecklistSaveState((prev) => ({ ...prev, [krId]: 'error' }))
-        return
-      }
-
-      setChecklistSaveState((prev) => ({ ...prev, [krId]: 'saving' }))
-      try {
-        await updateKRChecklist(krId, normalized)
-        setChecklistSaveState((prev) => ({ ...prev, [krId]: 'saved' }))
-        setTimeout(() => {
-          setChecklistSaveState((prev) => ({ ...prev, [krId]: 'idle' }))
-        }, 1200)
-      } catch (error: any) {
-        setChecklistSaveState((prev) => ({ ...prev, [krId]: 'error' }))
-        toast.error(error?.message || 'Erro ao salvar checklist')
-      }
+    checklistTimersRef.current[krId] = setTimeout(() => {
+      persistChecklist(krId, items, nextVersion)
     }, 500)
   }
 
@@ -129,13 +145,13 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit 
     }, 0)
   }
 
-  const handleUpdateKR = (kr: any) => {
+  const handleUpdateKR = (kr: ObjectiveKR) => {
     if (!canEdit) return
     setEditingKRId(kr.id)
     setEditingValue(String(kr.currentValue ?? 0))
   }
 
-  const handleSaveUpdate = async (kr: any) => {
+  const handleSaveUpdate = async (kr: ObjectiveKR) => {
     if (!canEdit) return
     const value = Number(editingValue)
     if (Number.isNaN(value) || value < 0) {
@@ -156,7 +172,7 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit 
     }
   }
 
-  const getProgress = (kr: any) => {
+  const getProgress = (kr: ObjectiveKR) => {
     return kr.computed?.progress ?? 0
   }
 
@@ -251,7 +267,7 @@ export function ObjectiveKRPanel({ objective, onOpenChange, onCreateKR, canEdit 
               const progress = getProgress(kr)
               const isEditing = editingKRId === kr.id
               const isSaving = savingKRId === kr.id
-              const checklistItems = checklistDrafts[kr.id] || [{ id: crypto.randomUUID(), title: '', done: false }]
+              const checklistItems = checklistDrafts[kr.id] || []
 
               return (
                 <Card key={kr.id} className="border border-gray-200">

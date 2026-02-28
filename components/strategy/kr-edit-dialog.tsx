@@ -68,7 +68,7 @@ export function KREditDialog({ kr, open, onOpenChange, onSaved }: KREditDialogPr
       return
     }
 
-    const payload: any = {
+    const payload: Record<string, string | number | null> = {
       title: form.title.trim(),
       dueDate: form.dueDate,
       referenceMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
@@ -163,11 +163,16 @@ export function KREditDialog({ kr, open, onOpenChange, onSaved }: KREditDialogPr
           {kr.type !== 'ENTREGAVEL' && (
             <div>
               <label className="mb-1 block text-xs font-medium">Unidade</label>
-              <select
-                className="h-9 w-full rounded border px-2"
-                value={form.unit}
-                onChange={(e) => setForm((prev) => ({ ...prev, unit: e.target.value as any }))}
-              >
+                <select
+                  className="h-9 w-full rounded border px-2"
+                  value={form.unit}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      unit: e.target.value as 'PERCENTUAL' | 'BRL' | 'USD' | 'EUR' | 'UNIDADE',
+                    }))
+                  }
+                >
                 <option value="PERCENTUAL">Percentual</option>
                 <option value="BRL">BRL</option>
                 <option value="USD">USD</option>

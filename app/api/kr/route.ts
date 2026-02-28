@@ -3,24 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { calculateKRMetrics } from '@/lib/domain/kr-metrics'
+import { canManageKR } from '@/lib/domain/kr-permissions'
 import { createKRSchema, sanitizeKRPayloadByType } from '@/lib/domain/kr-validation'
-
-async function canManageKR(userId: string, tenantId: string, orgNodeId: string) {
-  const userRoles = await prisma.userRole.findMany({
-    where: { userId },
-    include: { role: true },
-  })
-
-  const permissions = userRoles.flatMap(ur => JSON.parse(ur.role.permissionsJson))
-  const perms = permissions.reduce((acc, perm) => ({ ...acc, ...perm }), {}) as Record<string, boolean>
-  if (perms.canManageConfig || perms.canEditAll) return true
-
-  const isLeader = await prisma.orgNode.count({
-    where: { id: orgNodeId, tenantId, leaderUserId: userId },
-  })
-
-  return isLeader > 0
-}
 
 export async function GET(request: NextRequest) {
   try {

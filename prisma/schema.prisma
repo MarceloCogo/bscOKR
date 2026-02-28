@@ -387,6 +387,7 @@ model KRUpdateHistory {
   @@index([tenantId])
   @@index([keyResultId])
   @@index([referenceMonth])
+  @@unique([tenantId, keyResultId, referenceMonth, eventType])
   @@map("kr_update_history")
 }
 

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { calculateKRMetrics } from '@/lib/domain/kr-metrics'
+import { canManageKR } from '@/lib/domain/kr-permissions'
 import { sanitizeKRPayloadByType, updateKRSchema } from '@/lib/domain/kr-validation'
 import { KRType, KRUpdateEventType } from '@prisma/client'
 
@@ -24,23 +25,6 @@ function parseChecklist(value: unknown): ChecklistItem[] {
       typeof obj.done === 'boolean'
     )
   })
-}
-
-async function canManageKR(userId: string, tenantId: string, orgNodeId: string) {
-  const userRoles = await prisma.userRole.findMany({
-    where: { userId },
-    include: { role: true },
-  })
-
-  const permissions = userRoles.flatMap(ur => JSON.parse(ur.role.permissionsJson))
-  const perms = permissions.reduce((acc, perm) => ({ ...acc, ...perm }), {}) as Record<string, boolean>
-  if (perms.canManageConfig || perms.canEditAll) return true
-
-  const isLeader = await prisma.orgNode.count({
-    where: { id: orgNodeId, tenantId, leaderUserId: userId },
-  })
-
-  return isLeader > 0
 }
 
 export async function GET(
@@ -233,83 +217,67 @@ export async function PATCH(
       })
 
       if (shouldCreateChecklistHistory) {
-        const existingMonthlyChecklist = await tx.kRUpdateHistory.findFirst({
+        await tx.kRUpdateHistory.upsert({
           where: {
-            tenantId: session.user.tenantId,
-            keyResultId: id,
-            referenceMonth: monthRef,
-            eventType: KRUpdateEventType.CHECKLIST_UPDATE,
-          },
-          orderBy: { createdAt: 'desc' },
-        })
-
-        if (existingMonthlyChecklist) {
-          await tx.kRUpdateHistory.update({
-            where: { id: existingMonthlyChecklist.id },
-            data: {
-              newValue: nextMetrics.progress,
-              newProgress: nextMetrics.progress,
-              newItemsCount,
-              newDoneCount,
-              updatedByUserId: session.user.id,
-            },
-          })
-        } else {
-          await tx.kRUpdateHistory.create({
-            data: {
+            tenantId_keyResultId_referenceMonth_eventType: {
               tenantId: session.user.tenantId,
               keyResultId: id,
-              updatedByUserId: session.user.id,
-              eventType: KRUpdateEventType.CHECKLIST_UPDATE,
               referenceMonth: monthRef,
-              previousValue: previousMetrics.progress,
-              newValue: nextMetrics.progress,
-              previousProgress: previousMetrics.progress,
-              newProgress: nextMetrics.progress,
-              previousItemsCount,
-              newItemsCount,
-              previousDoneCount,
-              newDoneCount,
+              eventType: KRUpdateEventType.CHECKLIST_UPDATE,
             },
-          })
-        }
+          },
+          update: {
+            newValue: nextMetrics.progress,
+            newProgress: nextMetrics.progress,
+            newItemsCount,
+            newDoneCount,
+            updatedByUserId: session.user.id,
+          },
+          create: {
+            tenantId: session.user.tenantId,
+            keyResultId: id,
+            updatedByUserId: session.user.id,
+            eventType: KRUpdateEventType.CHECKLIST_UPDATE,
+            referenceMonth: monthRef,
+            previousValue: previousMetrics.progress,
+            newValue: nextMetrics.progress,
+            previousProgress: previousMetrics.progress,
+            newProgress: nextMetrics.progress,
+            previousItemsCount,
+            newItemsCount,
+            previousDoneCount,
+            newDoneCount,
+          },
+        })
       }
 
       if (shouldCreateNumericHistory) {
-        const existingMonthlyNumeric = await tx.kRUpdateHistory.findFirst({
+        await tx.kRUpdateHistory.upsert({
           where: {
-            tenantId: session.user.tenantId,
-            keyResultId: id,
-            referenceMonth: monthRef,
-            eventType: KRUpdateEventType.NUMERIC_UPDATE,
-          },
-          orderBy: { createdAt: 'desc' },
-        })
-
-        if (existingMonthlyNumeric) {
-          await tx.kRUpdateHistory.update({
-            where: { id: existingMonthlyNumeric.id },
-            data: {
-              newValue: nextNumericValue ?? 0,
-              newProgress: nextMetrics.progress,
-              updatedByUserId: session.user.id,
-            },
-          })
-        } else {
-          await tx.kRUpdateHistory.create({
-            data: {
+            tenantId_keyResultId_referenceMonth_eventType: {
               tenantId: session.user.tenantId,
               keyResultId: id,
-              updatedByUserId: session.user.id,
-              eventType: KRUpdateEventType.NUMERIC_UPDATE,
               referenceMonth: monthRef,
-              previousValue: previousNumericValue ?? 0,
-              newValue: nextNumericValue ?? 0,
-              previousProgress: previousMetrics.progress,
-              newProgress: nextMetrics.progress,
+              eventType: KRUpdateEventType.NUMERIC_UPDATE,
             },
-          })
-        }
+          },
+          update: {
+            newValue: nextNumericValue ?? 0,
+            newProgress: nextMetrics.progress,
+            updatedByUserId: session.user.id,
+          },
+          create: {
+            tenantId: session.user.tenantId,
+            keyResultId: id,
+            updatedByUserId: session.user.id,
+            eventType: KRUpdateEventType.NUMERIC_UPDATE,
+            referenceMonth: monthRef,
+            previousValue: previousNumericValue ?? 0,
+            newValue: nextNumericValue ?? 0,
+            previousProgress: previousMetrics.progress,
+            newProgress: nextMetrics.progress,
+          },
+        })
       }
     })
 
