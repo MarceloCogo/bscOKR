@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { updateObjectivePartial } from '@/lib/actions/strategy'
 import { KeyResultsTab } from './key-results-tab'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface Perspective {
   id: string
@@ -83,52 +84,81 @@ export function ObjectiveDrawer({
   perspectives,
   pillars,
   statuses,
-  orgNodes,
   users,
-  roles,
 }: ObjectiveDrawerProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('details')
+  const [isSavingDetails, setIsSavingDetails] = useState(false)
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    perspectiveId: '',
+    pillarId: '',
+    statusId: '',
+    sponsorUserId: '',
+  })
+
+  useEffect(() => {
+    if (!objective) return
+
+    setFormData({
+      title: objective.title || '',
+      description: objective.description || '',
+      perspectiveId: objective.perspective.id,
+      pillarId: objective.pillar?.id || '',
+      statusId: objective.status.id,
+      sponsorUserId: objective.sponsor.id,
+    })
+  }, [objective])
 
   if (!objective) return null
 
   const handleSaveDetails = async () => {
-    // Simple update
-    const title = prompt('Novo título:', objective.title)
-    if (!title) return
+    if (!formData.title.trim()) {
+      toast.error('Informe um titulo para o objetivo')
+      return
+    }
 
+    setIsSavingDetails(true)
     try {
       await updateObjectivePartial(objective.id, {
-        title,
+        title: formData.title.trim(),
+        description: formData.description.trim() || undefined,
+        perspectiveId: formData.perspectiveId,
+        pillarId: formData.pillarId || undefined,
+        statusId: formData.statusId,
+        sponsorUserId: formData.sponsorUserId,
       })
-      alert('Objetivo atualizado!')
+      toast.success('Objetivo atualizado com sucesso')
       router.refresh()
-      onOpenChange(false)
     } catch (error) {
       console.error('Error updating objective:', error)
-      alert('Erro ao atualizar')
+      toast.error('Erro ao atualizar objetivo')
+    } finally {
+      setIsSavingDetails(false)
     }
   }
 
   const handleAddResponsibility = () => {
-    // TODO: implement
-    alert('Adicionar responsabilidade - implementar')
+    toast.info('Responsabilidades ainda em implementacao neste painel')
   }
 
   const handleAddLink = () => {
-    // TODO: implement
-    alert('Adicionar link - implementar')
+    toast.info('Links ainda em implementacao neste painel')
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[860px] max-h-[85vh] overflow-y-auto p-0">
         <DialogHeader>
-          <DialogTitle>{objective.title}</DialogTitle>
+          <div className="border-b border-neutral-200 bg-neutral-50 px-6 py-4">
+            <DialogTitle className="text-xl font-semibold tracking-tight">{objective.title}</DialogTitle>
+            <p className="mt-1 text-sm text-neutral-600">Edite os detalhes e acompanhe os Key Results sem sair do contexto.</p>
+          </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="px-6 pb-6">
+          <TabsList className="mt-4 grid w-full grid-cols-4 bg-neutral-100">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="keyresults">KRs</TabsTrigger>
             <TabsTrigger value="responsibilities">Responsabilidades</TabsTrigger>
@@ -143,18 +173,29 @@ export function ObjectiveDrawer({
               <CardContent className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Título</label>
-                  <Input defaultValue={objective.title} />
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-1">Descrição</label>
-                  <Textarea defaultValue={objective.description || ''} />
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                    className="min-h-[96px]"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Perspectiva</label>
-                    <select className="w-full p-2 border rounded" defaultValue={objective.perspective.id}>
+                    <select
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={formData.perspectiveId}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, perspectiveId: e.target.value }))}
+                    >
                       {perspectives.map(p => (
                         <option key={p.id} value={p.id}>
                           {p.name}
@@ -165,7 +206,11 @@ export function ObjectiveDrawer({
 
                   <div>
                     <label className="block text-sm font-medium mb-1">Status</label>
-                    <select className="w-full p-2 border rounded" defaultValue={objective.status.id}>
+                    <select
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={formData.statusId}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, statusId: e.target.value }))}
+                    >
                       {statuses.map(s => (
                         <option key={s.id} value={s.id}>
                           {s.name}
@@ -177,13 +222,28 @@ export function ObjectiveDrawer({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Peso (%)</label>
-                    <Input type="number" defaultValue={objective.weight} min="1" max="100" />
+                    <label className="block text-sm font-medium mb-1">Pilar</label>
+                    <select
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={formData.pillarId}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, pillarId: e.target.value }))}
+                    >
+                      <option value="">Sem pilar</option>
+                      {pillars.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium mb-1">Sponsor</label>
-                    <select className="w-full p-2 border rounded" defaultValue={objective.sponsor.id}>
+                    <select
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={formData.sponsorUserId}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, sponsorUserId: e.target.value }))}
+                    >
                       {users.map(u => (
                         <option key={u.id} value={u.id}>
                           {u.name}
@@ -193,7 +253,15 @@ export function ObjectiveDrawer({
                   </div>
                 </div>
 
-                <Button onClick={handleSaveDetails}>Salvar Alterações</Button>
+                <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-600">
+                  Peso atual: <span className="font-medium text-neutral-900">{objective.weight}%</span>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button onClick={handleSaveDetails} disabled={isSavingDetails}>
+                    {isSavingDetails ? 'Salvando...' : 'Salvar alteracoes'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

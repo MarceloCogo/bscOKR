@@ -45,6 +45,17 @@ export async function GET(request: NextRequest) {
       include: {
         metricType: true,
         status: true,
+        updateHistories: {
+          select: {
+            id: true,
+            referenceMonth: true,
+            previousValue: true,
+            newValue: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+        },
         cycle: {
           select: {
             id: true,

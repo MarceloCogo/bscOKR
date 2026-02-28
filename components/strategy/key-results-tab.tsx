@@ -28,6 +28,13 @@ interface KeyResult {
   }
   status: { id: string; name: string; color: string | null } | null
   metricType: { id: string; name: string } | null
+  updateHistories?: Array<{
+    id: string
+    referenceMonth: string
+    previousValue: number
+    newValue: number
+    createdAt: string
+  }>
 }
 
 interface KeyResultsTabProps {

@@ -202,6 +202,19 @@ export function ObjectiveKRPanel({ objective, onOpenChange }: ObjectiveKRPanelPr
                           </div>
                         )}
                       </div>
+
+                      {kr.type !== 'ENTREGAVEL' && kr.updateHistories && kr.updateHistories.length > 0 && (
+                        <div className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1.5">
+                          <p className="text-[11px] font-medium text-neutral-700">Ultimas atualizacoes</p>
+                          <div className="mt-1 space-y-0.5">
+                            {kr.updateHistories.slice(0, 3).map((history: any) => (
+                              <p key={history.id} className="text-[11px] text-neutral-600">
+                                {history.referenceMonth}: {history.previousValue} → {history.newValue} {kr.unit ?? ''}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
