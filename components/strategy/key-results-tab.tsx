@@ -11,9 +11,20 @@ interface KeyResult {
   id: string
   title: string
   description: string | null
-  targetValue: number
-  currentValue: number
-  unit: string
+  type: 'AUMENTO' | 'REDUCAO' | 'ENTREGAVEL' | 'LIMIAR'
+  targetValue: number | null
+  baselineValue: number | null
+  thresholdValue: number | null
+  thresholdDirection: 'MAXIMO' | 'MINIMO' | null
+  currentValue: number | null
+  unit: 'PERCENTUAL' | 'BRL' | 'USD' | 'EUR' | 'UNIDADE' | null
+  dueDate: string
+  checklistJson: Array<{ id: string; title: string; done: boolean }> | null
+  computed?: {
+    progress: number
+    isAchieved: boolean
+    statusComputed: string
+  }
   status: { id: string; name: string; color: string | null } | null
   metricType: { id: string; name: string } | null
 }
@@ -37,10 +48,16 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newKR, setNewKR] = useState({
+    type: 'AUMENTO' as 'AUMENTO' | 'REDUCAO' | 'ENTREGAVEL' | 'LIMIAR',
     title: '',
+    dueDate: new Date().toISOString().slice(0, 10),
     targetValue: '',
+    baselineValue: '',
+    thresholdValue: '',
+    thresholdDirection: 'MAXIMO' as 'MAXIMO' | 'MINIMO',
     currentValue: '0',
-    unit: '%',
+    unit: 'PERCENTUAL' as 'PERCENTUAL' | 'BRL' | 'USD' | 'EUR' | 'UNIDADE',
+    checklistFirstItem: '',
     cycleId: '',
   })
   const [editValues, setEditValues] = useState<{ [key: string]: { currentValue: string } }>({})
@@ -64,29 +81,86 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
   }
 
   const calculateProgress = (kr: KeyResult) => {
-    if (kr.targetValue === 0) return 0
-    return Math.min(100, Math.max(0, (kr.currentValue / kr.targetValue) * 100))
+    return kr.computed?.progress ?? 0
   }
 
   const handleAddKR = async () => {
-    if (!newKR.title.trim() || !newKR.targetValue) return
+    if (!newKR.title.trim() || !newKR.dueDate) return
+
+    if ((newKR.type === 'AUMENTO' || newKR.type === 'REDUCAO' || newKR.type === 'LIMIAR') && !newKR.unit) {
+      return
+    }
+
+    if (newKR.type === 'REDUCAO' && !newKR.baselineValue) {
+      return
+    }
+
+    if (newKR.type === 'LIMIAR' && !newKR.thresholdValue) {
+      return
+    }
+
+    if (newKR.type === 'ENTREGAVEL' && !newKR.checklistFirstItem.trim()) {
+      return
+    }
 
     try {
+      const payload: any = {
+        objectiveId,
+        type: newKR.type,
+        title: newKR.title,
+        dueDate: newKR.dueDate,
+        cycleId: newKR.cycleId || null,
+      }
+
+      if (newKR.type === 'AUMENTO') {
+        payload.targetValue = parseFloat(newKR.targetValue)
+        payload.currentValue = parseFloat(newKR.currentValue) || 0
+        payload.unit = newKR.unit
+        payload.baselineValue = newKR.baselineValue ? parseFloat(newKR.baselineValue) : null
+      }
+
+      if (newKR.type === 'REDUCAO') {
+        payload.baselineValue = parseFloat(newKR.baselineValue)
+        payload.targetValue = parseFloat(newKR.targetValue)
+        payload.currentValue = parseFloat(newKR.currentValue) || 0
+        payload.unit = newKR.unit
+      }
+
+      if (newKR.type === 'LIMIAR') {
+        payload.thresholdValue = parseFloat(newKR.thresholdValue)
+        payload.currentValue = parseFloat(newKR.currentValue) || 0
+        payload.unit = newKR.unit
+        payload.thresholdDirection = newKR.thresholdDirection
+      }
+
+      if (newKR.type === 'ENTREGAVEL') {
+        payload.checklistJson = [{
+          id: crypto.randomUUID(),
+          title: newKR.checklistFirstItem,
+          done: false,
+        }]
+      }
+
       const response = await fetch('/api/kr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          objectiveId,
-          title: newKR.title,
-          targetValue: parseFloat(newKR.targetValue),
-          currentValue: parseFloat(newKR.currentValue) || 0,
-          unit: newKR.unit,
-          cycleId: newKR.cycleId || null,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (response.ok) {
-        setNewKR({ title: '', targetValue: '', currentValue: '0', unit: '%', cycleId: '' })
+        setNewKR({
+          type: 'AUMENTO',
+          title: '',
+          dueDate: new Date().toISOString().slice(0, 10),
+          targetValue: '',
+          baselineValue: '',
+          thresholdValue: '',
+          thresholdDirection: 'MAXIMO',
+          currentValue: '0',
+          unit: 'PERCENTUAL',
+          checklistFirstItem: '',
+          cycleId: '',
+        })
         setShowAddForm(false)
         loadKeyResults()
         router.refresh()
@@ -195,7 +269,9 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
                           />
                         </div>
                         <span className="text-xs font-medium whitespace-nowrap">
-                          {kr.currentValue} / {kr.targetValue} {kr.unit} ({Math.round(progress)}%)
+                          {kr.type === 'ENTREGAVEL'
+                            ? `${Math.round(progress)}% concluído`
+                            : `${kr.currentValue ?? 0} / ${kr.targetValue ?? kr.thresholdValue ?? 0} ${kr.unit ?? ''} (${Math.round(progress)}%)`}
                         </span>
                       </div>
 
@@ -205,7 +281,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
                           <Input
                             type="number"
                             className="h-8 w-24 text-sm"
-                            value={editValues[kr.id]?.currentValue ?? kr.currentValue}
+                              value={editValues[kr.id]?.currentValue ?? String(kr.currentValue ?? 0)}
                             onChange={(e) =>
                               setEditValues({
                                 ...editValues,
@@ -245,7 +321,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
                           className="h-8 w-8 p-0"
                           onClick={() => {
                             setEditingId(kr.id)
-                            setEditValues({ [kr.id]: { currentValue: String(kr.currentValue) } })
+                             setEditValues({ [kr.id]: { currentValue: String(kr.currentValue ?? 0) } })
                           }}
                           title="Atualizar valor atual"
                         >
@@ -278,6 +354,20 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
+              <label className="block text-xs font-medium mb-1">Tipo</label>
+              <select
+                className="w-full h-9 px-2 border rounded"
+                value={newKR.type}
+                onChange={(e) => setNewKR({ ...newKR, type: e.target.value as any })}
+              >
+                <option value="AUMENTO">Aumento</option>
+                <option value="REDUCAO">Reducao</option>
+                <option value="ENTREGAVEL">Entregavel</option>
+                <option value="LIMIAR">Limiar</option>
+              </select>
+            </div>
+
+            <div>
               <label className="block text-xs font-medium mb-1">Título</label>
               <Input
                 placeholder="Ex: Aumentar receita em 20%"
@@ -285,14 +375,30 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
                 onChange={(e) => setNewKR({ ...newKR, title: e.target.value })}
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Due date</label>
+              <Input
+                type="date"
+                value={newKR.dueDate}
+                onChange={(e) => setNewKR({ ...newKR, dueDate: e.target.value })}
+              />
+            </div>
+            {newKR.type !== 'ENTREGAVEL' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium mb-1">Target</label>
+                <label className="block text-xs font-medium mb-1">
+                  {newKR.type === 'LIMIAR' ? 'Limiar' : 'Target'}
+                </label>
                 <Input
                   type="number"
                   placeholder="100"
-                  value={newKR.targetValue}
-                  onChange={(e) => setNewKR({ ...newKR, targetValue: e.target.value })}
+                  value={newKR.type === 'LIMIAR' ? newKR.thresholdValue : newKR.targetValue}
+                  onChange={(e) => setNewKR({
+                    ...newKR,
+                    ...(newKR.type === 'LIMIAR'
+                      ? { thresholdValue: e.target.value }
+                      : { targetValue: e.target.value }),
+                  })}
                 />
               </div>
               <div>
@@ -300,14 +406,67 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, cycles = [] }: K
                 <select
                   className="w-full h-9 px-2 border rounded"
                   value={newKR.unit}
-                  onChange={(e) => setNewKR({ ...newKR, unit: e.target.value })}
+                  onChange={(e) => setNewKR({ ...newKR, unit: e.target.value as 'PERCENTUAL' | 'BRL' | 'USD' | 'EUR' | 'UNIDADE' })}
                 >
-                  <option value="%">%</option>
-                  <option value="R$">R$</option>
-                  <option value="#">Número</option>
+                  <option value="PERCENTUAL">Percentual</option>
+                  <option value="BRL">BRL</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="UNIDADE">Unidade</option>
                 </select>
               </div>
             </div>
+            )}
+
+            {(newKR.type === 'AUMENTO' || newKR.type === 'REDUCAO' || newKR.type === 'LIMIAR') && (
+              <div className="grid grid-cols-2 gap-3">
+                {newKR.type === 'REDUCAO' && (
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Baseline</label>
+                    <Input
+                      type="number"
+                      placeholder="120"
+                      value={newKR.baselineValue}
+                      onChange={(e) => setNewKR({ ...newKR, baselineValue: e.target.value })}
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-medium mb-1">Current</label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={newKR.currentValue}
+                    onChange={(e) => setNewKR({ ...newKR, currentValue: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+
+            {newKR.type === 'LIMIAR' && (
+              <div>
+                <label className="block text-xs font-medium mb-1">Direction</label>
+                <select
+                  className="w-full h-9 px-2 border rounded"
+                  value={newKR.thresholdDirection}
+                  onChange={(e) => setNewKR({ ...newKR, thresholdDirection: e.target.value as 'MAXIMO' | 'MINIMO' })}
+                >
+                  <option value="MAXIMO">Maximo (&lt;= limite)</option>
+                  <option value="MINIMO">Minimo (&gt;= limite)</option>
+                </select>
+              </div>
+            )}
+
+            {newKR.type === 'ENTREGAVEL' && (
+              <div>
+                <label className="block text-xs font-medium mb-1">Primeiro item do checklist</label>
+                <Input
+                  placeholder="Ex: Entregar dashboard em produção"
+                  value={newKR.checklistFirstItem}
+                  onChange={(e) => setNewKR({ ...newKR, checklistFirstItem: e.target.value })}
+                />
+              </div>
+            )}
             {cycles.length > 0 && (
               <div>
                 <label className="block text-xs font-medium mb-1">Ciclo (opcional)</label>

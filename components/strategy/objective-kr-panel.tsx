@@ -34,8 +34,7 @@ export function ObjectiveKRPanel({ objective, open, onOpenChange, cycles = [] }:
   }
 
   const getProgress = (kr: any) => {
-    if (kr.targetValue === 0) return 0
-    return Math.min(100, Math.max(0, (kr.currentValue / kr.targetValue) * 100))
+    return kr.computed?.progress ?? 0
   }
 
   const getProgressColor = (progress: number) => {
@@ -115,7 +114,11 @@ export function ObjectiveKRPanel({ objective, open, onOpenChange, cycles = [] }:
                       {/* Progress Bar */}
                       <div className="space-y-1">
                         <div className="flex justify-between text-xs text-gray-600">
-                          <span>{kr.currentValue} / {kr.targetValue} {kr.unit}</span>
+                          <span>
+                            {kr.type === 'ENTREGAVEL'
+                              ? `${Math.round(progress)}% concluido`
+                              : `${kr.currentValue ?? 0} / ${kr.targetValue ?? kr.thresholdValue ?? 0} ${kr.unit ?? ''}`}
+                          </span>
                           <span>{Math.round(progress)}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -131,16 +134,18 @@ export function ObjectiveKRPanel({ objective, open, onOpenChange, cycles = [] }:
 
                       {/* Actions */}
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleUpdateKR(kr)}
-                          className="flex-1"
-                          aria-label={`Atualizar valor atual do Key Result: ${kr.title}`}
-                        >
-                          <TrendingUp className="w-3 h-3 mr-1" aria-hidden="true" />
-                          Atualizar
-                        </Button>
+                        {kr.type !== 'ENTREGAVEL' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleUpdateKR(kr)}
+                            className="flex-1"
+                            aria-label={`Atualizar valor atual do Key Result: ${kr.title}`}
+                          >
+                            <TrendingUp className="w-3 h-3 mr-1" aria-hidden="true" />
+                            Atualizar
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

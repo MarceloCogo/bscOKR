@@ -11,9 +11,19 @@ interface KeyResult {
   id: string
   title: string
   description: string | null
-  targetValue: number
-  currentValue: number
-  unit: string
+  type: 'AUMENTO' | 'REDUCAO' | 'ENTREGAVEL' | 'LIMIAR'
+  targetValue: number | null
+  baselineValue: number | null
+  thresholdValue: number | null
+  currentValue: number | null
+  unit: 'PERCENTUAL' | 'BRL' | 'USD' | 'EUR' | 'UNIDADE' | null
+  dueDate: string
+  checklistJson: Array<{ id: string; title: string; done: boolean }> | null
+  computed?: {
+    progress: number
+    isAchieved: boolean
+    statusComputed: string
+  }
   status: { id: string; name: string; color: string | null } | null
   metricType: { id: string; name: string } | null
   objective: {
@@ -71,15 +81,15 @@ export default function KeyResultsPage() {
   const calculateStats = (krs: KeyResult[]) => {
     const total = krs.length
     const completed = krs.filter(kr => {
-      const progress = kr.targetValue > 0 ? (kr.currentValue / kr.targetValue) * 100 : 0
+      const progress = kr.computed?.progress ?? 0
       return progress >= 100
     }).length
     const onTrack = krs.filter(kr => {
-      const progress = kr.targetValue > 0 ? (kr.currentValue / kr.targetValue) * 100 : 0
+      const progress = kr.computed?.progress ?? 0
       return progress >= 70 && progress < 100
     }).length
     const atRisk = krs.filter(kr => {
-      const progress = kr.targetValue > 0 ? (kr.currentValue / kr.targetValue) * 100 : 0
+      const progress = kr.computed?.progress ?? 0
       return progress < 70
     }).length
 
@@ -87,8 +97,7 @@ export default function KeyResultsPage() {
   }
 
   const getProgress = (kr: KeyResult) => {
-    if (kr.targetValue === 0) return 0
-    return Math.min(100, Math.max(0, (kr.currentValue / kr.targetValue) * 100))
+    return kr.computed?.progress ?? 0
   }
 
   const getProgressColor = (progress: number) => {
@@ -255,7 +264,9 @@ export default function KeyResultsPage() {
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <p className="text-sm font-medium">
-                          {kr.currentValue} / {kr.targetValue} {kr.unit}
+                          {kr.type === 'ENTREGAVEL'
+                            ? `${Math.round(progress)}% concluido`
+                            : `${kr.currentValue ?? 0} / ${kr.targetValue ?? kr.thresholdValue ?? 0} ${kr.unit ?? ''}`}
                         </p>
                         <p className="text-xs text-gray-500">
                           {Math.round(progress)}%

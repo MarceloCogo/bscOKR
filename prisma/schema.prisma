@@ -10,6 +10,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum KRType {
+  AUMENTO
+  REDUCAO
+  ENTREGAVEL
+  LIMIAR
+}
+
+enum KRUnit {
+  PERCENTUAL
+  BRL
+  USD
+  EUR
+  UNIDADE
+}
+
+enum KRThresholdDirection {
+  MAXIMO
+  MINIMO
+}
+
 model Tenant {
   id        String   @id @default(cuid())
   name      String
@@ -303,10 +323,16 @@ model KeyResult {
   objectiveId   String
   title         String
   description   String?
-  targetValue   Float
-  currentValue  Float    @default(0)
+  type          KRType   @default(AUMENTO)
+  dueDate       DateTime @default(now())
+  targetValue   Float?
+  baselineValue Float?
+  thresholdValue Float?
+  thresholdDirection KRThresholdDirection?
+  currentValue  Float?
   metricTypeId  String?
-  unit          String   @default("%")
+  unit          String?
+  checklistJson Json?
   statusId     String?
   cycleId      String?
   startDate    DateTime?

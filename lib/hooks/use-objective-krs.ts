@@ -5,9 +5,20 @@ export interface KeyResult {
   id: string
   title: string
   description: string | null
-  targetValue: number
-  currentValue: number
-  unit: string
+  type: 'AUMENTO' | 'REDUCAO' | 'ENTREGAVEL' | 'LIMIAR'
+  targetValue: number | null
+  baselineValue: number | null
+  thresholdValue: number | null
+  thresholdDirection: 'MAXIMO' | 'MINIMO' | null
+  currentValue: number | null
+  unit: 'PERCENTUAL' | 'BRL' | 'USD' | 'EUR' | 'UNIDADE' | null
+  dueDate: string
+  checklistJson: Array<{ id: string; title: string; done: boolean }> | null
+  computed?: {
+    progress: number
+    isAchieved: boolean
+    statusComputed: string
+  }
   status: { id: string; name: string; color: string | null } | null
   metricType: { id: string; name: string } | null
   cycle?: { id: string; name: string } | null
