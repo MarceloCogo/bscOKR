@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowUp, ArrowDown, Edit, Trash2, Plus, Settings } from 'lucide-react'
+import { ArrowUp, ArrowDown, Edit, Trash2, Plus, Settings, BarChart3 } from 'lucide-react'
 import { getStrategyMap, createObjectiveInRegion, reorderObjective, updateObjectivePartial, deleteObjective, upsertStrategyMapMeta } from '@/lib/actions/strategy'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ObjectiveFormDialog } from './objective-form-dialog'
 import { ObjectiveEditDialog } from './objective-edit-dialog'
 import { ContextSelector } from './context-selector'
-import { ObjectiveDrawer } from './objective-drawer'
+import { ObjectiveKRPanel } from './objective-kr-panel'
 
 interface StrategicObjective {
   id: string
@@ -59,10 +59,11 @@ export function MapEditor() {
   const [editingMetaValue, setEditingMetaValue] = useState('')
   const [isSavingMeta, setIsSavingMeta] = useState(false)
   const [inlineTitle, setInlineTitle] = useState('')
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [selectedObjective, setSelectedObjective] = useState<any>(null)
   const [cycles, setCycles] = useState<any[]>([])
   const [roles, setRoles] = useState<any[]>([])
+  const [selectedObjectiveForKR, setSelectedObjectiveForKR] = useState<any>(null)
+  const [krPanelOpen, setKrPanelOpen] = useState(false)
+  const [objectiveKRStatus, setObjectiveKRStatus] = useState<Record<string, boolean>>({})
   const router = useRouter()
 
   useEffect(() => {
@@ -74,7 +75,7 @@ export function MapEditor() {
       const mapData = await getStrategyMap()
       setData(mapData)
 
-      const [perspectivesRes, pillarsRes, statusesRes, usersRes, orgNodesRes, cyclesRes, rolesRes] = await Promise.all([
+      const [perspectivesRes, pillarsRes, statusesRes, usersRes, orgNodesRes, cyclesRes, rolesRes, krCountRes] = await Promise.all([
         fetch('/api/config/perspectives'),
         fetch('/api/config/pillars'),
         fetch('/api/config/objective-statuses'),
@@ -82,6 +83,7 @@ export function MapEditor() {
         fetch('/api/org'),
         fetch('/api/cycle'),
         fetch('/api/config/roles'),
+        fetch('/api/objectives/kr-count'),
       ])
 
       if (perspectivesRes.ok) setPerspectives(await perspectivesRes.json())
@@ -96,6 +98,10 @@ export function MapEditor() {
       if (rolesRes.ok) {
         const rolesData = await rolesRes.json()
         setRoles(rolesData.roles || [])
+      }
+      if (krCountRes.ok) {
+        const krData = await krCountRes.json()
+        setObjectiveKRStatus(krData.krStatusMap || {})
       }
     } catch (error) {
       console.error('Error loading map:', error)
@@ -153,9 +159,9 @@ export function MapEditor() {
     }
   }
 
-  const handleViewObjective = (objective: any) => {
-    setSelectedObjective(objective)
-    setDrawerOpen(true)
+  const handleOpenKRPanel = (objective: any) => {
+    setSelectedObjectiveForKR(objective)
+    setKrPanelOpen(true)
   }
 
   const handleReorderObjective = async (objectiveId: string, direction: 'up' | 'down') => {
@@ -318,12 +324,14 @@ export function MapEditor() {
                       objective={objective}
                       onEdit={() => setEditingObjective(objective)}
                       onDelete={() => handleDeleteObjective(objective.id)}
-                      onView={() => handleViewObjective(objective)}
+                      onView={() => handleOpenKRPanel(objective)}
                       canReorder={true}
                       onReorderUp={() => handleReorderObjective(objective.id, 'up')}
                       onReorderDown={() => handleReorderObjective(objective.id, 'down')}
                       showControls={editMode}
                       style="default"
+                      hasKRs={objectiveKRStatus[objective.id] || false}
+                      isSelected={selectedObjectiveForKR?.id === objective.id && krPanelOpen}
                     />
                   ) : editMode ? (
                     creatingInRegion === `GROWTH_FOCUS_${index}` ? (
@@ -464,12 +472,14 @@ export function MapEditor() {
                     objective={obj}
                     onEdit={() => setEditingObjective(obj)}
                     onDelete={() => handleDeleteObjective(obj.id)}
-                    onView={() => handleViewObjective(obj)}
+                    onView={() => handleOpenKRPanel(obj)}
                     canReorder={true}
                     onReorderUp={() => handleReorderObjective(obj.id, 'up')}
                     onReorderDown={() => handleReorderObjective(obj.id, 'down')}
                     showControls={editMode}
                     style="pillar"
+                    hasKRs={objectiveKRStatus[obj.id] || false}
+                    isSelected={selectedObjectiveForKR?.id === obj.id && krPanelOpen}
                   />
                 ))}
                 {editMode && (
@@ -537,12 +547,14 @@ export function MapEditor() {
                     objective={obj}
                     onEdit={() => setEditingObjective(obj)}
                     onDelete={() => handleDeleteObjective(obj.id)}
-                    onView={() => handleViewObjective(obj)}
+                    onView={() => handleOpenKRPanel(obj)}
                     canReorder={true}
                     onReorderUp={() => handleReorderObjective(obj.id, 'up')}
                     onReorderDown={() => handleReorderObjective(obj.id, 'down')}
                     showControls={editMode}
                     style="pillar"
+                    hasKRs={objectiveKRStatus[obj.id] || false}
+                    isSelected={selectedObjectiveForKR?.id === obj.id && krPanelOpen}
                   />
                 ))}
                 {editMode && (
@@ -610,12 +622,14 @@ export function MapEditor() {
                     objective={obj}
                     onEdit={() => setEditingObjective(obj)}
                     onDelete={() => handleDeleteObjective(obj.id)}
-                    onView={() => handleViewObjective(obj)}
+                    onView={() => handleOpenKRPanel(obj)}
                     canReorder={true}
                     onReorderUp={() => handleReorderObjective(obj.id, 'up')}
                     onReorderDown={() => handleReorderObjective(obj.id, 'down')}
                     showControls={editMode}
                     style="pillar"
+                    hasKRs={objectiveKRStatus[obj.id] || false}
+                    isSelected={selectedObjectiveForKR?.id === obj.id && krPanelOpen}
                   />
                 ))}
                 {editMode && (
@@ -694,12 +708,14 @@ export function MapEditor() {
                       objective={objective}
                       onEdit={() => setEditingObjective(objective)}
                       onDelete={() => handleDeleteObjective(objective.id)}
-                      onView={() => handleViewObjective(objective)}
+                      onView={() => handleOpenKRPanel(objective)}
                       canReorder={true}
                       onReorderUp={() => handleReorderObjective(objective.id, 'up')}
                       onReorderDown={() => handleReorderObjective(objective.id, 'down')}
                       showControls={editMode}
                       style="base"
+                      hasKRs={objectiveKRStatus[objective.id] || false}
+                      isSelected={selectedObjectiveForKR?.id === objective.id && krPanelOpen}
                     />
                   ) : editMode ? (
                     creatingInRegion === `PEOPLE_BASE_${index}` ? (
@@ -790,16 +806,10 @@ export function MapEditor() {
           />
         )}
 
-        <ObjectiveDrawer
-          objective={selectedObjective}
-          open={drawerOpen}
-          onOpenChange={setDrawerOpen}
-          perspectives={perspectives}
-          pillars={pillars}
-          statuses={statuses}
-          orgNodes={orgNodes}
-          users={users}
-          roles={roles}
+        <ObjectiveKRPanel
+          objective={selectedObjectiveForKR}
+          open={krPanelOpen}
+          onOpenChange={setKrPanelOpen}
           cycles={cycles}
         />
       </div>
@@ -816,7 +826,9 @@ function ObjectiveCard({
   onReorderUp,
   onReorderDown,
   showControls,
-  style = 'default'
+  style = 'default',
+  hasKRs = false,
+  isSelected = false
 }: {
   objective: any,
   onEdit?: () => void,
@@ -826,7 +838,9 @@ function ObjectiveCard({
   onReorderUp?: () => void,
   onReorderDown?: () => void,
   showControls?: boolean,
-  style?: CardStyle
+  style?: CardStyle,
+  hasKRs?: boolean,
+  isSelected?: boolean
 }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState(objective?.title || '')
@@ -871,11 +885,16 @@ function ObjectiveCard({
   }
 
   return (
-    <div 
-      className={`${getContainerClass()} mb-1 ${!showControls ? 'cursor-pointer hover:ring-2 hover:ring-[#E87722]' : ''}`}
+    <div
+      className={`${getContainerClass()} mb-1 relative ${!showControls ? 'cursor-pointer hover:ring-2 hover:ring-[#E87722]' : ''} ${isSelected ? 'ring-2 ring-blue-400 shadow-lg' : ''}`}
       onClick={() => !showControls && onView?.()}
     >
-      <div className="flex items-start justify-between">
+      {/* KR indicator icon */}
+      <div className="absolute top-1 right-1 z-10">
+        <BarChart3 className={`w-3 h-3 ${hasKRs ? 'text-green-600' : 'text-gray-400'}`} />
+      </div>
+
+      <div className="flex items-start justify-between pr-4">
         <div className="flex-1">
           {isEditingTitle ? (
             <div className="space-y-1">
