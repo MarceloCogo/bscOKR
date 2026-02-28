@@ -27,6 +27,7 @@ model Tenant {
   pillars           Pillar[]
   objectiveStatuses ObjectiveStatus[]
   cycleStatuses     CycleStatus[]
+  cycles           Cycle[]
   krStatuses        KRStatus[]
   krMetricTypes     KRMetricType[]
   responsibilityRoles ResponsibilityRole[]
@@ -156,9 +157,33 @@ model CycleStatus {
 
   // Relations
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cycles Cycle[]
 
   @@unique([tenantId, key])
   @@map("cycle_statuses")
+}
+
+model Cycle {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  key         String   // "monthly", "quarterly", "semester", "yearly"
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(false)
+  statusId    String?
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status     CycleStatus? @relation(fields: [statusId], references: [id])
+  keyResults KeyResult[]
+
+  @@index([tenantId])
+  @@index([isActive])
+  @@map("cycles")
 }
 
 model KRStatus {
@@ -283,6 +308,7 @@ model KeyResult {
   metricTypeId  String?
   unit          String   @default("%")
   statusId     String?
+  cycleId      String?
   startDate    DateTime?
   endDate      DateTime?
   orderIndex   Int      @default(0)
@@ -294,6 +320,7 @@ model KeyResult {
   objective   StrategicObjective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
   metricType  KRMetricType?  @relation(fields: [metricTypeId], references: [id])
   status      KRStatus?      @relation(fields: [statusId], references: [id])
+  cycle       Cycle?         @relation(fields: [cycleId], references: [id])
 
   @@index([tenantId])
   @@index([objectiveId])
