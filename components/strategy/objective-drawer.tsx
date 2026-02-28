@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { updateObjectivePartial } from '@/lib/actions/strategy'
+import { KeyResultsTab } from './key-results-tab'
 import { useRouter } from 'next/navigation'
 
 interface Perspective {
@@ -127,8 +128,9 @@ export function ObjectiveDrawer({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
+            <TabsTrigger value="keyresults">KRs</TabsTrigger>
             <TabsTrigger value="responsibilities">Responsabilidades</TabsTrigger>
             <TabsTrigger value="links">Links</TabsTrigger>
           </TabsList>
@@ -194,6 +196,10 @@ export function ObjectiveDrawer({
                 <Button onClick={handleSaveDetails}>Salvar Alterações</Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="keyresults" className="space-y-4">
+            <KeyResultsTab objectiveId={objective.id} isEditMode={true} />
           </TabsContent>
 
           <TabsContent value="responsibilities" className="space-y-4">
