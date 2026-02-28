@@ -16,6 +16,7 @@ const signupSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   confirmPassword: z.string(),
+  adminSecret: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Senhas não coincidem',
   path: ['confirmPassword'],
@@ -36,6 +37,7 @@ export function SignupForm() {
       email: '',
       password: '',
       confirmPassword: '',
+      adminSecret: '',
     },
   })
 
@@ -54,6 +56,7 @@ export function SignupForm() {
           name: data.name,
           email: data.email,
           password: data.password,
+          adminSecret: data.adminSecret || undefined,
         }),
       })
 
@@ -77,7 +80,7 @@ export function SignupForm() {
       <CardHeader className="space-y-1">
         <CardTitle className="text-center">Informações da Conta</CardTitle>
         <CardDescription className="text-center">
-          Preencha os dados para criar sua organização e conta de administrador.
+          Preencha os dados para criar sua organização. Use o código de administrador apenas se souber.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -172,6 +175,28 @@ export function SignupForm() {
                     />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="adminSecret"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Código de Administrador</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Digite apenas se souber o código..."
+                      className="h-11"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <p className="text-xs text-muted-foreground">
+                    Campo opcional para administradores autorizados
+                  </p>
                 </FormItem>
               )}
             />

@@ -10,12 +10,13 @@ const signupSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  adminSecret: z.string().optional(),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { tenantName, name, email, password } = signupSchema.parse(body)
+    const { tenantName, name, email, password, adminSecret } = signupSchema.parse(body)
 
     // Check if email already exists
     const existingUser = await prisma.user.findFirst({
@@ -61,25 +62,41 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Assign admin role to user
-    const adminRole = await prisma.role.findFirst({
+    // Check admin secret
+    let isAdmin = false
+    if (adminSecret) {
+      if (adminSecret === process.env.ADMIN_SECRET) {
+        isAdmin = true
+        console.log(`[ADMIN_SECRET] Usuário ${email} usou segredo correto para se tornar admin`)
+      } else {
+        return NextResponse.json(
+          { error: 'Código de administrador inválido' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Always bootstrap tenant configuration (creates roles, perspectives, etc.)
+    await bootstrapTenantConfig(tenant.id)
+
+    // Get appropriate role
+    const roleKey = isAdmin ? 'admin' : 'member'
+    const role = await prisma.role.findFirst({
       where: {
         tenantId: tenant.id,
-        key: 'admin',
+        key: roleKey,
       },
     })
 
-    if (adminRole) {
+    // Assign role to user
+    if (role) {
       await prisma.userRole.create({
         data: {
           userId: user.id,
-          roleId: adminRole.id,
+          roleId: role.id,
         },
       })
     }
-
-    // Bootstrap tenant configuration
-    await bootstrapTenantConfig(tenant.id)
 
     return NextResponse.json({
       message: 'Conta criada com sucesso',
