@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import { Session } from 'next-auth'
 import { SidebarNav } from './sidebar-nav'
 import { TopBar } from './top-bar'
@@ -9,12 +12,17 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, session, title }: AppShellProps) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
   return (
     <div className="flex h-screen bg-background">
-      <SidebarNav />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <SidebarNav collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+      <div 
+        className="flex flex-1 flex-col overflow-hidden transition-all duration-300"
+        style={{ marginLeft: sidebarCollapsed ? '64px' : '256px' }}
+      >
         <TopBar session={session} title={title} />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4">
           {children}
         </main>
       </div>
