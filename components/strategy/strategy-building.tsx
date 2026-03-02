@@ -29,15 +29,33 @@ interface StrategyMapData {
 }
 
 function StrategyMapPreview({ title, data, loading }: { title: string; data: StrategyMapData | null; loading: boolean }) {
+  const summary = data
+    ? {
+        growth: data.regions.growthFocus.length,
+        pillars:
+          data.regions.pillarOffer.length +
+          data.regions.pillarRevenue.length +
+          data.regions.pillarEfficiency.length,
+        base: data.regions.peopleBase.length,
+      }
+    : null
+
   return (
-    <Card className="h-full border-neutral-200">
-      <CardHeader className="border-b border-neutral-200 bg-neutral-50">
+    <Card className="flex h-full flex-col border-neutral-200">
+      <CardHeader className="border-b border-neutral-200 bg-neutral-50 py-3">
         <CardTitle className="flex items-center justify-between text-sm">
-          <span>{title}</span>
+          <div className="flex items-center gap-2">
+            <span>{title}</span>
+            {summary && (
+              <span className="text-[11px] font-normal text-neutral-500">
+                Focos {summary.growth} • Pilares {summary.pillars} • Base {summary.base}
+              </span>
+            )}
+          </div>
           {data?.isEditAllowed ? <Badge variant="default">Editável</Badge> : <Badge variant="secondary">Somente leitura</Badge>}
         </CardTitle>
       </CardHeader>
-      <CardContent className="relative p-4">
+      <CardContent className="relative flex-1 overflow-y-auto p-3">
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
             <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700">
@@ -50,7 +68,7 @@ function StrategyMapPreview({ title, data, loading }: { title: string; data: Str
         {!data?.orgNode ? (
           <div className="py-10 text-center text-sm text-neutral-500">Selecione um mapa para visualizar.</div>
         ) : (
-          <StrategyMapCanvas data={data} />
+          <StrategyMapCanvas data={data} compact />
         )}
       </CardContent>
     </Card>
@@ -112,64 +130,33 @@ export function StrategyBuilding() {
   }, [])
 
   return (
-    <div className="relative space-y-4">
-      <div>
+    <div className="relative space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-bold text-foreground">Strategy Building</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Compare mapas da sua cadeia hierárquica e construa sua estratégia no contexto editável.
         </p>
       </div>
 
-      {!leftCollapsed && (
-        <div className="absolute left-0 top-[88px] z-20 hidden lg:block">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-r-md rounded-l-none border-l-0 bg-white"
-            onClick={() => setLeftCollapsed(true)}
-          >
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            Colapsar referência
-          </Button>
-        </div>
-      )}
+      <div className="sticky top-0 z-20 rounded-lg border border-neutral-200 bg-white/95 p-2 backdrop-blur-sm">
+        <div className={`grid gap-2 ${leftCollapsed ? 'lg:grid-cols-[1fr_auto]' : 'lg:grid-cols-[1fr_1fr_auto]'}`}>
+          {!leftCollapsed && (
+            <Select value={leftNodeId} onValueChange={(value) => { setLeftNodeId(value); void loadMap(value, 'left') }}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Selecione o mapa de referência" />
+              </SelectTrigger>
+              <SelectContent>
+                {leftOptions.map((node) => (
+                  <SelectItem key={node.id} value={node.id}>
+                    {node.name} ({node.type.name})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
-      {leftCollapsed && (
-        <div className="absolute left-0 top-[88px] z-20 hidden lg:block">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-r-md rounded-l-none border-l-0 bg-white"
-            onClick={() => setLeftCollapsed(false)}
-          >
-            <ChevronRight className="mr-1 h-4 w-4" />
-            Mostrar referência
-          </Button>
-        </div>
-      )}
-
-      <div className={`grid gap-4 ${leftCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-2'}`}>
-        {!leftCollapsed && (
-          <div className="space-y-3">
-          <Select value={leftNodeId} onValueChange={(value) => { setLeftNodeId(value); void loadMap(value, 'left') }}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o mapa de referência" />
-            </SelectTrigger>
-            <SelectContent>
-              {leftOptions.map((node) => (
-                <SelectItem key={node.id} value={node.id}>
-                  {node.name} ({node.type.name})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <StrategyMapPreview title="Referência (esquerda)" data={leftMap} loading={loadingLeft} />
-          </div>
-        )}
-
-        <div className="space-y-3">
           <Select value={rightNodeId} onValueChange={(value) => { setRightNodeId(value); void loadMap(value, 'right') }}>
-            <SelectTrigger>
+            <SelectTrigger className="h-9">
               <SelectValue placeholder="Selecione seu mapa editável" />
             </SelectTrigger>
             <SelectContent>
@@ -180,6 +167,29 @@ export function StrategyBuilding() {
               ))}
             </SelectContent>
           </Select>
+
+          <Button variant="outline" size="sm" className="h-9" onClick={() => setLeftCollapsed((prev) => !prev)}>
+            {leftCollapsed ? (
+              <>
+                <ChevronRight className="mr-1 h-4 w-4" /> Mostrar referência
+              </>
+            ) : (
+              <>
+                <ChevronLeft className="mr-1 h-4 w-4" /> Colapsar referência
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      <div className={`grid h-[calc(100vh-220px)] min-h-[560px] gap-3 ${leftCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-2'}`}>
+        {!leftCollapsed && (
+          <div className="h-full">
+            <StrategyMapPreview title="Referência (esquerda)" data={leftMap} loading={loadingLeft} />
+          </div>
+        )}
+
+        <div className="h-full">
           <StrategyMapPreview title="Seu mapa (direita)" data={rightMap} loading={loadingRight} />
         </div>
       </div>
