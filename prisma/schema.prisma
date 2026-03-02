@@ -35,6 +35,16 @@ enum KRUpdateEventType {
   CHECKLIST_UPDATE
 }
 
+enum OrgAccessGranteeType {
+  ROLE
+  USER
+}
+
+enum OrgAccessPermission {
+  VIEW
+  EDIT
+}
+
 model Tenant {
   id        String   @id @default(cuid())
   name      String
@@ -62,6 +72,7 @@ model Tenant {
   objectiveResponsibilities ObjectiveResponsibility[]
   objectiveLinks    ObjectiveLink[]
   strategyMapMeta   StrategyMapMeta[]
+  orgNodeAccessGrants OrgNodeAccessGrant[]
   keyResults        KeyResult[]
   krUpdateHistories KRUpdateHistory[]
 
@@ -447,6 +458,7 @@ model OrgNode {
   memberships OrgNodeMembership[]
   strategicObjectives StrategicObjective[]
   strategyMapMeta StrategyMapMeta[]
+  accessGrants OrgNodeAccessGrant[]
 
   @@map("org_nodes")
 }
@@ -485,6 +497,27 @@ model UserPreference {
   @@unique([tenantId, userId])
   @@unique([userId])
   @@map("user_preferences")
+}
+
+model OrgNodeAccessGrant {
+  id                 String               @id @default(cuid())
+  tenantId           String
+  orgNodeId          String
+  granteeType        OrgAccessGranteeType
+  granteeId          String
+  permission         OrgAccessPermission
+  includeDescendants Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orgNode OrgNode @relation(fields: [orgNodeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([orgNodeId])
+  @@index([granteeType, granteeId])
+  @@unique([tenantId, orgNodeId, granteeType, granteeId, permission])
+  @@map("org_node_access_grants")
 }
 
 model StrategyMapMeta {

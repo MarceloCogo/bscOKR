@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getUserPermissions } from '@/lib/domain/permissions'
+import { getUserOrgScope } from '@/lib/domain/org-scope'
 
 export async function GET(
   request: NextRequest,
@@ -20,11 +21,15 @@ export async function GET(
     }
 
     const { id } = await params
+    const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
 
     const keyResult = await prisma.keyResult.findFirst({
       where: {
         id,
         tenantId: session.user.tenantId,
+        objective: {
+          orgNodeId: { in: scope.viewableNodeIds },
+        },
       },
       select: { id: true },
     })

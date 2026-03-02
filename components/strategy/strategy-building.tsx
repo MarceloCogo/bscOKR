@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { StrategyMapCanvas } from './strategy-map-canvas'
 
@@ -139,7 +138,7 @@ export function StrategyBuilding() {
       </div>
 
       <div className="sticky top-0 z-20 rounded-lg border border-neutral-200 bg-white/95 p-2 backdrop-blur-sm">
-        <div className={`grid gap-2 ${leftCollapsed ? 'lg:grid-cols-[1fr_auto]' : 'lg:grid-cols-[1fr_1fr_auto]'}`}>
+        <div className={`grid gap-2 ${leftCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-2'}`}>
           {!leftCollapsed && (
             <Select value={leftNodeId} onValueChange={(value) => { setLeftNodeId(value); void loadMap(value, 'left') }}>
               <SelectTrigger className="h-9">
@@ -167,29 +166,37 @@ export function StrategyBuilding() {
               ))}
             </SelectContent>
           </Select>
-
-          <Button variant="outline" size="sm" className="h-9" onClick={() => setLeftCollapsed((prev) => !prev)}>
-            {leftCollapsed ? (
-              <>
-                <ChevronRight className="mr-1 h-4 w-4" /> Mostrar referência
-              </>
-            ) : (
-              <>
-                <ChevronLeft className="mr-1 h-4 w-4" /> Colapsar referência
-              </>
-            )}
-          </Button>
         </div>
       </div>
 
       <div className={`grid h-[calc(100vh-220px)] min-h-[560px] gap-3 ${leftCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-2'}`}>
         {!leftCollapsed && (
-          <div className="h-full">
+          <div className="relative h-full">
             <StrategyMapPreview title="Referência (esquerda)" data={leftMap} loading={loadingLeft} />
+            <button
+              type="button"
+              onClick={() => setLeftCollapsed(true)}
+              className="absolute right-0 top-1/2 hidden h-8 w-6 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-500 shadow-sm transition-colors hover:text-neutral-800 lg:flex"
+              aria-label="Colapsar referência"
+              title="Colapsar referência"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
           </div>
         )}
 
-        <div className="h-full">
+        <div className="relative h-full">
+          {leftCollapsed && (
+            <button
+              type="button"
+              onClick={() => setLeftCollapsed(false)}
+              className="absolute left-0 top-1/2 z-10 hidden h-8 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-500 shadow-sm transition-colors hover:text-neutral-800 lg:flex"
+              aria-label="Mostrar referência"
+              title="Mostrar referência"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          )}
           <StrategyMapPreview title="Seu mapa (direita)" data={rightMap} loading={loadingRight} />
         </div>
       </div>

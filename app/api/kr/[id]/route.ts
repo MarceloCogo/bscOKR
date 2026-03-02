@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { calculateKRMetrics } from '@/lib/domain/kr-metrics'
 import { canManageKR } from '@/lib/domain/kr-permissions'
 import { getUserPermissions } from '@/lib/domain/permissions'
+import { getUserOrgScope } from '@/lib/domain/org-scope'
 import { sanitizeKRPayloadByType, updateKRSchema } from '@/lib/domain/kr-validation'
 import { KRType, KRUpdateEventType } from '@prisma/client'
 
@@ -44,11 +45,15 @@ export async function GET(
     }
 
     const { id } = await params
+    const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
 
     const keyResult = await prisma.keyResult.findFirst({
       where: {
         id,
         tenantId: session.user.tenantId,
+        objective: {
+          orgNodeId: { in: scope.viewableNodeIds },
+        },
       },
       include: {
         metricType: true,
@@ -81,6 +86,7 @@ export async function GET(
           select: {
             id: true,
             title: true,
+            orgNodeId: true,
           },
         },
       },

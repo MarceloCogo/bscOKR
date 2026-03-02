@@ -32,9 +32,13 @@ interface OrgTreeProps {
 export function OrgTree({ tree, userContext }: OrgTreeProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
   const [parentNodeId, setParentNodeId] = useState<string>('')
+  const [editingNodeId, setEditingNodeId] = useState<string>('')
+  const [editingNodeName, setEditingNodeName] = useState('')
   const [childForm, setChildForm] = useState({ name: '', type: '' })
   const [isCreating, setIsCreating] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const router = useRouter()
 
   const toggleExpanded = (nodeId: string) => {
@@ -83,9 +87,39 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
     }
   }
 
-  const handleEditNode = (nodeId: string) => {
-    // TODO: Implementar modal/form para editar nó
-    toast.info('Funcionalidade editar nó será implementada em breve')
+  const handleEditNode = (nodeId: string, nodeName: string) => {
+    setEditingNodeId(nodeId)
+    setEditingNodeName(nodeName)
+    setShowEditDialog(true)
+  }
+
+  const handleEditNodeSubmit = async () => {
+    if (!editingNodeId || !editingNodeName.trim()) return
+
+    setIsEditing(true)
+    try {
+      const response = await fetch(`/api/org/${editingNodeId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editingNodeName.trim() }),
+      })
+
+      if (response.ok) {
+        setShowEditDialog(false)
+        setEditingNodeId('')
+        setEditingNodeName('')
+        router.refresh()
+        toast.success('Unidade atualizada com sucesso!')
+      } else {
+        const data = await response.json().catch(() => ({}))
+        toast.error(data.error || 'Erro ao atualizar unidade')
+      }
+    } catch (error) {
+      console.error('Error editing node:', error)
+      toast.error('Erro ao atualizar unidade')
+    } finally {
+      setIsEditing(false)
+    }
   }
 
   const handleSetActiveContext = async (nodeId: string) => {
@@ -96,6 +130,7 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
         body: JSON.stringify({ orgNodeId: nodeId }),
       })
       router.refresh()
+      window.dispatchEvent(new Event('org-context-changed'))
     } catch (error) {
       console.error('Error setting active context:', error)
     }
@@ -154,13 +189,13 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
                     onClick={() => handleSetActiveContext(node.id)}
                   >
                     <Check className="h-3 w-3 mr-1" />
-                    Definir contexto
+                    Ativar contexto de trabalho
                   </Button>
                 )}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleEditNode(node.id)}
+                  onClick={() => handleEditNode(node.id, node.name)}
                 >
                   <Edit className="h-3 w-3 mr-1" />
                   Editar
@@ -261,6 +296,38 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
               disabled={!childForm.name.trim() || !childForm.type || isCreating}
             >
               {isCreating ? 'Criando...' : 'Criar Unidade'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Unidade</DialogTitle>
+            <DialogDescription>
+              Atualize o nome da unidade organizacional selecionada.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="editNodeName">Nome da Unidade</Label>
+              <Input
+                id="editNodeName"
+                value={editingNodeName}
+                onChange={(e) => setEditingNodeName(e.target.value)}
+                placeholder="Digite o nome da unidade"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditNodeSubmit} disabled={!editingNodeName.trim() || isEditing}>
+              {isEditing ? 'Salvando...' : 'Salvar alterações'}
             </Button>
           </DialogFooter>
         </DialogContent>

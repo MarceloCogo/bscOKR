@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { calculateKRMetrics } from '@/lib/domain/kr-metrics'
 import { canManageKR } from '@/lib/domain/kr-permissions'
 import { getUserPermissions } from '@/lib/domain/permissions'
+import { getUserOrgScope } from '@/lib/domain/org-scope'
 import { createKRSchema, sanitizeKRPayloadByType } from '@/lib/domain/kr-validation'
 
 export async function GET(request: NextRequest) {
@@ -21,9 +22,13 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const objectiveId = searchParams.get('objectiveId')
+    const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
 
     const where: any = {
       tenantId: session.user.tenantId,
+      objective: {
+        orgNodeId: { in: scope.viewableNodeIds },
+      },
     }
 
     if (objectiveId) {

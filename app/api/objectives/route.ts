@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getUserPermissions } from '@/lib/domain/permissions'
+import { getUserOrgScope } from '@/lib/domain/org-scope'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,8 +17,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
+    const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
+
     const objectives = await prisma.strategicObjective.findMany({
-      where: { tenantId: session.user.tenantId },
+      where: {
+        tenantId: session.user.tenantId,
+        orgNodeId: { in: scope.viewableNodeIds },
+      },
       select: {
         id: true,
         title: true,
