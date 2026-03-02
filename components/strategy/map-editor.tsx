@@ -19,6 +19,7 @@ import { toast } from 'sonner'
 import { ObjectiveFormDialog } from './objective-form-dialog'
 import { ObjectiveDrawer } from './objective-drawer'
 import { ObjectiveKRPanel } from './objective-kr-panel'
+import { StrategyMapCanvas } from './strategy-map-canvas'
 
 interface StrategicObjective {
   id: string
@@ -300,6 +301,64 @@ export function MapEditor() {
           <Button onClick={() => router.push('/app/organization')} className="bg-[#E87722] hover:bg-[#d06a1e]">
             Ir para Estrutura Organizacional
           </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!editMode) {
+    return (
+      <div className="flex min-h-screen bg-[#F4F4F4]">
+        <div className={`relative transition-all duration-250 ease-out ${krPanelOpen ? `w-[calc(100%-450px)]` : 'w-full'}`}>
+          {isContextLoading && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/75 backdrop-blur-sm">
+              <div className="rounded-xl border border-neutral-200 bg-white px-6 py-5 shadow-sm">
+                <div className="flex items-center gap-3" role="status" aria-live="polite">
+                  <Loader2 className="h-5 w-5 animate-spin text-[#E87722]" />
+                  <span className="text-sm font-medium text-neutral-700">{contextLoadingPhrase}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="min-h-screen py-1">
+            <div className="mx-auto max-w-[1280px] px-2">
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <h1 className="text-sm font-bold text-gray-800">Mapa Estratégico</h1>
+                  <p className="mt-0.5 text-[10px] text-gray-500">Contexto: {data.orgNode?.name}</p>
+                </div>
+                <Button size="sm" variant="default" onClick={() => setEditMode(true)} className="bg-[#E87722] hover:bg-[#d06a1e] text-white">
+                  Editar mapa
+                </Button>
+              </div>
+
+              <StrategyMapCanvas
+                data={data}
+                objectiveKRStatus={objectiveKRStatus}
+                selectedObjectiveId={selectedObjectiveForKR?.id || null}
+                onObjectiveView={(objective) => handleOpenKRPanel(objective)}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={`fixed right-0 top-0 h-full w-[450px] bg-white border-l border-neutral-200 shadow-lg transition-transform duration-250 ease-out ${
+            krPanelOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+          style={{ zIndex: 40 }}
+        >
+          <ObjectiveKRPanel
+            objective={selectedObjectiveForKR}
+            onOpenChange={setKrPanelOpen}
+            canEdit={Boolean(data?.isEditAllowed)}
+            krRefreshToken={krRefreshToken}
+            onKRMutation={handleKRMutation}
+            onCreateKR={(objective) => {
+              handleOpenObjectiveModal(objective, { initialTab: 'keyresults', autoOpenCreateKR: true })
+            }}
+          />
         </div>
       </div>
     )

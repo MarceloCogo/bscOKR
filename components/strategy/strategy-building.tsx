@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { StrategyMapCanvas } from './strategy-map-canvas'
 
 interface OrgNode {
   id: string
@@ -24,10 +26,6 @@ interface StrategyMapData {
     pillarEfficiency: any[]
     peopleBase: any[]
   }
-}
-
-function ObjectivePill({ title }: { title: string }) {
-  return <div className="rounded border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-700">{title}</div>
 }
 
 function StrategyMapPreview({ title, data, loading }: { title: string; data: StrategyMapData | null; loading: boolean }) {
@@ -52,48 +50,7 @@ function StrategyMapPreview({ title, data, loading }: { title: string; data: Str
         {!data?.orgNode ? (
           <div className="py-10 text-center text-sm text-neutral-500">Selecione um mapa para visualizar.</div>
         ) : (
-          <div className="space-y-3">
-            <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-center">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Contexto</p>
-              <p className="text-sm font-semibold text-neutral-800">{data.orgNode.name}</p>
-              <p className="text-xs text-neutral-500">{data.orgNode.type.name}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg border border-neutral-200 bg-[#FFF8F2] p-2">
-                <p className="mb-1 text-[11px] font-semibold text-neutral-600">Ambição</p>
-                {data.regions.ambition ? <ObjectivePill title={data.regions.ambition.title} /> : <p className="text-xs text-neutral-400">Sem objetivo</p>}
-              </div>
-              <div className="rounded-lg border border-neutral-200 bg-[#F6FBFF] p-2">
-                <p className="mb-1 text-[11px] font-semibold text-neutral-600">Proposta de Valor</p>
-                {data.regions.valueProposition ? <ObjectivePill title={data.regions.valueProposition.title} /> : <p className="text-xs text-neutral-400">Sem objetivo</p>}
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-neutral-200 p-2">
-              <p className="mb-2 text-[11px] font-semibold text-neutral-600">Focos de Crescimento</p>
-              <div className="grid grid-cols-1 gap-1">
-                {data.regions.growthFocus.length > 0
-                  ? data.regions.growthFocus.map((objective) => <ObjectivePill key={objective.id} title={objective.title} />)
-                  : <p className="text-xs text-neutral-400">Sem objetivos</p>}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-lg border border-neutral-200 p-2">
-                <p className="mb-1 text-[11px] font-semibold text-neutral-600">Oferta</p>
-                <p className="text-xs text-neutral-500">{data.regions.pillarOffer.length} objetivos</p>
-              </div>
-              <div className="rounded-lg border border-neutral-200 p-2">
-                <p className="mb-1 text-[11px] font-semibold text-neutral-600">Receita</p>
-                <p className="text-xs text-neutral-500">{data.regions.pillarRevenue.length} objetivos</p>
-              </div>
-              <div className="rounded-lg border border-neutral-200 p-2">
-                <p className="mb-1 text-[11px] font-semibold text-neutral-600">Eficiência</p>
-                <p className="text-xs text-neutral-500">{data.regions.pillarEfficiency.length} objetivos</p>
-              </div>
-            </div>
-          </div>
+          <StrategyMapCanvas data={data} />
         )}
       </CardContent>
     </Card>
@@ -109,6 +66,7 @@ export function StrategyBuilding() {
   const [rightMap, setRightMap] = useState<StrategyMapData | null>(null)
   const [loadingLeft, setLoadingLeft] = useState(false)
   const [loadingRight, setLoadingRight] = useState(false)
+  const [leftCollapsed, setLeftCollapsed] = useState(false)
 
   const rightOptions = useMemo(() => editableNodes, [editableNodes])
   const leftOptions = useMemo(() => viewableNodes, [viewableNodes])
@@ -154,7 +112,7 @@ export function StrategyBuilding() {
   }, [])
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Strategy Building</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -162,8 +120,37 @@ export function StrategyBuilding() {
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-3">
+      {!leftCollapsed && (
+        <div className="absolute left-0 top-[88px] z-20 hidden lg:block">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-r-md rounded-l-none border-l-0 bg-white"
+            onClick={() => setLeftCollapsed(true)}
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            Colapsar referência
+          </Button>
+        </div>
+      )}
+
+      {leftCollapsed && (
+        <div className="absolute left-0 top-[88px] z-20 hidden lg:block">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-r-md rounded-l-none border-l-0 bg-white"
+            onClick={() => setLeftCollapsed(false)}
+          >
+            <ChevronRight className="mr-1 h-4 w-4" />
+            Mostrar referência
+          </Button>
+        </div>
+      )}
+
+      <div className={`grid gap-4 ${leftCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-2'}`}>
+        {!leftCollapsed && (
+          <div className="space-y-3">
           <Select value={leftNodeId} onValueChange={(value) => { setLeftNodeId(value); void loadMap(value, 'left') }}>
             <SelectTrigger>
               <SelectValue placeholder="Selecione o mapa de referência" />
@@ -177,7 +164,8 @@ export function StrategyBuilding() {
             </SelectContent>
           </Select>
           <StrategyMapPreview title="Referência (esquerda)" data={leftMap} loading={loadingLeft} />
-        </div>
+          </div>
+        )}
 
         <div className="space-y-3">
           <Select value={rightNodeId} onValueChange={(value) => { setRightNodeId(value); void loadMap(value, 'right') }}>
