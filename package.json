@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma validate && prisma generate && tsx scripts/prepare-migrations.ts && prisma migrate deploy && tsx scripts/verify-db.ts && next build",
     "build:local": "TURBOPACK=0 next build",
     "start": "next start",
     "lint": "next lint",
@@ -12,6 +12,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "tsx scripts/prepare-migrations.ts && prisma migrate deploy",
+    "db:verify": "tsx scripts/verify-db.ts",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts"
   },
