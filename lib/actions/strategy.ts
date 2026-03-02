@@ -4,9 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
+import { getUserPermissions as getResolvedPermissions } from '@/lib/domain/permissions'
 
 // Helper to get user permissions
-async function getUserPermissions(userId: string, tenantId: string) {
+async function getUserRolePermissions(userId: string, tenantId: string) {
   const userRoles = await prisma.userRole.findMany({
     where: { userId },
     include: { role: true },
@@ -18,7 +19,7 @@ async function getUserPermissions(userId: string, tenantId: string) {
 
 // Helper to check if user can manage objectives
 async function canManageObjectives(userId: string, tenantId: string, orgNodeId?: string) {
-  const perms = await getUserPermissions(userId, tenantId)
+  const perms = await getUserRolePermissions(userId, tenantId)
   if (perms.canManageConfig || perms.canEditAll) return true
 
   // Check if user is leader of the org node
@@ -61,6 +62,11 @@ export async function getStrategyMap() {
     }
 
     const activeOrgNodeId = await getActiveOrgNode(session.user.id, session.user.tenantId)
+
+    const permissions = await getResolvedPermissions(session.user.id, session.user.tenantId)
+    if (!permissions.canViewStrategyMap) {
+      throw new Error('Insufficient permissions to view strategy map')
+    }
 
     // DEV-only logging for consistency checking
     if (process.env.NODE_ENV === 'development') {
@@ -201,6 +207,10 @@ export async function listObjectives(filters?: {
   }
 
   const activeOrgNodeId = await getActiveOrgNode(session.user.id, session.user.tenantId)
+  const permissions = await getResolvedPermissions(session.user.id, session.user.tenantId)
+  if (!permissions.canViewObjectives) {
+    throw new Error('Insufficient permissions to view objectives')
+  }
   const orgNodeFilter = filters?.orgNodeId || activeOrgNodeId
 
   // If no active context and no specific orgNodeId filter, return empty array

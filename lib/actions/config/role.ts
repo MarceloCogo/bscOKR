@@ -22,6 +22,21 @@ const roleSchema = z.object({
   path: ['permissionsJson'],
 })
 
+function normalizePermissionsJson(input: string) {
+  const parsed = JSON.parse(input)
+  const normalized = {
+    canManageUsers: Boolean(parsed.canManageUsers),
+    canManageConfig: Boolean(parsed.canManageConfig),
+    canViewAll: Boolean(parsed.canViewAll),
+    canEditAll: Boolean(parsed.canEditAll),
+    canViewStrategyMap: Boolean(parsed.canViewStrategyMap) || Boolean(parsed.canViewAll) || Boolean(parsed.canEditAll) || Boolean(parsed.canManageConfig),
+    canViewObjectives: Boolean(parsed.canViewObjectives) || Boolean(parsed.canViewAll) || Boolean(parsed.canEditAll) || Boolean(parsed.canManageConfig),
+    canViewKRs: Boolean(parsed.canViewKRs) || Boolean(parsed.canViewAll) || Boolean(parsed.canEditAll) || Boolean(parsed.canManageConfig),
+  }
+
+  return JSON.stringify(normalized)
+}
+
 export async function listRoles() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.tenantId) {
@@ -57,6 +72,7 @@ export async function createRole(data: z.infer<typeof roleSchema>) {
     data: {
       tenantId: session.user.tenantId,
       ...validatedData,
+      permissionsJson: normalizePermissionsJson(validatedData.permissionsJson),
     },
   })
 
@@ -89,7 +105,10 @@ export async function updateRole(id: string, data: z.infer<typeof roleSchema>) {
       id,
       tenantId: session.user.tenantId,
     },
-    data: validatedData,
+    data: {
+      ...validatedData,
+      permissionsJson: normalizePermissionsJson(validatedData.permissionsJson),
+    },
   })
 
   revalidatePath('/app/admin/config')

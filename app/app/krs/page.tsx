@@ -49,10 +49,37 @@ export default function KeyResultsPage() {
     onTrack: 0,
     atRisk: 0,
   })
+  const [canViewKRs, setCanViewKRs] = useState<boolean | null>(null)
 
   useEffect(() => {
-    loadData()
+    loadPermissionsAndData()
   }, [])
+
+  const loadPermissionsAndData = async () => {
+    try {
+      const permissionsResponse = await fetch('/api/user/permissions')
+      if (!permissionsResponse.ok) {
+        setCanViewKRs(false)
+        setLoading(false)
+        return
+      }
+
+      const permissionsData = await permissionsResponse.json()
+      const allowed = Boolean(permissionsData.permissions?.canViewKRs)
+      setCanViewKRs(allowed)
+
+      if (!allowed) {
+        setLoading(false)
+        return
+      }
+
+      await loadData()
+    } catch (error) {
+      console.error('Error loading permissions:', error)
+      setCanViewKRs(false)
+      setLoading(false)
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -120,6 +147,14 @@ export default function KeyResultsPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-500">Carregando...</div>
+      </div>
+    )
+  }
+
+  if (canViewKRs === false) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Você não possui permissão para visualizar Key Results.</div>
       </div>
     )
   }

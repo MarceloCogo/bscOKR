@@ -74,6 +74,8 @@ model User {
   name         String
   email        String
   passwordHash String
+  mustChangePassword Boolean @default(false)
+  passwordChangedAt DateTime?
   createdAt    DateTime @default(now())
 
   // Relations

@@ -13,6 +13,9 @@ export async function bootstrapTenantConfig(tenantId: string): Promise<void> {
           canManageConfig: true,
           canViewAll: true,
           canEditAll: true,
+          canViewStrategyMap: true,
+          canViewObjectives: true,
+          canViewKRs: true,
         }),
       },
       {
@@ -24,6 +27,9 @@ export async function bootstrapTenantConfig(tenantId: string): Promise<void> {
           canManageConfig: false,
           canViewAll: true,
           canEditAll: true,
+          canViewStrategyMap: true,
+          canViewObjectives: true,
+          canViewKRs: true,
         }),
       },
       {
@@ -33,8 +39,11 @@ export async function bootstrapTenantConfig(tenantId: string): Promise<void> {
         permissionsJson: JSON.stringify({
           canManageUsers: false,
           canManageConfig: false,
-          canViewAll: true,
+          canViewAll: false,
           canEditAll: false,
+          canViewStrategyMap: true,
+          canViewObjectives: true,
+          canViewKRs: true,
         }),
       },
       {
@@ -44,8 +53,11 @@ export async function bootstrapTenantConfig(tenantId: string): Promise<void> {
         permissionsJson: JSON.stringify({
           canManageUsers: false,
           canManageConfig: false,
-          canViewAll: true,
+          canViewAll: false,
           canEditAll: false,
+          canViewStrategyMap: true,
+          canViewObjectives: true,
+          canViewKRs: true,
         }),
       },
     ],

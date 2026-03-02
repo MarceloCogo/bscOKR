@@ -8,6 +8,20 @@ export async function getPostLoginRedirect() {
     return '/login'
   }
 
+  const user = await prisma.user.findFirst({
+    where: {
+      id: session.user.id,
+      tenantId: session.user.tenantId,
+    },
+    select: {
+      mustChangePassword: true,
+    },
+  })
+
+  if (user?.mustChangePassword) {
+    return '/app/account/first-access'
+  }
+
   // Always go to Dashboard - it will show appropriate state
   return '/app/dashboard'
 }

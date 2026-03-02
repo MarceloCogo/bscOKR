@@ -34,7 +34,20 @@ export function RolesTab() {
     { key: 'permissionsJson', label: 'Permissões', render: (value: string) => {
       try {
         const parsed = JSON.parse(value)
-        return <code className="text-xs">{JSON.stringify(parsed, null, 2)}</code>
+        const enabled = Object.entries(parsed)
+          .filter(([, enabledValue]) => Boolean(enabledValue))
+          .map(([permission]) => permission)
+
+        return (
+          <div className="flex flex-wrap gap-1">
+            {enabled.length === 0 && <span className="text-xs text-muted-foreground">Sem permissões</span>}
+            {enabled.map((permission) => (
+              <span key={permission} className="rounded bg-muted px-2 py-0.5 text-xs">
+                {permission}
+              </span>
+            ))}
+          </div>
+        )
       } catch {
         return value
       }
@@ -44,7 +57,21 @@ export function RolesTab() {
   const formFields = [
     { name: 'key', label: 'Chave', type: 'text' as const, required: true },
     { name: 'name', label: 'Nome', type: 'text' as const, required: true },
-    { name: 'permissionsJson', label: 'Permissões JSON', type: 'textarea' as const, required: true, placeholder: '{"canManageUsers": true}' },
+    {
+      name: 'permissionsJson',
+      label: 'Permissões JSON',
+      type: 'textarea' as const,
+      required: true,
+      placeholder: JSON.stringify({
+        canManageUsers: false,
+        canManageConfig: false,
+        canViewAll: false,
+        canEditAll: false,
+        canViewStrategyMap: true,
+        canViewObjectives: true,
+        canViewKRs: true,
+      }, null, 2),
+    },
   ]
 
   if (loading) {

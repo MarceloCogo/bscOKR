@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getUserPermissions } from '@/lib/domain/permissions'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,25 +21,40 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if current user is admin
-    const currentUserRoles = await prisma.userRole.findMany({
+    const permissions = await getUserPermissions(session.user.id, session.user.tenantId)
+    if (!permissions.canManageUsers && !permissions.canManageConfig) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+    }
+
+    const targetUser = await prisma.user.findFirst({
       where: {
-        userId: session.user.id,
-        role: { key: 'admin' }
-      }
+        id: userId,
+        tenantId: session.user.tenantId,
+      },
+      include: {
+        userRoles: {
+          include: { role: true },
+        },
+      },
     })
 
-    if (currentUserRoles.length === 0) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+    if (!targetUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Prevent removing the last admin
     const targetRole = await prisma.role.findUnique({
       where: { id: roleId },
-      select: { key: true }
+      select: { key: true, tenantId: true }
     })
 
-    if (targetRole?.key !== 'admin') { // If changing from admin to non-admin
+    if (!targetRole || targetRole.tenantId !== session.user.tenantId) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    }
+
+    const currentlyAdmin = targetUser.userRoles.some((ur) => ur.role.key === 'admin')
+
+    if (currentlyAdmin && targetRole?.key !== 'admin') {
       const adminCount = await prisma.userRole.count({
         where: {
           role: {
@@ -56,21 +72,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update user role
-    await prisma.userRole.upsert({
-      where: {
-        userId_roleId: {
+    await prisma.$transaction(async (tx) => {
+      await tx.userRole.deleteMany({ where: { userId } })
+      await tx.userRole.create({
+        data: {
           userId,
           roleId,
-        }
-      },
-      update: {
-        roleId,
-      },
-      create: {
-        userId,
-        roleId,
-      }
+        },
+      })
     })
 
     return NextResponse.json({ success: true })

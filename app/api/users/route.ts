@@ -2,12 +2,18 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getUserPermissions } from '@/lib/domain/permissions'
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.tenantId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const permissions = await getUserPermissions(session.user.id, session.user.tenantId)
+    if (!permissions.canManageUsers && !permissions.canManageConfig) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
     const users = await prisma.user.findMany({
@@ -17,6 +23,7 @@ export async function GET() {
         name: true,
         email: true,
         createdAt: true,
+        mustChangePassword: true,
         userRoles: {
           include: {
             role: { select: { id: true, name: true, key: true } }

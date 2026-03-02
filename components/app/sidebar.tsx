@@ -2,16 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { BarChart3, Settings, Users, Target, Map, Network } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/app/dashboard', icon: BarChart3 },
-  { name: 'Mapa Estratégico', href: '/app/strategy/map', icon: Map },
-  { name: 'Objetivos', href: '/app/strategy/objectives', icon: Target },
+  { name: 'Mapa Estratégico', href: '/app/strategy/map', icon: Map, permission: 'canViewStrategyMap' },
+  { name: 'Objetivos', href: '/app/strategy/objectives', icon: Target, permission: 'canViewObjectives' },
   { name: 'Estrutura Organizacional', href: '/app/organization', icon: Network },
-  { name: 'Configurações', href: '/app/admin/config', icon: Settings },
+  { name: 'Configurações', href: '/app/admin/config', icon: Settings, permission: 'canManageConfig' },
 ]
 
 export function AppSidebar() {
@@ -20,6 +20,7 @@ export function AppSidebar() {
     name: string;
     type: string;
   } | null>(null)
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const fetchContext = async () => {
@@ -35,7 +36,25 @@ export function AppSidebar() {
     }
 
     fetchContext()
+
+    const fetchPermissions = async () => {
+      try {
+        const response = await fetch('/api/user/permissions')
+        if (!response.ok) return
+        const data = await response.json()
+        setPermissions(data.permissions || {})
+      } catch (error) {
+        console.error('Error fetching permissions:', error)
+      }
+    }
+
+    fetchPermissions()
   }, [])
+
+  const visibleNavigation = useMemo(
+    () => navigation.filter((item) => !item.permission || permissions[item.permission]),
+    [permissions]
+  )
 
   return (
     <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
@@ -61,7 +80,7 @@ export function AppSidebar() {
             </div>
           )}
           <nav className="mt-5 flex-1 px-2 space-y-1">
-            {navigation.map((item) => {
+            {visibleNavigation.map((item) => {
               const isActive = pathname === item.href
               return (
                 <Link

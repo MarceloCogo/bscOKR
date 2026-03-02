@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { calculateKRMetrics } from '@/lib/domain/kr-metrics'
 import { canManageKR } from '@/lib/domain/kr-permissions'
+import { getUserPermissions } from '@/lib/domain/permissions'
 import { createKRSchema, sanitizeKRPayloadByType } from '@/lib/domain/kr-validation'
 
 export async function GET(request: NextRequest) {
@@ -11,6 +12,11 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.tenantId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const permissions = await getUserPermissions(session.user.id, session.user.tenantId)
+    if (!permissions.canViewKRs) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
     const searchParams = request.nextUrl.searchParams

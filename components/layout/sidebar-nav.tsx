@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -7,13 +8,13 @@ import { Settings, Users, Target, Home, Map, Network, ChevronLeft, ChevronRight,
 
 const navigation = [
   { name: 'Dashboard', href: '/app/dashboard', icon: Home },
-  { name: 'Mapa Estratégico', href: '/app/strategy/map', icon: Map },
-  { name: 'Objetivos', href: '/app/strategy/objectives', icon: Target },
-  { name: 'Key Results', href: '/app/krs', icon: BarChart3 },
+  { name: 'Mapa Estratégico', href: '/app/strategy/map', icon: Map, permission: 'canViewStrategyMap' },
+  { name: 'Objetivos', href: '/app/strategy/objectives', icon: Target, permission: 'canViewObjectives' },
+  { name: 'Key Results', href: '/app/krs', icon: BarChart3, permission: 'canViewKRs' },
   { name: 'Estrutura Organizacional', href: '/app/organization', icon: Network },
-  { name: 'Administração', href: '/app/admin/config', icon: Settings },
-  { name: 'Ciclos', href: '/app/admin/cycles', icon: Calendar },
-  { name: 'Usuários', href: '/app/admin/users', icon: Users },
+  { name: 'Administração', href: '/app/admin/config', icon: Settings, permission: 'canManageConfig' },
+  { name: 'Ciclos', href: '/app/admin/cycles', icon: Calendar, permission: 'canManageConfig' },
+  { name: 'Usuários', href: '/app/admin/users', icon: Users, permission: 'canManageUsers' },
 ]
 
 interface SidebarNavProps {
@@ -23,6 +24,29 @@ interface SidebarNavProps {
 
 export function SidebarNav({ collapsed = false, onToggle }: SidebarNavProps) {
   const pathname = usePathname()
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    const loadPermissions = async () => {
+      try {
+        const response = await fetch('/api/user/permissions')
+        if (!response.ok) return
+        const data = await response.json()
+        setPermissions(data.permissions || {})
+      } catch (error) {
+        console.error('Error loading permissions for sidebar:', error)
+      }
+    }
+
+    loadPermissions()
+  }, [])
+
+  const visibleNavigation = useMemo(() => {
+    return navigation.filter((item) => {
+      if (!item.permission) return true
+      return Boolean(permissions[item.permission])
+    })
+  }, [permissions])
 
   return (
     <div className={cn(
@@ -47,7 +71,7 @@ export function SidebarNav({ collapsed = false, onToggle }: SidebarNavProps) {
         )}
       </div>
       <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
-        {navigation.map((item) => {
+        {visibleNavigation.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
             <Link

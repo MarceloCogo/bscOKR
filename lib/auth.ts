@@ -69,6 +69,7 @@ export const authOptions: NextAuthOptions = {
           tenantId: user.tenantId,
           tenantSlug: user.tenant.slug,
           tenantName: user.tenant.name,
+          mustChangePassword: user.mustChangePassword,
         }
       },
     }),
@@ -82,6 +83,7 @@ export const authOptions: NextAuthOptions = {
         token.tenantId = user.tenantId
         token.tenantSlug = user.tenantSlug
         token.tenantName = user.tenantName
+        token.mustChangePassword = Boolean(user.mustChangePassword)
       }
       return token
     },
@@ -91,6 +93,7 @@ export const authOptions: NextAuthOptions = {
         session.user.tenantId = token.tenantId as string
         session.user.tenantSlug = token.tenantSlug as string
         session.user.tenantName = token.tenantName as string
+        session.user.mustChangePassword = Boolean(token.mustChangePassword)
       }
       return session
     },
@@ -113,6 +116,7 @@ declare module 'next-auth' {
     tenantId: string
     tenantSlug: string
     tenantName: string
+    mustChangePassword?: boolean
   }
 
   interface Session {
@@ -123,6 +127,7 @@ declare module 'next-auth' {
       tenantId: string
       tenantSlug: string
       tenantName: string
+      mustChangePassword?: boolean
     }
   }
 }
@@ -132,5 +137,6 @@ declare module 'next-auth/jwt' {
     tenantId: string
     tenantSlug: string
     tenantName: string
+    mustChangePassword?: boolean
   }
 }

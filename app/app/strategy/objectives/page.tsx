@@ -9,12 +9,18 @@ import { listOrgNodes } from '@/lib/actions/org'
 import { listResponsibilityRoles } from '@/lib/actions/config/responsibility-role'
 import { prisma } from '@/lib/db'
 import { ObjectivesList } from '@/components/strategy/objectives-list'
+import { getUserPermissions } from '@/lib/domain/permissions'
 
 export default async function ObjectivesPage() {
   const session = await getServerSession(authOptions)
 
   if (!session) {
     redirect('/login')
+  }
+
+  const permissions = await getUserPermissions(session.user.id, session.user.tenantId)
+  if (!permissions.canViewObjectives) {
+    redirect('/app/dashboard')
   }
 
   const [objectives, perspectives, pillars, statuses, orgNodes, users, roles] = await Promise.all([
