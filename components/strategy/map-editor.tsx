@@ -90,7 +90,7 @@ export function MapEditor() {
   }, [])
 
   useEffect(() => {
-    const handleGlobalContextChange = () => {
+    const handleGlobalContextChanging = () => {
       const loadingPhrases = [
         'Alinhando os planetas estratégicos...',
         'Organizando os KPIs no multiverso...',
@@ -102,7 +102,9 @@ export function MapEditor() {
       setKrPanelOpen(false)
       setSelectedObjectiveForKR(null)
       setEditingObjective(null)
+    }
 
+    const handleGlobalContextChange = () => {
       void (async () => {
         try {
           await loadMap()
@@ -112,8 +114,18 @@ export function MapEditor() {
       })()
     }
 
+    const handleGlobalContextChangeEnded = () => {
+      setIsContextLoading(false)
+    }
+
+    window.addEventListener('org-context-changing', handleGlobalContextChanging)
     window.addEventListener('org-context-changed', handleGlobalContextChange)
-    return () => window.removeEventListener('org-context-changed', handleGlobalContextChange)
+    window.addEventListener('org-context-change-ended', handleGlobalContextChangeEnded)
+    return () => {
+      window.removeEventListener('org-context-changing', handleGlobalContextChanging)
+      window.removeEventListener('org-context-changed', handleGlobalContextChange)
+      window.removeEventListener('org-context-change-ended', handleGlobalContextChangeEnded)
+    }
   }, [])
 
   // Handle map resize when sidebar opens/closes

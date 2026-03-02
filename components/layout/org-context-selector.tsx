@@ -25,6 +25,7 @@ export function OrgContextSelector() {
   const [context, setContext] = useState<UserContext | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedContext, setSelectedContext] = useState('')
+  const [updating, setUpdating] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -44,7 +45,11 @@ export function OrgContextSelector() {
   }
 
   const handleContextChange = async (orgNodeId: string) => {
+    if (updating) return
+
     setSelectedContext(orgNodeId)
+    setUpdating(true)
+    window.dispatchEvent(new Event('org-context-changing'))
 
     try {
       const response = await fetch('/api/org/set-active-context', {
@@ -64,6 +69,9 @@ export function OrgContextSelector() {
     } catch (error) {
       console.error('Failed to update org context:', error)
       toast.error(error instanceof Error ? error.message : 'Erro ao alterar contexto')
+      window.dispatchEvent(new Event('org-context-change-ended'))
+    } finally {
+      setUpdating(false)
     }
   }
 
@@ -85,7 +93,7 @@ export function OrgContextSelector() {
     <div className="flex items-center gap-2">
       <span className="text-sm font-medium text-muted-foreground">Contexto:</span>
       <Select value={selectedContext} onValueChange={handleContextChange}>
-        <SelectTrigger className="h-8 min-w-[220px] text-sm">
+        <SelectTrigger className="h-8 min-w-[220px] text-sm" disabled={updating}>
           <SelectValue placeholder="Selecione o contexto" />
         </SelectTrigger>
         <SelectContent>
