@@ -4,6 +4,16 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Plus, Trash2, Edit, Check, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -81,6 +91,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
   const [editValues, setEditValues] = useState<{ [key: string]: { currentValue: string } }>({})
   const [checklistDrafts, setChecklistDrafts] = useState<Record<string, ChecklistItem[]>>({})
   const [checklistSaveState, setChecklistSaveState] = useState<Record<string, 'idle' | 'pending' | 'saving' | 'saved' | 'error'>>({})
+  const [pendingDeleteKrId, setPendingDeleteKrId] = useState<string | null>(null)
   const checklistTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const checklistVersionRef = useRef<Record<string, number>>({})
 
@@ -382,8 +393,6 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
   }
 
   const handleDeleteKR = async (krId: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta Key Result?')) return
-
     setDeletingId(krId)
     try {
       const response = await fetch(`/api/kr/${krId}`, { method: 'DELETE' })
@@ -662,7 +671,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
                           size="sm"
                           className="h-8 w-8 p-0 text-red-500"
                           disabled={deletingId === kr.id || savingValueId === kr.id}
-                          onClick={() => handleDeleteKR(kr.id)}
+                          onClick={() => setPendingDeleteKrId(kr.id)}
                           title="Excluir"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -847,6 +856,31 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
           Adicionar Key Result
         </Button>
       )}
+
+      <AlertDialog open={!!pendingDeleteKrId} onOpenChange={(open) => !open && setPendingDeleteKrId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Key Result</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta Key Result? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (pendingDeleteKrId) {
+                  handleDeleteKR(pendingDeleteKrId)
+                }
+                setPendingDeleteKrId(null)
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

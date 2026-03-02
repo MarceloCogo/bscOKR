@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { createObjectiveInRegion } from '@/lib/actions/strategy'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Perspective {
   id: string
@@ -88,7 +89,7 @@ export function ObjectiveFormDialog({
     e.preventDefault()
 
     if (!formData.title.trim() || !formData.mapRegion || !formData.perspectiveId || !formData.statusId) {
-      alert('Preencha todos os campos obrigatórios')
+      toast.error('Preencha todos os campos obrigatórios')
       return
     }
 
@@ -107,9 +108,10 @@ export function ObjectiveFormDialog({
 
       setOpen(false)
       router.refresh()
+      toast.success('Objetivo criado com sucesso')
     } catch (error) {
       console.error('Error creating objective:', error)
-      alert('Erro ao criar objetivo')
+      toast.error('Erro ao criar objetivo')
     } finally {
       setLoading(false)
     }

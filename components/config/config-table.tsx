@@ -4,8 +4,19 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { ConfigFormModal } from './config-form-modal'
+import { toast } from 'sonner'
 
 interface Column {
   key: string
@@ -38,6 +49,7 @@ export function ConfigTable({
 }: ConfigTableProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<any>(null)
 
   const handleCreate = () => {
     setEditingItem(null)
@@ -50,12 +62,11 @@ export function ConfigTable({
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm(`Tem certeza que deseja excluir este ${entityName.toLowerCase()}?`)) {
-      try {
-        await onDelete(id)
-      } catch (error) {
-        alert(`Erro ao excluir: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
-      }
+    try {
+      await onDelete(id)
+      toast.success(`${entityName} excluído com sucesso`)
+    } catch (error) {
+      toast.error(`Erro ao excluir: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     }
   }
 
@@ -128,7 +139,7 @@ export function ConfigTable({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => setPendingDeleteItem(item)}
                             className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -155,6 +166,31 @@ export function ConfigTable({
         initialData={editingItem}
         title={editingItem ? `Editar ${entityName}` : `Novo ${entityName}`}
       />
+
+      <AlertDialog open={!!pendingDeleteItem} onOpenChange={(open) => !open && setPendingDeleteItem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {entityName.toLowerCase()}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este {entityName.toLowerCase()}? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (pendingDeleteItem?.id) {
+                  handleDelete(pendingDeleteItem.id)
+                }
+                setPendingDeleteItem(null)
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

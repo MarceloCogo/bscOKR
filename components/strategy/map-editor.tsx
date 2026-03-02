@@ -2,6 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { ArrowUp, ArrowDown, Edit, Trash2, Plus, Settings, BarChart3 } from 'lucide-react'
 import { getStrategyMap, createObjectiveInRegion, reorderObjective, updateObjectivePartial, deleteObjective, upsertStrategyMapMeta } from '@/lib/actions/strategy'
 import { useRouter } from 'next/navigation'
@@ -68,6 +78,7 @@ export function MapEditor() {
   const [objectiveKRStatus, setObjectiveKRStatus] = useState<Record<string, boolean>>({})
   const [krRefreshToken, setKrRefreshToken] = useState(0)
   const [prevKrPanelOpen, setPrevKrPanelOpen] = useState(false)
+  const [objectiveToDelete, setObjectiveToDelete] = useState<string | null>(null)
   const router = useRouter()
 
   // Split view layout state
@@ -169,15 +180,13 @@ export function MapEditor() {
   }
 
   const handleDeleteObjective = async (objectiveId: string) => {
-    if (!confirm('Tem certeza que deseja excluir este objetivo? Esta ação não pode ser desfeita.')) {
-      return
-    }
-
     try {
       await deleteObjective(objectiveId)
       await loadMap()
+      toast.success('Objetivo excluído com sucesso')
     } catch (error) {
       console.error('Error deleting objective:', error)
+      toast.error('Erro ao excluir objetivo')
     }
   }
 
@@ -381,7 +390,7 @@ export function MapEditor() {
                     <ObjectiveCard
                       objective={objective}
                       onEdit={() => handleOpenObjectiveModal(objective)}
-                      onDelete={() => handleDeleteObjective(objective.id)}
+                      onDelete={() => setObjectiveToDelete(objective.id)}
                       onView={() => handleOpenKRPanel(objective)}
                       canReorder={true}
                       onReorderUp={() => handleReorderObjective(objective.id, 'up')}
@@ -529,7 +538,7 @@ export function MapEditor() {
                     key={obj.id}
                     objective={obj}
                     onEdit={() => handleOpenObjectiveModal(obj)}
-                    onDelete={() => handleDeleteObjective(obj.id)}
+                    onDelete={() => setObjectiveToDelete(obj.id)}
                     onView={() => handleOpenKRPanel(obj)}
                     canReorder={true}
                     onReorderUp={() => handleReorderObjective(obj.id, 'up')}
@@ -604,7 +613,7 @@ export function MapEditor() {
                     key={obj.id}
                     objective={obj}
                     onEdit={() => handleOpenObjectiveModal(obj)}
-                    onDelete={() => handleDeleteObjective(obj.id)}
+                    onDelete={() => setObjectiveToDelete(obj.id)}
                     onView={() => handleOpenKRPanel(obj)}
                     canReorder={true}
                     onReorderUp={() => handleReorderObjective(obj.id, 'up')}
@@ -679,7 +688,7 @@ export function MapEditor() {
                     key={obj.id}
                     objective={obj}
                     onEdit={() => handleOpenObjectiveModal(obj)}
-                    onDelete={() => handleDeleteObjective(obj.id)}
+                    onDelete={() => setObjectiveToDelete(obj.id)}
                     onView={() => handleOpenKRPanel(obj)}
                     canReorder={true}
                     onReorderUp={() => handleReorderObjective(obj.id, 'up')}
@@ -765,7 +774,7 @@ export function MapEditor() {
                     <ObjectiveCard
                       objective={objective}
                       onEdit={() => handleOpenObjectiveModal(objective)}
-                      onDelete={() => handleDeleteObjective(objective.id)}
+                      onDelete={() => setObjectiveToDelete(objective.id)}
                       onView={() => handleOpenKRPanel(objective)}
                       canReorder={true}
                       onReorderUp={() => handleReorderObjective(objective.id, 'up')}
@@ -897,6 +906,31 @@ export function MapEditor() {
           }}
         />
       </div>
+
+      <AlertDialog open={!!objectiveToDelete} onOpenChange={(open) => !open && setObjectiveToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir objetivo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este objetivo? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (objectiveToDelete) {
+                  handleDeleteObjective(objectiveToDelete)
+                }
+                setObjectiveToDelete(null)
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

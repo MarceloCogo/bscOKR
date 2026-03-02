@@ -3,11 +3,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Eye, Edit, Trash2 } from 'lucide-react'
 import { deleteObjective } from '@/lib/actions/strategy'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { ObjectiveDrawer } from './objective-drawer'
+import { toast } from 'sonner'
 
 interface StrategicObjective {
   id: string
@@ -85,6 +96,7 @@ export function ObjectivesList({
   const [loading, setLoading] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedObjective, setSelectedObjective] = useState<any>(null)
+  const [pendingDeleteObjectiveId, setPendingDeleteObjectiveId] = useState<string | null>(null)
 
   const handleView = (id: string) => {
     const objective = objectives.find(o => o.id === id)
@@ -95,20 +107,18 @@ export function ObjectivesList({
   }
 
   const handleEdit = (id: string) => {
-    // TODO: Open drawer for edit
-    alert('Editar objetivo: ' + id)
+    handleView(id)
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este objetivo?')) return
-
     setLoading(id)
     try {
       await deleteObjective(id)
       router.refresh()
+      toast.success('Objetivo excluído com sucesso')
     } catch (error) {
       console.error('Error deleting objective:', error)
-      alert('Erro ao excluir objetivo')
+      toast.error('Erro ao excluir objetivo')
     } finally {
       setLoading(null)
     }
@@ -174,7 +184,7 @@ export function ObjectivesList({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(objective.id)}
+                        onClick={() => setPendingDeleteObjectiveId(objective.id)}
                         disabled={loading === objective.id}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -199,6 +209,31 @@ export function ObjectivesList({
         users={users}
         roles={roles}
       />
+
+      <AlertDialog open={!!pendingDeleteObjectiveId} onOpenChange={(open) => !open && setPendingDeleteObjectiveId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir objetivo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este objetivo? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (pendingDeleteObjectiveId) {
+                  handleDelete(pendingDeleteObjectiveId)
+                }
+                setPendingDeleteObjectiveId(null)
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

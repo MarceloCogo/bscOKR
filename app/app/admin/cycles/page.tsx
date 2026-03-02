@@ -9,6 +9,16 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +46,7 @@ export default function CyclesPage() {
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCycle, setEditingCycle] = useState<Cycle | null>(null)
+  const [pendingDeleteCycleId, setPendingDeleteCycleId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     key: '',
@@ -117,8 +128,6 @@ export default function CyclesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir?')) return
-
     try {
       const res = await fetch(`/api/cycle/${id}`, { method: 'DELETE' })
       if (res.ok) {
@@ -234,7 +243,7 @@ export default function CyclesPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDelete(cycle.id)}
+                          onClick={() => setPendingDeleteCycleId(cycle.id)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -322,6 +331,31 @@ export default function CyclesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!pendingDeleteCycleId} onOpenChange={(open) => !open && setPendingDeleteCycleId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir ciclo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este ciclo? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (pendingDeleteCycleId) {
+                  handleDelete(pendingDeleteCycleId)
+                }
+                setPendingDeleteCycleId(null)
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
