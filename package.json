@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma db push --skip-generate 2>/dev/null && npx prisma migrate resolve --applied 20250228_baseline_complete 2>/dev/null || true && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "build:local": "TURBOPACK=0 next build",
     "start": "next start",
     "lint": "next lint",
