@@ -239,7 +239,7 @@ export function ObjectiveKRPanel({
           {objective?.title || 'Key Results'}
         </h2>
         <div className="flex items-center gap-2">
-          {objective && onCreateKR && (
+          {objective && onCreateKR && krs.length > 0 && (
             <Button
               variant="outline"
               size="sm"
@@ -276,6 +276,11 @@ export function ObjectiveKRPanel({
             <Target className="mx-auto mb-4 h-12 w-12 text-gray-300" />
             <h3 className="mb-2 text-lg font-medium text-gray-900">Nenhum Key Result</h3>
             <p className="mb-4 text-sm text-gray-500">Crie KRs na aba do objetivo para acompanhar aqui.</p>
+            {objective && onCreateKR && (
+              <Button onClick={() => onCreateKR(objective)}>
+                Criar KR
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">

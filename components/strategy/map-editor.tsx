@@ -18,7 +18,6 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ObjectiveFormDialog } from './objective-form-dialog'
 import { ObjectiveDrawer } from './objective-drawer'
-import { ContextSelector } from './context-selector'
 import { ObjectiveKRPanel } from './objective-kr-panel'
 
 interface StrategicObjective {
@@ -88,6 +87,18 @@ export function MapEditor() {
     loadMap()
   }, [])
 
+  useEffect(() => {
+    const handleGlobalContextChange = () => {
+      setKrPanelOpen(false)
+      setSelectedObjectiveForKR(null)
+      setEditingObjective(null)
+      loadMap()
+    }
+
+    window.addEventListener('org-context-changed', handleGlobalContextChange)
+    return () => window.removeEventListener('org-context-changed', handleGlobalContextChange)
+  }, [])
+
   // Handle map resize when sidebar opens/closes
   useEffect(() => {
     if (prevKrPanelOpen !== krPanelOpen) {
@@ -146,19 +157,6 @@ export function MapEditor() {
   const handleCreateObjective = (mapRegion: string) => {
     setSelectedRegion(mapRegion)
     setShowObjectiveDialog(true)
-  }
-
-  const handleContextChange = async (orgNodeId: string) => {
-    try {
-      await fetch('/api/org/set-active-context', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orgNodeId }),
-      })
-      await loadMap()
-    } catch (error) {
-      console.error('Error changing context:', error)
-    }
   }
 
   const handleCreateInline = async (region: string, title: string) => {
@@ -288,42 +286,21 @@ export function MapEditor() {
       >
         <div className="min-h-screen py-1">
           <div className="max-w-[1280px] mx-auto px-2">
-        {/* Header - Hide title in view mode, show in edit mode */}
-        <div className={`flex justify-between items-center mb-2 ${!editMode && data.orgNode ? 'justify-end' : ''}`}>
-          {editMode && (
-            <div>
-              <h1 className="text-sm font-bold text-gray-800">Mapa Estratégico</h1>
-              <p className="text-gray-500 text-[10px] mt-0.5">Contexto: {data.orgNode?.name}</p>
-            </div>
-          )}
-          <div className="flex items-center space-x-3">
-            <div className="flex bg-white rounded-lg p-1 border border-gray-200">
-              <Button
-                size="sm"
-                variant={!editMode ? "default" : "ghost"}
-                onClick={() => setEditMode(false)}
-                className={!editMode ? "bg-gray-700 text-white" : "text-gray-600"}
-              >
-                Visualizar
-              </Button>
-              <Button
-                size="sm"
-                variant={editMode ? "default" : "ghost"}
-                onClick={() => setEditMode(true)}
-                disabled={false}
-                className={editMode ? "bg-[#E87722] hover:bg-[#d06a1e] text-white" : "text-gray-600"}
-              >
-                Editar mapa
-              </Button>
-            </div>
+        {/* Header */}
+        <div className="mb-2 flex items-center justify-between">
+          <div>
+            <h1 className="text-sm font-bold text-gray-800">Mapa Estratégico</h1>
+            <p className="mt-0.5 text-[10px] text-gray-500">Contexto: {data.orgNode?.name}</p>
           </div>
+          <Button
+            size="sm"
+            variant={editMode ? 'outline' : 'default'}
+            onClick={() => setEditMode((prev) => !prev)}
+            className={!editMode ? 'bg-[#E87722] hover:bg-[#d06a1e] text-white' : ''}
+          >
+            {editMode ? 'Visualizar' : 'Editar mapa'}
+          </Button>
         </div>
-
-        <ContextSelector
-          currentContext={data.orgNode}
-          allContexts={orgNodes}
-          onContextChange={handleContextChange}
-        />
 
         {/* Ambição Estratégica */}
         <div className="text-center mt-2 mb-2">

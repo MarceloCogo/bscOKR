@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { LogOut, Search, User, Target, Map, BarChart3 } from 'lucide-react'
 import { OrgContextSelector } from './org-context-selector'
-import { cn } from '@/lib/utils'
 
 interface SearchResult {
   id: string
@@ -85,82 +84,84 @@ export function TopBar({ session, title = 'Dashboard' }: TopBarProps) {
   }
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
-      <div className="flex items-center gap-4">
-        <h1 className="text-base font-semibold text-foreground">{title}</h1>
-        <OrgContextSelector />
-      </div>
-
-      <div className="flex items-center gap-4">
-        {/* Search */}
-        <div className="relative" ref={searchRef}>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar objetivos, KPIs..."
-              className="w-56 pl-9 pr-3"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                setShowResults(true)
-              }}
-              onFocus={() => setShowResults(true)}
-            />
-          </div>
-          
-          {showResults && searchQuery.length >= 2 && (
-            <div className="absolute right-0 top-full mt-1 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-80 overflow-y-auto">
-              {isSearching ? (
-                <div className="p-4 text-center text-sm text-gray-500">Buscando...</div>
-              ) : searchResults.length > 0 ? (
-                <div className="py-1">
-                  {searchResults.map((result) => {
-                    const Icon = getIcon(result.type)
-                    return (
-                      <button
-                        key={result.id}
-                        onClick={() => handleResultClick(result)}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-gray-50 transition-colors"
-                      >
-                        <Icon className="h-4 w-4 text-gray-400" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{result.title}</p>
-                          <p className="text-xs text-gray-500 capitalize">{result.type}</p>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="p-4 text-center text-sm text-gray-500">
-                  Nenhum resultado encontrado
-                </div>
-              )}
-            </div>
-          )}
+    <header className="h-14 border-b border-border bg-card">
+      <div className="mx-auto flex h-full w-full max-w-[1280px] items-center justify-between px-2">
+        <div className="flex items-center gap-4">
+          <h1 className="text-base font-semibold text-foreground">{title}</h1>
+          <OrgContextSelector />
         </div>
 
-        {/* User info and logout */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-              <User className="h-4 w-4 text-primary" />
+        <div className="flex items-center gap-4">
+          {/* Search */}
+          <div className="relative" ref={searchRef}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar objetivos, KPIs..."
+                className="w-56 pl-9 pr-3"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setShowResults(true)
+                }}
+                onFocus={() => setShowResults(true)}
+              />
             </div>
-            <div className="hidden md:block">
-              <p className="text-sm font-medium text-foreground">
-                {session.user.name}
-              </p>
-            </div>
+
+            {showResults && searchQuery.length >= 2 && (
+              <div className="absolute right-0 top-full z-50 mt-1 max-h-80 w-80 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                {isSearching ? (
+                  <div className="p-4 text-center text-sm text-gray-500">Buscando...</div>
+                ) : searchResults.length > 0 ? (
+                  <div className="py-1">
+                    {searchResults.map((result) => {
+                      const Icon = getIcon(result.type)
+                      return (
+                        <button
+                          key={result.id}
+                          onClick={() => handleResultClick(result)}
+                          className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-gray-50"
+                        >
+                          <Icon className="h-4 w-4 text-gray-400" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{result.title}</p>
+                            <p className="text-xs capitalize text-gray-500">{result.type}</p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-sm text-gray-500">
+                    Nenhum resultado encontrado
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+          {/* User info and logout */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+              <div className="hidden md:block">
+                <p className="text-sm font-medium text-foreground">
+                  {session.user.name}
+                </p>
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </header>
