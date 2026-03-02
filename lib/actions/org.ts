@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
+import { getUserOrgScope } from '@/lib/domain/org-scope'
 
 // Helper to get user permissions
 async function getUserPermissions(userId: string, tenantId: string) {
@@ -324,7 +325,7 @@ export async function getUserOrgContext() {
     throw new Error('Unauthorized')
   }
 
-  const [memberships, preference, primaryMemberships] = await Promise.all([
+  const [memberships, preference, primaryMemberships, scope] = await Promise.all([
     prisma.orgNodeMembership.findMany({
       where: {
         userId: session.user.id,
@@ -352,11 +353,24 @@ export async function getUserOrgContext() {
         orgNode: { include: { type: true, memberships: { include: { user: { select: { id: true, name: true } } } }, children: true } },
       },
     }),
+    getUserOrgScope(session.user.id, session.user.tenantId),
   ])
+
+  const availableNodes = await prisma.orgNode.findMany({
+    where: {
+      tenantId: session.user.tenantId,
+      id: { in: scope.viewableNodeIds },
+    },
+    include: {
+      type: true,
+    },
+    orderBy: { createdAt: 'asc' },
+  })
 
   return {
     activeOrgNodeId: preference?.activeOrgNodeId,
     memberships,
+    availableNodes,
     primaryOrgNode: primaryMemberships[0]?.orgNode || null,
   }
 }
@@ -367,18 +381,12 @@ export async function setActiveOrgNode(orgNodeId: string | null) {
     throw new Error('Unauthorized')
   }
 
-  // If setting to a specific node, ensure user is member
+  // If setting to a specific node, ensure user can view this node in hierarchy
   if (orgNodeId) {
-    const membership = await prisma.orgNodeMembership.findFirst({
-      where: {
-        orgNodeId,
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-      },
-    })
+    const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
 
-    if (!membership) {
-      throw new Error('User is not a member of this org node')
+    if (!scope.viewableNodeIds.includes(orgNodeId)) {
+      throw new Error('User cannot view this org node')
     }
   }
 

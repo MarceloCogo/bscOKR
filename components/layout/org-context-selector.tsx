@@ -15,6 +15,11 @@ interface UserContext {
       type: { name: string }
     }
   }>
+  availableNodes?: Array<{
+    id: string
+    name: string
+    type: { name: string }
+  }>
   primaryOrgNode?: {
     id: string
     name: string
@@ -85,7 +90,9 @@ export function OrgContextSelector() {
     return null
   }
 
-  if (context.memberships.length === 0) {
+  const availableNodes = context.availableNodes || context.memberships.map((membership) => membership.orgNode)
+
+  if (availableNodes.length === 0) {
     return null
   }
 
@@ -97,9 +104,9 @@ export function OrgContextSelector() {
           <SelectValue placeholder="Selecione o contexto" />
         </SelectTrigger>
         <SelectContent>
-          {context.memberships.map((membership) => (
-            <SelectItem key={membership.orgNode.id} value={membership.orgNode.id}>
-              {membership.orgNode.name} ({membership.orgNode.type.name})
+          {availableNodes.map((node) => (
+            <SelectItem key={node.id} value={node.id}>
+              {node.name} ({node.type.name})
             </SelectItem>
           ))}
         </SelectContent>

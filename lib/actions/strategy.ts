@@ -5,32 +5,23 @@ import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { getUserPermissions as getResolvedPermissions } from '@/lib/domain/permissions'
-
-// Helper to get user permissions
-async function getUserRolePermissions(userId: string, tenantId: string) {
-  const userRoles = await prisma.userRole.findMany({
-    where: { userId },
-    include: { role: true },
-  })
-
-  const permissions = userRoles.flatMap(ur => JSON.parse(ur.role.permissionsJson))
-  return permissions.reduce((acc, perm) => ({ ...acc, ...perm }), {})
-}
+import { getUserOrgScope } from '@/lib/domain/org-scope'
 
 // Helper to check if user can manage objectives
 async function canManageObjectives(userId: string, tenantId: string, orgNodeId?: string) {
-  const perms = await getUserRolePermissions(userId, tenantId)
+  const [perms, scope] = await Promise.all([
+    getResolvedPermissions(userId, tenantId),
+    getUserOrgScope(userId, tenantId),
+  ])
+
   if (perms.canManageConfig || perms.canEditAll) return true
+  if (!orgNodeId) return false
+  if (scope.editableNodeIds.includes(orgNodeId)) return true
 
-  // Check if user is leader of the org node
-  if (orgNodeId) {
-    const isLeader = await prisma.orgNode.count({
-      where: { id: orgNodeId, leaderUserId: userId },
-    })
-    if (isLeader > 0) return true
-  }
-
-  return false
+  const isLeader = await prisma.orgNode.count({
+    where: { id: orgNodeId, leaderUserId: userId, tenantId },
+  })
+  return isLeader > 0
 }
 
 // Helper to get active org node
@@ -78,6 +69,25 @@ export async function getStrategyMap() {
     }
 
     if (!activeOrgNodeId) {
+      return {
+        needsContext: true,
+        orgNode: null,
+        isEditAllowed: false,
+        meta: null,
+        regions: {
+          ambition: null,
+          growthFocus: [],
+          valueProposition: null,
+          pillarOffer: [],
+          pillarRevenue: [],
+          pillarEfficiency: [],
+          peopleBase: [],
+        },
+      }
+    }
+
+    const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
+    if (!scope.viewableNodeIds.includes(activeOrgNodeId)) {
       return {
         needsContext: true,
         orgNode: null,
@@ -212,9 +222,10 @@ export async function listObjectives(filters?: {
     throw new Error('Insufficient permissions to view objectives')
   }
   const orgNodeFilter = filters?.orgNodeId || activeOrgNodeId
+  const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
 
   // If no active context and no specific orgNodeId filter, return empty array
-  if (!orgNodeFilter) {
+  if (!orgNodeFilter || !scope.viewableNodeIds.includes(orgNodeFilter)) {
     return []
   }
 

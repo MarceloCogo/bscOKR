@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Settings, Users, Target, Home, Map, Network, ChevronLeft, ChevronRight, BarChart3, Calendar } from 'lucide-react'
+import { Settings, Users, Target, Home, Map, Network, ChevronLeft, ChevronRight, BarChart3, Calendar, Columns2 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/app/dashboard', icon: Home },
   { name: 'Mapa Estratégico', href: '/app/strategy/map', icon: Map, permission: 'canViewStrategyMap' },
+  { name: 'Strategy Building', href: '/app/strategy/building', icon: Columns2, permission: 'canViewStrategyMap' },
   { name: 'Objetivos', href: '/app/strategy/objectives', icon: Target, permission: 'canViewObjectives' },
   { name: 'Key Results', href: '/app/krs', icon: BarChart3, permission: 'canViewKRs' },
   { name: 'Estrutura Organizacional', href: '/app/organization', icon: Network },

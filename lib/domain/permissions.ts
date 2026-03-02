@@ -43,20 +43,36 @@ export function normalizePermissions(raw: Partial<AppPermissions>): AppPermissio
 }
 
 export async function getUserPermissions(userId: string, tenantId: string): Promise<AppPermissions> {
-  const userRoles = await prisma.userRole.findMany({
-    where: {
-      userId,
-      user: { tenantId },
-      role: { tenantId },
-    },
-    include: { role: true },
-  })
+  const [userRoles, membershipCount] = await Promise.all([
+    prisma.userRole.findMany({
+      where: {
+        userId,
+        user: { tenantId },
+        role: { tenantId },
+      },
+      include: { role: true },
+    }),
+    prisma.orgNodeMembership.count({
+      where: {
+        tenantId,
+        userId,
+      },
+    }),
+  ])
 
   const merged = userRoles.reduce((acc, userRole) => {
     return { ...acc, ...parsePermissionsJson(userRole.role.permissionsJson) }
   }, {} as Partial<AppPermissions>)
 
-  return normalizePermissions(merged)
+  const normalized = normalizePermissions(merged)
+
+  if (membershipCount > 0) {
+    normalized.canViewStrategyMap = true
+    normalized.canViewObjectives = true
+    normalized.canViewKRs = true
+  }
+
+  return normalized
 }
 
 export async function requireUserPermissions(userId: string, tenantId: string) {

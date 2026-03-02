@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getUserOrgScope } from '@/lib/domain/org-scope'
 
 export async function GET() {
   try {
@@ -10,15 +11,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get all org nodes where user has membership
+    const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
+
+    // Get all org nodes the user can view in hierarchy
     const orgNodes = await prisma.orgNode.findMany({
       where: {
         tenantId: session.user.tenantId,
-        memberships: {
-          some: {
-            userId: session.user.id,
-          },
-        },
+        id: { in: scope.viewableNodeIds },
       },
       include: {
         type: true,
