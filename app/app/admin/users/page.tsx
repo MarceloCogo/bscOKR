@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Users, UserPlus, Edit, Trash2, Save, Copy } from 'lucide-react'
@@ -296,11 +296,14 @@ export default function UsersPage() {
       </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[560px] p-0 gap-0">
+          <DialogHeader className="border-b border-neutral-200 bg-neutral-50 px-6 py-4">
             <DialogTitle>Novo usuário</DialogTitle>
+            <DialogDescription>
+              Crie um usuário e defina o grupo de acesso inicial.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 px-6 py-5">
             <div>
               <label className="mb-1 block text-xs font-medium">Nome</label>
               <Input value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} />
@@ -325,7 +328,7 @@ export default function UsersPage() {
               </Select>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t border-neutral-200 bg-neutral-50 px-6 py-4">
             <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={saving}>Cancelar</Button>
             <Button onClick={handleCreateUser} disabled={saving}>
               <Save className="mr-1 h-4 w-4" />
@@ -336,11 +339,14 @@ export default function UsersPage() {
       </Dialog>
 
       <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[560px] p-0 gap-0">
+          <DialogHeader className="border-b border-neutral-200 bg-neutral-50 px-6 py-4">
             <DialogTitle>Editar usuário</DialogTitle>
+            <DialogDescription>
+              Atualize dados do usuário e ajuste o grupo de acesso.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 px-6 py-5">
             <div>
               <label className="mb-1 block text-xs font-medium">Nome</label>
               <Input value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} />
@@ -365,7 +371,7 @@ export default function UsersPage() {
               </Select>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t border-neutral-200 bg-neutral-50 px-6 py-4">
             <Button variant="outline" onClick={() => setEditUser(null)} disabled={saving}>Cancelar</Button>
             <Button onClick={handleEditUser} disabled={saving}>
               <Save className="mr-1 h-4 w-4" />
@@ -376,14 +382,17 @@ export default function UsersPage() {
       </Dialog>
 
       <Dialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md p-0 gap-0">
+          <DialogHeader className="border-b border-neutral-200 bg-neutral-50 px-6 py-4">
             <DialogTitle>Remover usuário</DialogTitle>
+            <DialogDescription>
+              Esta ação remove acesso ao sistema imediatamente.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="px-6 py-5 text-sm text-muted-foreground">
             Tem certeza que deseja remover <span className="font-medium text-foreground">{deleteUser?.name}</span>? Essa ação não pode ser desfeita.
           </p>
-          <DialogFooter>
+          <DialogFooter className="border-t border-neutral-200 bg-neutral-50 px-6 py-4">
             <Button variant="outline" onClick={() => setDeleteUser(null)} disabled={saving}>Cancelar</Button>
             <Button variant="destructive" onClick={handleDeleteUser} disabled={saving}>
               {saving ? 'Removendo...' : 'Remover usuário'}
@@ -393,15 +402,17 @@ export default function UsersPage() {
       </Dialog>
 
       <Dialog open={!!tempPassword} onOpenChange={(open) => !open && setTempPassword(null)}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md p-0 gap-0">
+          <DialogHeader className="border-b border-neutral-200 bg-neutral-50 px-6 py-4">
             <DialogTitle>Senha temporária gerada</DialogTitle>
+            <DialogDescription>
+              Copie e compartilhe com segurança. A senha é exibida uma única vez.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Copie e envie essa senha para o usuário. Ela é exibida apenas uma vez.
-          </p>
-          <div className="rounded-md border bg-muted/40 p-3 font-mono text-sm">{tempPassword}</div>
-          <DialogFooter>
+          <div className="space-y-3 px-6 py-5">
+            <div className="rounded-md border bg-muted/40 p-3 font-mono text-sm">{tempPassword}</div>
+          </div>
+          <DialogFooter className="border-t border-neutral-200 bg-neutral-50 px-6 py-4">
             <Button variant="outline" onClick={() => setTempPassword(null)}>Fechar</Button>
             <Button onClick={handleCopyTemporaryPassword}>
               <Copy className="mr-1 h-4 w-4" />
