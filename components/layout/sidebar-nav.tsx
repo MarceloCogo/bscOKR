@@ -54,7 +54,7 @@ export function SidebarNav({ collapsed = false, onToggle }: SidebarNavProps) {
       collapsed ? 'w-16' : 'w-64'
     )}>
       <div className={cn(
-        'flex h-16 items-center border-b border-border transition-all duration-300',
+        'flex h-14 items-center border-b border-border transition-all duration-300',
         collapsed ? 'justify-center px-2' : 'justify-between px-6'
       )}>
         {!collapsed && (

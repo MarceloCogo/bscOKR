@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { ArrowUp, ArrowDown, Edit, Trash2, Plus, Settings, BarChart3 } from 'lucide-react'
+import { ArrowUp, ArrowDown, Edit, Trash2, Plus, Settings, BarChart3, Loader2 } from 'lucide-react'
 import { getStrategyMap, createObjectiveInRegion, reorderObjective, updateObjectivePartial, deleteObjective, upsertStrategyMapMeta } from '@/lib/actions/strategy'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -78,6 +78,8 @@ export function MapEditor() {
   const [krRefreshToken, setKrRefreshToken] = useState(0)
   const [prevKrPanelOpen, setPrevKrPanelOpen] = useState(false)
   const [objectiveToDelete, setObjectiveToDelete] = useState<string | null>(null)
+  const [isContextLoading, setIsContextLoading] = useState(false)
+  const [contextLoadingPhrase, setContextLoadingPhrase] = useState('Alinhando os planetas estratégicos...')
   const router = useRouter()
 
   // Split view layout state
@@ -89,10 +91,25 @@ export function MapEditor() {
 
   useEffect(() => {
     const handleGlobalContextChange = () => {
+      const loadingPhrases = [
+        'Alinhando os planetas estratégicos...',
+        'Organizando os KPIs no multiverso...',
+        'Convocando a reunião dos objetivos...'
+      ]
+
+      setContextLoadingPhrase(loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)])
+      setIsContextLoading(true)
       setKrPanelOpen(false)
       setSelectedObjectiveForKR(null)
       setEditingObjective(null)
-      loadMap()
+
+      void (async () => {
+        try {
+          await loadMap()
+        } finally {
+          setTimeout(() => setIsContextLoading(false), 450)
+        }
+      })()
     }
 
     window.addEventListener('org-context-changed', handleGlobalContextChange)
@@ -280,10 +297,20 @@ export function MapEditor() {
     <div className="flex min-h-screen bg-[#F4F4F4]">
       {/* Map Area - Dynamic width */}
       <div
-        className={`transition-all duration-250 ease-out ${
+        className={`relative transition-all duration-250 ease-out ${
           krPanelOpen ? `w-[calc(100%-450px)]` : 'w-full'
         }`}
       >
+        {isContextLoading && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/75 backdrop-blur-sm">
+            <div className="rounded-xl border border-neutral-200 bg-white px-6 py-5 shadow-sm">
+              <div className="flex items-center gap-3" role="status" aria-live="polite">
+                <Loader2 className="h-5 w-5 animate-spin text-[#E87722]" />
+                <span className="text-sm font-medium text-neutral-700">{contextLoadingPhrase}</span>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="min-h-screen py-1">
           <div className="max-w-[1280px] mx-auto px-2">
         {/* Header */}
