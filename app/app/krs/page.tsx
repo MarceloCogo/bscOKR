@@ -50,9 +50,40 @@ export default function KeyResultsPage() {
     atRisk: 0,
   })
   const [canViewKRs, setCanViewKRs] = useState<boolean | null>(null)
+  const [isContextLoading, setIsContextLoading] = useState(false)
 
   useEffect(() => {
     loadPermissionsAndData()
+  }, [])
+
+  useEffect(() => {
+    const handleContextChanging = () => {
+      setIsContextLoading(true)
+    }
+
+    const handleContextChanged = () => {
+      void (async () => {
+        try {
+          await loadData()
+        } finally {
+          setTimeout(() => setIsContextLoading(false), 350)
+        }
+      })()
+    }
+
+    const handleContextChangeEnded = () => {
+      setIsContextLoading(false)
+    }
+
+    window.addEventListener('org-context-changing', handleContextChanging)
+    window.addEventListener('org-context-changed', handleContextChanged)
+    window.addEventListener('org-context-change-ended', handleContextChangeEnded)
+
+    return () => {
+      window.removeEventListener('org-context-changing', handleContextChanging)
+      window.removeEventListener('org-context-changed', handleContextChanged)
+      window.removeEventListener('org-context-change-ended', handleContextChangeEnded)
+    }
   }, [])
 
   const loadPermissionsAndData = async () => {
@@ -160,7 +191,14 @@ export default function KeyResultsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      {isContextLoading && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-md bg-white/70 backdrop-blur-sm">
+          <div className="rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-700 shadow-sm">
+            Atualizando KRs do novo contexto...
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

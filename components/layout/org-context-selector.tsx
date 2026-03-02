@@ -47,9 +47,9 @@ export function OrgContextSelector() {
   const handleContextChange = async (orgNodeId: string) => {
     if (updating) return
 
+    window.dispatchEvent(new CustomEvent('org-context-changing', { detail: { orgNodeId } }))
     setSelectedContext(orgNodeId)
     setUpdating(true)
-    window.dispatchEvent(new Event('org-context-changing'))
 
     try {
       const response = await fetch('/api/org/set-active-context', {

@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,17 +17,17 @@ import {
 import { Eye, Edit, Trash2 } from 'lucide-react'
 import { deleteObjective } from '@/lib/actions/strategy'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ObjectiveDrawer } from './objective-drawer'
 import { toast } from 'sonner'
 
 interface StrategicObjective {
   id: string
   title: string
-  perspective: { name: string }
+  perspective: { id: string; name: string }
   pillar?: { name: string } | null
-  status: { name: string; color?: string | null }
-  sponsor: { name: string }
+  status: { id: string; name: string; color?: string | null }
+  sponsor: { id: string; name: string }
   weight: number
   orgNode: { name: string; type: { name: string } }
 }
@@ -97,6 +98,39 @@ export function ObjectivesList({
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedObjective, setSelectedObjective] = useState<any>(null)
   const [pendingDeleteObjectiveId, setPendingDeleteObjectiveId] = useState<string | null>(null)
+  const [perspectiveFilter, setPerspectiveFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [sponsorFilter, setSponsorFilter] = useState('all')
+  const [isContextLoading, setIsContextLoading] = useState(false)
+
+  useEffect(() => {
+    const handleContextChanging = () => {
+      setIsContextLoading(true)
+    }
+
+    const handleContextChangeEnded = () => {
+      setTimeout(() => setIsContextLoading(false), 350)
+    }
+
+    window.addEventListener('org-context-changing', handleContextChanging)
+    window.addEventListener('org-context-changed', handleContextChangeEnded)
+    window.addEventListener('org-context-change-ended', handleContextChangeEnded)
+
+    return () => {
+      window.removeEventListener('org-context-changing', handleContextChanging)
+      window.removeEventListener('org-context-changed', handleContextChangeEnded)
+      window.removeEventListener('org-context-change-ended', handleContextChangeEnded)
+    }
+  }, [])
+
+  const filteredObjectives = useMemo(() => {
+    return objectives.filter((objective) => {
+      const matchesPerspective = perspectiveFilter === 'all' || objective.perspective.id === perspectiveFilter
+      const matchesStatus = statusFilter === 'all' || objective.status.id === statusFilter
+      const matchesSponsor = sponsorFilter === 'all' || objective.sponsor.id === sponsorFilter
+      return matchesPerspective && matchesStatus && matchesSponsor
+    })
+  }, [objectives, perspectiveFilter, statusFilter, sponsorFilter])
 
   const handleView = (id: string) => {
     const objective = objectives.find(o => o.id === id)
@@ -130,9 +164,73 @@ export function ObjectivesList({
         <CardTitle>Lista de Objetivos</CardTitle>
       </CardHeader>
       <CardContent>
-        {objectives.length === 0 ? (
+        <div className="mb-4 grid gap-3 md:grid-cols-4">
+          <Select value={perspectiveFilter} onValueChange={setPerspectiveFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Perspectiva" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as perspectivas</SelectItem>
+              {perspectives.map((perspective) => (
+                <SelectItem key={perspective.id} value={perspective.id}>
+                  {perspective.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {statuses.map((status) => (
+                <SelectItem key={status.id} value={status.id}>
+                  {status.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={sponsorFilter} onValueChange={setSponsorFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sponsor" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os sponsors</SelectItem>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button
+            variant="outline"
+            onClick={() => {
+              setPerspectiveFilter('all')
+              setStatusFilter('all')
+              setSponsorFilter('all')
+            }}
+          >
+            Limpar filtros
+          </Button>
+        </div>
+
+        <div className="relative">
+        {isContextLoading && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-md bg-white/70 backdrop-blur-sm">
+            <div className="rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-700 shadow-sm">
+              Atualizando objetivos do novo contexto...
+            </div>
+          </div>
+        )}
+
+        {filteredObjectives.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
-            Nenhum objetivo encontrado. Crie o primeiro objetivo usando o botão acima.
+            Nenhum objetivo encontrado para os filtros selecionados.
           </p>
         ) : (
           <Table>
@@ -149,7 +247,7 @@ export function ObjectivesList({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {objectives.map(objective => (
+              {filteredObjectives.map(objective => (
                 <TableRow key={objective.id}>
                   <TableCell className="font-medium">{objective.title}</TableCell>
                   <TableCell>{objective.perspective.name}</TableCell>
@@ -196,6 +294,7 @@ export function ObjectivesList({
             </TableBody>
           </Table>
         )}
+        </div>
       </CardContent>
 
       <ObjectiveDrawer
