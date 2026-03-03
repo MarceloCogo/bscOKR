@@ -130,7 +130,7 @@ export function LoginForm() {
 
   if (mustChangePassword || (forceFirstAccess && status === 'authenticated')) {
     return (
-      <Card className="stat-card">
+      <Card className="auth-form-card">
         <CardHeader className="space-y-1">
           <CardTitle className="text-center">Troca obrigatória de senha</CardTitle>
           <CardDescription className="text-center">
@@ -164,7 +164,7 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="stat-card">
+    <Card className="auth-form-card">
       <CardHeader className="space-y-1">
         <CardTitle className="text-center">Entrar</CardTitle>
         <CardDescription className="text-center">

@@ -11,6 +11,17 @@
   }
 }
 
+@keyframes authFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer base {
   :root {
     --font-nunito: 'Nunito', sans-serif;
@@ -64,5 +75,24 @@
 
   .btn-secondary {
     @apply bg-secondary text-gray-900 hover:bg-secondary/80;
+  }
+
+  .auth-shell {
+    background:
+      radial-gradient(80rem 40rem at -10% -20%, rgba(232, 119, 34, 0.12), transparent 60%),
+      radial-gradient(60rem 30rem at 110% 10%, rgba(33, 37, 41, 0.06), transparent 55%),
+      linear-gradient(to bottom right, #fbfbfd, #f5f6fa);
+  }
+
+  .auth-hero {
+    animation: authFadeUp 450ms ease-out both;
+  }
+
+  .auth-form-panel {
+    animation: authFadeUp 500ms ease-out both;
+  }
+
+  .auth-form-card {
+    @apply rounded-xl border border-neutral-200 bg-white shadow-sm;
   }
 }

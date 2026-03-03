@@ -76,7 +76,7 @@ export function SignupForm() {
   }
 
   return (
-    <Card className="stat-card">
+    <Card className="auth-form-card">
       <CardHeader className="space-y-1">
         <CardTitle className="text-center">Informações da Conta</CardTitle>
         <CardDescription className="text-center">
