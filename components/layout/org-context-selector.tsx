@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { getUserOrgContext } from '@/lib/actions/org'
@@ -33,11 +33,7 @@ export function OrgContextSelector() {
   const [updating, setUpdating] = useState(false)
   const router = useRouter()
 
-  useEffect(() => {
-    loadContext()
-  }, [])
-
-  const loadContext = async () => {
+  const loadContext = useCallback(async () => {
     try {
       const ctx = await getUserOrgContext()
       setContext(ctx)
@@ -47,7 +43,25 @@ export function OrgContextSelector() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void loadContext()
+  }, [loadContext])
+
+  useEffect(() => {
+    const handleContextSync = () => {
+      void loadContext()
+    }
+
+    window.addEventListener('org-context-changed', handleContextSync)
+    window.addEventListener('org-context-change-ended', handleContextSync)
+
+    return () => {
+      window.removeEventListener('org-context-changed', handleContextSync)
+      window.removeEventListener('org-context-change-ended', handleContextSync)
+    }
+  }, [loadContext])
 
   const handleContextChange = async (orgNodeId: string) => {
     if (updating) return

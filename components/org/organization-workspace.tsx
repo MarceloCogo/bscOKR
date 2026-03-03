@@ -51,20 +51,26 @@ export function OrganizationWorkspace({ tree, userContext, canManageGrants }: Or
   )
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Árvore Organizacional</h2>
-        <OrgTree
-          tree={tree}
-          userContext={userContext}
-          selectedNodeId={selectedNodeId}
-          onSelectNode={(node) => setSelectedNodeId(node.id)}
-        />
+    <div className="space-y-4">
+      <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-muted-foreground">
+        O contexto de trabalho agora e controlado no seletor do topo da aplicacao.
       </div>
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Detalhes do Nó</h2>
-        <OrgNodePanel selectedNode={selectedNode} canManageGrants={canManageGrants} />
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Árvore Organizacional</h2>
+          <OrgTree
+            tree={tree}
+            userContext={userContext}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={(node) => setSelectedNodeId(node.id)}
+          />
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Detalhes do Nó</h2>
+          <OrgNodePanel selectedNode={selectedNode} canManageGrants={canManageGrants} />
+        </div>
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Plus, Edit, Trash2, Check } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Edit, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -124,20 +124,6 @@ export function OrgTree({ tree, userContext, selectedNodeId = null, onSelectNode
     }
   }
 
-  const handleSetActiveContext = async (nodeId: string) => {
-    try {
-      await fetch('/api/org/set-active-context', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orgNodeId: nodeId }),
-      })
-      router.refresh()
-      window.dispatchEvent(new Event('org-context-changed'))
-    } catch (error) {
-      console.error('Error setting active context:', error)
-    }
-  }
-
   const handleCreateRootNode = () => {
     // Redirect to onboarding wizard
     router.push('/app/organization?onboarding=true')
@@ -188,16 +174,6 @@ export function OrgTree({ tree, userContext, selectedNodeId = null, onSelectNode
                   <Plus className="h-3 w-3 mr-1" />
                   Adicionar filho
                 </Button>
-                {!isActive && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSetActiveContext(node.id)}
-                  >
-                    <Check className="h-3 w-3 mr-1" />
-                    Ativar contexto de trabalho
-                  </Button>
-                )}
                 <Button
                   variant="outline"
                   size="sm"
