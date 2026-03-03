@@ -36,12 +36,13 @@ interface StrategyMapEditableCanvasProps {
   savingObjectiveId?: string | null
   savingRegionKey?: string | null
   savingMetaField?: MetaField | null
+  hasPendingMutation?: boolean
   onObjectiveView?: (objective: StrategicObjective) => void
-  onCreateObjective?: (mapRegion: string, title: string, regionKey: string) => Promise<void>
-  onRenameObjective?: (objectiveId: string, title: string) => Promise<void>
-  onDeleteObjective?: (objectiveId: string) => Promise<void>
-  onReorderObjective?: (objectiveId: string, direction: 'up' | 'down') => Promise<void>
-  onSaveMeta?: (field: MetaField, value: string) => Promise<void>
+  onCreateObjective?: (mapRegion: string, title: string, regionKey: string) => Promise<boolean>
+  onRenameObjective?: (objectiveId: string, title: string) => Promise<boolean>
+  onDeleteObjective?: (objectiveId: string) => Promise<boolean>
+  onReorderObjective?: (objectiveId: string, direction: 'up' | 'down') => Promise<boolean>
+  onSaveMeta?: (field: MetaField, value: string) => Promise<boolean>
 }
 
 function EditableMetaBlock({
@@ -49,6 +50,7 @@ function EditableMetaBlock({
   value,
   editable,
   isSaving,
+  isBlocked,
   placeholder,
   textClassName,
   onSave,
@@ -57,9 +59,10 @@ function EditableMetaBlock({
   value?: string | null
   editable: boolean
   isSaving: boolean
+  isBlocked: boolean
   placeholder: string
   textClassName: string
-  onSave?: (field: MetaField, value: string) => Promise<void>
+  onSave?: (field: MetaField, value: string) => Promise<boolean>
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(value || '')
@@ -76,6 +79,7 @@ function EditableMetaBlock({
           rows={4}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
+          disabled={isSaving}
           autoFocus
         />
         <div className="flex items-center gap-2">
@@ -84,8 +88,10 @@ function EditableMetaBlock({
             disabled={isSaving}
             className="bg-[#E87722] hover:bg-[#d06a1e]"
             onClick={async () => {
-              await onSave?.(field, draft)
-              setIsEditing(false)
+              const ok = await onSave?.(field, draft)
+              if (ok) {
+                setIsEditing(false)
+              }
             }}
           >
             {isSaving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
@@ -110,7 +116,8 @@ function EditableMetaBlock({
   return (
     <button
       type="button"
-      className="w-full rounded-md p-2 text-left hover:bg-gray-50"
+      className="w-full rounded-md p-2 text-left hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+      disabled={isBlocked}
       onClick={() => {
         setDraft(value || '')
         setIsEditing(true)
@@ -128,6 +135,7 @@ function ObjectiveCard({
   hasKRs = false,
   isSelected = false,
   isSaving = false,
+  disabled = false,
   onView,
   onRename,
   onDelete,
@@ -139,10 +147,11 @@ function ObjectiveCard({
   hasKRs?: boolean
   isSelected?: boolean
   isSaving?: boolean
+  disabled?: boolean
   onView?: () => void
-  onRename?: (title: string) => Promise<void> | void
-  onDelete?: () => Promise<void> | void
-  onReorder?: (direction: 'up' | 'down') => Promise<void> | void
+  onRename?: (title: string) => Promise<boolean> | boolean | void
+  onDelete?: () => Promise<boolean> | boolean | void
+  onReorder?: (direction: 'up' | 'down') => Promise<boolean> | boolean | void
 }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState(objective.title)
@@ -160,7 +169,7 @@ function ObjectiveCard({
 
   return (
     <div
-      className={`${getContainerClass()} mb-1 relative transition-opacity ${isSaving ? 'opacity-70' : ''} ${!editable ? 'cursor-pointer hover:ring-2 hover:ring-[#E87722]' : ''} ${isSelected ? 'ring-2 ring-blue-400 shadow-lg' : ''}`}
+      className={`${getContainerClass()} mb-1 relative transition-opacity ${(isSaving || disabled) ? 'opacity-70' : ''} ${!editable ? 'cursor-pointer hover:ring-2 hover:ring-[#E87722]' : ''} ${isSelected ? 'ring-2 ring-blue-400 shadow-lg' : ''}`}
       onClick={() => !editable && onView?.()}
     >
       <div className="absolute right-1 top-1 z-10 flex items-center gap-1">
@@ -193,8 +202,8 @@ function ObjectiveCard({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-5 px-1 text-xs"
-                  disabled={isSaving || !titleValue.trim()}
+                className="h-5 px-1 text-xs"
+                disabled={isSaving || disabled || !titleValue.trim()}
                   onClick={() => {
                     void onRename?.(titleValue.trim())
                     setIsEditingTitle(false)
@@ -205,8 +214,8 @@ function ObjectiveCard({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-5 px-1 text-xs"
-                  disabled={isSaving}
+                className="h-5 px-1 text-xs"
+                disabled={isSaving || disabled}
                   onClick={() => {
                     setTitleValue(objective.title)
                     setIsEditingTitle(false)
@@ -243,16 +252,16 @@ function ObjectiveCard({
 
         {editable && (
           <div className="ml-1 flex items-center gap-0.5">
-            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving} onClick={() => void onReorder?.('up')}>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving || disabled} onClick={() => void onReorder?.('up')}>
               <ArrowUp className="h-2.5 w-2.5" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving} onClick={() => void onReorder?.('down')}>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving || disabled} onClick={() => void onReorder?.('down')}>
               <ArrowDown className="h-2.5 w-2.5" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving} onClick={() => setIsEditingTitle(true)}>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving || disabled} onClick={() => setIsEditingTitle(true)}>
               <Edit className="h-2.5 w-2.5" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5 text-red-600" disabled={isSaving} onClick={() => void onDelete?.()}>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5 text-red-600" disabled={isSaving || disabled} onClick={() => void onDelete?.()}>
               <Trash2 className="h-2.5 w-2.5" />
             </Button>
           </div>
@@ -270,6 +279,7 @@ export function StrategyMapEditableCanvas({
   savingObjectiveId,
   savingRegionKey,
   savingMetaField,
+  hasPendingMutation = false,
   onObjectiveView,
   onCreateObjective,
   onRenameObjective,
@@ -296,11 +306,17 @@ export function StrategyMapEditableCanvas({
             autoFocus
             value={inlineTitle}
             onChange={(event) => setInlineTitle(event.target.value)}
+            disabled={isSavingThisRegion || hasPendingMutation}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && inlineTitle.trim() && !isSavingThisRegion) {
-                void onCreateObjective?.(mapRegion, inlineTitle.trim(), regionKey)
-                setInlineTitle('')
-                setCreatingInRegion(null)
+              if (event.key === 'Enter' && inlineTitle.trim() && !isSavingThisRegion && !hasPendingMutation) {
+                event.preventDefault()
+                void (async () => {
+                  const ok = await onCreateObjective?.(mapRegion, inlineTitle.trim(), regionKey)
+                  if (ok) {
+                    setInlineTitle('')
+                    setCreatingInRegion(null)
+                  }
+                })()
               } else if (event.key === 'Escape') {
                 setInlineTitle('')
                 setCreatingInRegion(null)
@@ -311,11 +327,13 @@ export function StrategyMapEditableCanvas({
             <Button
               size="sm"
               className="bg-[#E87722] hover:bg-[#d06a1e]"
-              disabled={isSavingThisRegion || !inlineTitle.trim()}
-              onClick={() => {
-                void onCreateObjective?.(mapRegion, inlineTitle.trim(), regionKey)
-                setInlineTitle('')
-                setCreatingInRegion(null)
+              disabled={isSavingThisRegion || hasPendingMutation || !inlineTitle.trim()}
+              onClick={async () => {
+                const ok = await onCreateObjective?.(mapRegion, inlineTitle.trim(), regionKey)
+                if (ok) {
+                  setInlineTitle('')
+                  setCreatingInRegion(null)
+                }
               }}
             >
               {isSavingThisRegion ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
@@ -324,7 +342,7 @@ export function StrategyMapEditableCanvas({
             <Button
               size="sm"
               variant="outline"
-              disabled={isSavingThisRegion}
+              disabled={isSavingThisRegion || hasPendingMutation}
               onClick={() => {
                 setInlineTitle('')
                 setCreatingInRegion(null)
@@ -339,7 +357,7 @@ export function StrategyMapEditableCanvas({
 
     return (
       <div className="py-4 text-center">
-        <Button variant="outline" size="sm" onClick={() => setCreatingInRegion(regionKey)} disabled={Boolean(savingRegionKey)}>
+        <Button variant="outline" size="sm" onClick={() => setCreatingInRegion(regionKey)} disabled={Boolean(savingRegionKey) || hasPendingMutation}>
           <Plus className="mr-1 h-3 w-3" />
           Adicionar
         </Button>
@@ -357,6 +375,7 @@ export function StrategyMapEditableCanvas({
             value={data.meta?.ambitionText}
             editable={editable}
             isSaving={savingMetaField === 'ambitionText'}
+            isBlocked={hasPendingMutation && savingMetaField !== 'ambitionText'}
             placeholder="Clique para editar a ambicao estrategica..."
             textClassName="text-base text-gray-600"
             onSave={onSaveMeta}
@@ -378,6 +397,7 @@ export function StrategyMapEditableCanvas({
                     editable={editable}
                     style="default"
                     isSaving={savingObjectiveId === objective.id}
+                    disabled={hasPendingMutation && savingObjectiveId !== objective.id}
                     hasKRs={objectiveKRStatus[objective.id] || false}
                     isSelected={selectedObjectiveId === objective.id}
                     onView={() => onObjectiveView?.(objective)}
@@ -406,6 +426,7 @@ export function StrategyMapEditableCanvas({
               value={data.meta?.valuePropositionText}
               editable={editable}
               isSaving={savingMetaField === 'valuePropositionText'}
+              isBlocked={hasPendingMutation && savingMetaField !== 'valuePropositionText'}
               placeholder="Clique para editar a proposta de valor..."
               textClassName="text-lg font-semibold text-gray-700"
               onSave={onSaveMeta}
@@ -434,6 +455,7 @@ export function StrategyMapEditableCanvas({
                       editable={editable}
                       style="pillar"
                       isSaving={savingObjectiveId === objective.id}
+                      disabled={hasPendingMutation && savingObjectiveId !== objective.id}
                       hasKRs={objectiveKRStatus[objective.id] || false}
                       isSelected={selectedObjectiveId === objective.id}
                       onView={() => onObjectiveView?.(objective)}
@@ -477,9 +499,10 @@ export function StrategyMapEditableCanvas({
                   <ObjectiveCard
                     objective={objective}
                     editable={editable}
-                    style="base"
-                    isSaving={savingObjectiveId === objective.id}
-                    hasKRs={objectiveKRStatus[objective.id] || false}
+                      style="base"
+                      isSaving={savingObjectiveId === objective.id}
+                      disabled={hasPendingMutation && savingObjectiveId !== objective.id}
+                      hasKRs={objectiveKRStatus[objective.id] || false}
                     isSelected={selectedObjectiveId === objective.id}
                     onView={() => onObjectiveView?.(objective)}
                     onRename={(title) => onRenameObjective?.(objective.id, title)}

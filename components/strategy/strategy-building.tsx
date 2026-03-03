@@ -60,6 +60,7 @@ function StrategyMapPreview({
   savingObjectiveId,
   savingRegionKey,
   savingMetaField,
+  hasPendingMutation,
   onCreateObjective,
   onRenameObjective,
   onDeleteObjective,
@@ -74,11 +75,12 @@ function StrategyMapPreview({
   savingObjectiveId?: string | null
   savingRegionKey?: string | null
   savingMetaField?: MetaField | null
-  onCreateObjective?: (mapRegion: string, title: string, regionKey: string) => Promise<void>
-  onRenameObjective?: (objectiveId: string, title: string) => Promise<void>
-  onDeleteObjective?: (objectiveId: string) => Promise<void>
-  onReorderObjective?: (objectiveId: string, direction: 'up' | 'down') => Promise<void>
-  onSaveMeta?: (field: MetaField, value: string) => Promise<void>
+  hasPendingMutation?: boolean
+  onCreateObjective?: (mapRegion: string, title: string, regionKey: string) => Promise<boolean>
+  onRenameObjective?: (objectiveId: string, title: string) => Promise<boolean>
+  onDeleteObjective?: (objectiveId: string) => Promise<boolean>
+  onReorderObjective?: (objectiveId: string, direction: 'up' | 'down') => Promise<boolean>
+  onSaveMeta?: (field: MetaField, value: string) => Promise<boolean>
 }) {
   const summary = data
     ? {
@@ -127,6 +129,7 @@ function StrategyMapPreview({
             savingObjectiveId={savingObjectiveId}
             savingRegionKey={savingRegionKey}
             savingMetaField={savingMetaField}
+            hasPendingMutation={hasPendingMutation}
             onCreateObjective={onCreateObjective}
             onRenameObjective={onRenameObjective}
             onDeleteObjective={onDeleteObjective}
@@ -154,6 +157,8 @@ export function StrategyBuilding() {
   const [savingObjectiveId, setSavingObjectiveId] = useState<string | null>(null)
   const [savingRegionKey, setSavingRegionKey] = useState<string | null>(null)
   const [savingMetaField, setSavingMetaField] = useState<MetaField | null>(null)
+
+  const hasPendingMutation = Boolean(savingObjectiveId || savingRegionKey || savingMetaField)
 
   const rightOptions = useMemo(() => editableNodes, [editableNodes])
   const leftOptions = useMemo(() => viewableNodes, [viewableNodes])
@@ -211,8 +216,8 @@ export function StrategyBuilding() {
     void loadScope()
   }, [])
 
-  const createObjective = async (mapRegion: string, title: string, regionKey: string) => {
-    if (!rightMap?.orgNode?.id) return
+  const createObjective = async (mapRegion: string, title: string, regionKey: string): Promise<boolean> => {
+    if (!rightMap?.orgNode?.id || hasPendingMutation) return false
 
     setSavingRegionKey(regionKey)
     try {
@@ -243,15 +248,18 @@ export function StrategyBuilding() {
       }
 
       toast.success('Objetivo criado')
+      return true
     } catch (error) {
       console.error('Error creating objective in building:', error)
       toast.error(error instanceof Error ? error.message : 'Erro ao criar objetivo')
+      return false
     } finally {
       setSavingRegionKey(null)
     }
   }
 
-  const renameObjective = async (id: string, title: string) => {
+  const renameObjective = async (id: string, title: string): Promise<boolean> => {
+    if (hasPendingMutation) return false
     const previous = rightMap
     setSavingObjectiveId(id)
 
@@ -273,47 +281,50 @@ export function StrategyBuilding() {
     try {
       await updateObjectivePartial(id, { title })
       toast.success('Objetivo atualizado')
+      return true
     } catch (error) {
       console.error('Error renaming objective in building:', error)
       setRightMap(previous)
       toast.error(error instanceof Error ? error.message : 'Erro ao atualizar objetivo')
+      return false
     } finally {
       setSavingObjectiveId(null)
     }
   }
 
-  const removeObjective = async (id: string) => {
-    const previous = rightMap
+  const removeObjective = async (id: string): Promise<boolean> => {
+    if (hasPendingMutation) return false
     setSavingObjectiveId(id)
-
-    updateRightMap((current) => {
-      const removeFrom = (items: StrategicObjective[]) => items.filter((item) => item.id !== id)
-      return {
-        ...current,
-        regions: {
-          ...current.regions,
-          growthFocus: removeFrom(current.regions.growthFocus),
-          pillarOffer: removeFrom(current.regions.pillarOffer),
-          pillarRevenue: removeFrom(current.regions.pillarRevenue),
-          pillarEfficiency: removeFrom(current.regions.pillarEfficiency),
-          peopleBase: removeFrom(current.regions.peopleBase),
-        },
-      }
-    })
 
     try {
       await deleteObjective(id)
+      updateRightMap((current) => {
+        const removeFrom = (items: StrategicObjective[]) => items.filter((item) => item.id !== id)
+        return {
+          ...current,
+          regions: {
+            ...current.regions,
+            growthFocus: removeFrom(current.regions.growthFocus),
+            pillarOffer: removeFrom(current.regions.pillarOffer),
+            pillarRevenue: removeFrom(current.regions.pillarRevenue),
+            pillarEfficiency: removeFrom(current.regions.pillarEfficiency),
+            peopleBase: removeFrom(current.regions.peopleBase),
+          },
+        }
+      })
       toast.success('Objetivo removido')
+      return true
     } catch (error) {
       console.error('Error deleting objective in building:', error)
-      setRightMap(previous)
       toast.error(error instanceof Error ? error.message : 'Erro ao remover objetivo')
+      return false
     } finally {
       setSavingObjectiveId(null)
     }
   }
 
-  const moveObjective = async (id: string, direction: 'up' | 'down') => {
+  const moveObjective = async (id: string, direction: 'up' | 'down'): Promise<boolean> => {
+    if (hasPendingMutation) return false
     const previous = rightMap
     setSavingObjectiveId(id)
 
@@ -345,17 +356,19 @@ export function StrategyBuilding() {
 
     try {
       await reorderObjective(id, direction)
+      return true
     } catch (error) {
       console.error('Error reordering objective in building:', error)
       setRightMap(previous)
       toast.error(error instanceof Error ? error.message : 'Erro ao reordenar objetivo')
+      return false
     } finally {
       setSavingObjectiveId(null)
     }
   }
 
-  const saveMeta = async (field: MetaField, value: string) => {
-    if (!rightMap?.orgNode?.id) return
+  const saveMeta = async (field: MetaField, value: string): Promise<boolean> => {
+    if (!rightMap?.orgNode?.id || hasPendingMutation) return false
 
     const previous = rightMap
     setSavingMetaField(field)
@@ -370,10 +383,12 @@ export function StrategyBuilding() {
     try {
       await upsertStrategyMapMetaForOrgNode({ orgNodeId: rightMap.orgNode.id, [field]: value })
       toast.success('Texto salvo com sucesso')
+      return true
     } catch (error) {
       console.error('Error saving strategy meta in building:', error)
       setRightMap(previous)
       toast.error(error instanceof Error ? error.message : 'Erro ao salvar texto')
+      return false
     } finally {
       setSavingMetaField(null)
     }
@@ -462,6 +477,7 @@ export function StrategyBuilding() {
             savingObjectiveId={savingObjectiveId}
             savingRegionKey={savingRegionKey}
             savingMetaField={savingMetaField}
+            hasPendingMutation={hasPendingMutation}
             onCreateObjective={createObjective}
             onRenameObjective={renameObjective}
             onDeleteObjective={removeObjective}
