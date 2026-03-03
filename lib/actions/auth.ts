@@ -19,7 +19,7 @@ export async function getPostLoginRedirect() {
   })
 
   if (user?.mustChangePassword) {
-    return '/app/account/first-access'
+    return '/login?firstAccess=1'
   }
 
   // Always go to Dashboard - it will show appropriate state

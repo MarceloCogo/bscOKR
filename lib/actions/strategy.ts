@@ -14,7 +14,7 @@ async function canManageObjectives(userId: string, tenantId: string, orgNodeId?:
     getUserOrgScope(userId, tenantId),
   ])
 
-  if (perms.canManageConfig || perms.canEditAll) return true
+  if (perms.canManageConfig) return true
   if (!orgNodeId) return false
   if (scope.editableNodeIds.includes(orgNodeId)) return true
 
@@ -474,7 +474,7 @@ export async function upsertStrategyMapMeta(data: { ambitionText?: string; value
   })
   const permissions = userRoles.flatMap(ur => JSON.parse(ur.role.permissionsJson))
   const perms = permissions.reduce((acc, perm) => ({ ...acc, ...perm }), {})
-  if (!perms.canManageConfig && !perms.canEditAll) {
+  if (!perms.canManageConfig) {
     throw new Error('Insufficient permissions')
   }
 

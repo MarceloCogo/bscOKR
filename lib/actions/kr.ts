@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { calculateKRMetrics } from '@/lib/domain/kr-metrics'
 import { createKRSchema, sanitizeKRPayloadByType, updateKRSchema } from '@/lib/domain/kr-validation'
+import { canManageKR } from '@/lib/domain/kr-permissions'
 
 type CreateKeyResultInput = {
   objectiveId: string
@@ -26,27 +27,6 @@ type CreateKeyResultInput = {
 
 type UpdateKeyResultInput = Partial<CreateKeyResultInput> & {
   orderIndex?: number
-}
-
-async function getUserPermissions(userId: string) {
-  const userRoles = await prisma.userRole.findMany({
-    where: { userId },
-    include: { role: true },
-  })
-
-  const permissions = userRoles.flatMap(ur => JSON.parse(ur.role.permissionsJson))
-  return permissions.reduce((acc, perm) => ({ ...acc, ...perm }), {})
-}
-
-async function canManageKR(userId: string, tenantId: string, orgNodeId: string) {
-  const perms = await getUserPermissions(userId)
-  if (perms.canManageConfig || perms.canEditAll) return true
-
-  const isLeader = await prisma.orgNode.count({
-    where: { id: orgNodeId, tenantId, leaderUserId: userId },
-  })
-
-  return isLeader > 0
 }
 
 export async function createKeyResult(input: CreateKeyResultInput) {

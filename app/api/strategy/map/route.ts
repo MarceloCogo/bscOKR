@@ -14,7 +14,6 @@ async function canEditNode(userId: string, tenantId: string, orgNodeId: string) 
 
   return (
     permissions.canManageConfig ||
-    permissions.canEditAll ||
     scope.editableNodeIds.includes(orgNodeId) ||
     isLeaderCount > 0
   )

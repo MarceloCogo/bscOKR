@@ -78,13 +78,18 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.tenantId = user.tenantId
         token.tenantSlug = user.tenantSlug
         token.tenantName = user.tenantName
         token.mustChangePassword = Boolean(user.mustChangePassword)
       }
+
+      if (trigger === 'update' && session && 'mustChangePassword' in session) {
+        token.mustChangePassword = Boolean((session as any).mustChangePassword)
+      }
+
       return token
     },
     async session({ session, token }) {

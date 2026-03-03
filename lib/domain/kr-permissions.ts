@@ -11,7 +11,7 @@ export async function canManageKR(userId: string, tenantId: string, orgNodeId: s
     }),
   ])
 
-  if (permissions.canManageConfig || permissions.canEditAll) return true
+  if (permissions.canManageConfig) return true
   if (scope.editableNodeIds.includes(orgNodeId)) return true
 
   return isLeader > 0

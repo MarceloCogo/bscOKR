@@ -70,8 +70,17 @@ export async function getOrgTree() {
     throw new Error('Unauthorized')
   }
 
+  const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
+
+  if (scope.viewableNodeIds.length === 0) {
+    return []
+  }
+
   const nodes = await prisma.orgNode.findMany({
-    where: { tenantId: session.user.tenantId },
+    where: {
+      tenantId: session.user.tenantId,
+      id: { in: scope.viewableNodeIds },
+    },
     include: {
       type: true,
       leader: { select: { id: true, name: true } },

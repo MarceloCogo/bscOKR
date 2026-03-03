@@ -28,8 +28,9 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
   ])
 
   const allNodeIds = allNodes.map((node) => node.id)
+  const allNodeIdSet = new Set(allNodeIds)
 
-  if (permissions.canManageConfig || permissions.canEditAll) {
+  if (permissions.canManageConfig) {
     return {
       viewableNodeIds: allNodeIds,
       editableNodeIds: allNodeIds,
@@ -54,7 +55,6 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
     },
   })
 
-  const nodeById = new Map(allNodes.map((node) => [node.id, node]))
   const childrenByParent = new Map<string | null, string[]>()
 
   allNodes.forEach((node) => {
@@ -78,18 +78,6 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
     return result
   }
 
-  const collectAncestors = (nodeId: string) => {
-    const result = new Set<string>()
-    let current = nodeById.get(nodeId)
-
-    while (current?.parentId) {
-      result.add(current.parentId)
-      current = nodeById.get(current.parentId)
-    }
-
-    return result
-  }
-
   const directNodeIds = memberships.map((membership) => membership.orgNodeId)
   const editable = new Set<string>()
   const viewable = new Set<string>()
@@ -98,11 +86,10 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
     const editableSubtree = collectDescendants(nodeId)
     editableSubtree.forEach((id) => editable.add(id))
     editableSubtree.forEach((id) => viewable.add(id))
-    collectAncestors(nodeId).forEach((id) => viewable.add(id))
   }
 
   for (const grant of grants) {
-    if (!nodeById.has(grant.orgNodeId)) continue
+    if (!allNodeIdSet.has(grant.orgNodeId)) continue
 
     const grantedNodes = grant.includeDescendants
       ? collectDescendants(grant.orgNodeId)
@@ -110,13 +97,11 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
 
     if (grant.permission === OrgAccessPermission.VIEW) {
       grantedNodes.forEach((id) => viewable.add(id))
-      collectAncestors(grant.orgNodeId).forEach((id) => viewable.add(id))
       continue
     }
 
     grantedNodes.forEach((id) => editable.add(id))
     grantedNodes.forEach((id) => viewable.add(id))
-    collectAncestors(grant.orgNodeId).forEach((id) => viewable.add(id))
   }
 
   return {

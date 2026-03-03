@@ -7,13 +7,10 @@ export default withAuth(
     const path = req.nextUrl.pathname
 
     if (token?.mustChangePassword) {
-      const isFirstAccessPage = path.startsWith('/app/account/first-access')
-      if (!isFirstAccessPage) {
-        const url = req.nextUrl.clone()
-        url.pathname = '/app/account/first-access'
-        url.search = ''
-        return NextResponse.redirect(url)
-      }
+      const url = req.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('firstAccess', '1')
+      return NextResponse.redirect(url)
     }
   },
   {

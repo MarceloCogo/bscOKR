@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { signIn } from 'next-auth/react'
+import { signIn, useSession } from 'next-auth/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -20,11 +20,16 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 export function LoginForm() {
+  const { data: session, status, update } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [mustChangePassword, setMustChangePassword] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
+  const forceFirstAccess = searchParams.get('firstAccess') === '1'
 
   useEffect(() => {
     const message = searchParams.get('message')
@@ -32,6 +37,12 @@ export function LoginForm() {
       setSuccessMessage(message)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.mustChangePassword) {
+      setMustChangePassword(true)
+    }
+  }, [session?.user?.mustChangePassword, status])
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -57,13 +68,99 @@ export function LoginForm() {
       if (result?.error) {
         setError('Credenciais inválidas ou organização não encontrada')
       } else {
+        const sessionResponse = await fetch('/api/auth/session')
+        const sessionPayload = await sessionResponse.json().catch(() => ({}))
+        const mustChange = Boolean(sessionPayload?.user?.mustChangePassword)
+
+        if (mustChange) {
+          setMustChangePassword(true)
+          setSuccessMessage('Autenticado. Defina sua nova senha para continuar.')
+          return
+        }
+
         router.push('/app/dashboard')
+        router.refresh()
       }
     } catch (err) {
       setError('Erro ao fazer login')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  async function onSubmitPasswordChange(event: React.FormEvent) {
+    event.preventDefault()
+    setError('')
+
+    if (newPassword.length < 8) {
+      setError('Senha deve ter no mínimo 8 caracteres')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('As senhas não conferem')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/auth/change-password-first-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload.error?.formErrors?.[0] || payload.error || 'Erro ao trocar senha')
+      }
+
+      await update({ mustChangePassword: false } as any)
+      setMustChangePassword(false)
+      setNewPassword('')
+      setConfirmPassword('')
+      router.push('/app/dashboard')
+      router.refresh()
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Erro ao trocar senha')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (mustChangePassword || (forceFirstAccess && status === 'authenticated')) {
+    return (
+      <Card className="stat-card">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-center">Troca obrigatória de senha</CardTitle>
+          <CardDescription className="text-center">
+            Por segurança, defina uma nova senha para acessar o sistema.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSubmitPasswordChange} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nova senha</label>
+              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Confirmar nova senha</label>
+              <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            </div>
+
+            {error && (
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+                {error}
+              </div>
+            )}
+
+            <Button type="submit" className="w-full h-11 btn-primary" disabled={isLoading || status !== 'authenticated'}>
+              {isLoading ? 'Salvando...' : 'Salvar nova senha'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -136,6 +233,12 @@ export function LoginForm() {
             {successMessage && (
               <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg border border-green-200">
                 {successMessage}
+              </div>
+            )}
+
+            {forceFirstAccess && status !== 'authenticated' && (
+              <div className="text-sm text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                Faça login com sua senha temporária para concluir a troca obrigatória de senha.
               </div>
             )}
 
