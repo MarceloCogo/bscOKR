@@ -402,9 +402,55 @@ export async function createObjectiveInRegion(data: {
       orderIndex,
       weight: 100,
     },
+    include: {
+      perspective: true,
+      status: true,
+    },
   })
 
   revalidatePath('/app/strategy')
+  return result
+}
+
+export async function upsertStrategyMapMetaForOrgNode(data: {
+  orgNodeId: string
+  ambitionText?: string
+  valuePropositionText?: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.tenantId || !session.user.id) {
+    throw new Error('Unauthorized')
+  }
+
+  if (!data.orgNodeId) {
+    throw new Error('orgNodeId is required')
+  }
+
+  const canManage = await canManageObjectives(session.user.id, session.user.tenantId, data.orgNodeId)
+  if (!canManage) {
+    throw new Error('Insufficient permissions')
+  }
+
+  const result = await prisma.strategyMapMeta.upsert({
+    where: {
+      tenantId_orgNodeId: {
+        tenantId: session.user.tenantId,
+        orgNodeId: data.orgNodeId,
+      },
+    },
+    update: {
+      ...(data.ambitionText !== undefined ? { ambitionText: data.ambitionText } : {}),
+      ...(data.valuePropositionText !== undefined ? { valuePropositionText: data.valuePropositionText } : {}),
+    },
+    create: {
+      tenantId: session.user.tenantId,
+      orgNodeId: data.orgNodeId,
+      ambitionText: data.ambitionText,
+      valuePropositionText: data.valuePropositionText,
+    },
+  })
+
+  revalidatePath('/app/strategy/building')
   return result
 }
 

@@ -8,7 +8,13 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { StrategyMapCanvas } from './strategy-map-canvas'
 import { StrategyMapEditableCanvas } from './strategy-map-editable-canvas'
-import { createObjectiveInRegion, deleteObjective, reorderObjective, updateObjectivePartial } from '@/lib/actions/strategy'
+import {
+  createObjectiveInRegion,
+  deleteObjective,
+  reorderObjective,
+  updateObjectivePartial,
+  upsertStrategyMapMetaForOrgNode,
+} from '@/lib/actions/strategy'
 
 interface OrgNode {
   id: string
@@ -19,9 +25,13 @@ interface OrgNode {
 interface StrategicObjective {
   id: string
   title: string
+  mapRegion: string
+  orderIndex: number
   perspective?: { name: string } | null
   status?: { name: string; color?: string | null } | null
 }
+
+type MetaField = 'ambitionText' | 'valuePropositionText'
 
 interface StrategyMapData {
   orgNode: OrgNode | null
@@ -47,22 +57,28 @@ function StrategyMapPreview({
   loading,
   forceReadonly = false,
   editable = false,
-  busy = false,
+  savingObjectiveId,
+  savingRegionKey,
+  savingMetaField,
   onCreateObjective,
   onRenameObjective,
   onDeleteObjective,
   onReorderObjective,
+  onSaveMeta,
 }: {
   title: string
   data: StrategyMapData | null
   loading: boolean
   forceReadonly?: boolean
   editable?: boolean
-  busy?: boolean
-  onCreateObjective?: (mapRegion: string, title: string) => Promise<void>
+  savingObjectiveId?: string | null
+  savingRegionKey?: string | null
+  savingMetaField?: MetaField | null
+  onCreateObjective?: (mapRegion: string, title: string, regionKey: string) => Promise<void>
   onRenameObjective?: (objectiveId: string, title: string) => Promise<void>
   onDeleteObjective?: (objectiveId: string) => Promise<void>
   onReorderObjective?: (objectiveId: string, direction: 'up' | 'down') => Promise<void>
+  onSaveMeta?: (field: MetaField, value: string) => Promise<void>
 }) {
   const summary = data
     ? {
@@ -104,20 +120,21 @@ function StrategyMapPreview({
 
         {!data?.orgNode ? (
           <div className="py-10 text-center text-sm text-neutral-500">Selecione um mapa para visualizar.</div>
+        ) : showEditable ? (
+          <StrategyMapEditableCanvas
+            data={data}
+            editable
+            savingObjectiveId={savingObjectiveId}
+            savingRegionKey={savingRegionKey}
+            savingMetaField={savingMetaField}
+            onCreateObjective={onCreateObjective}
+            onRenameObjective={onRenameObjective}
+            onDeleteObjective={onDeleteObjective}
+            onReorderObjective={onReorderObjective}
+            onSaveMeta={onSaveMeta}
+          />
         ) : (
-          showEditable ? (
-            <StrategyMapEditableCanvas
-              data={data}
-              editable
-              busy={busy}
-              onCreateObjective={onCreateObjective}
-              onRenameObjective={onRenameObjective}
-              onDeleteObjective={onDeleteObjective}
-              onReorderObjective={onReorderObjective}
-            />
-          ) : (
-            <StrategyMapCanvas data={data} compact />
-          )
+          <StrategyMapCanvas data={data} compact />
         )}
       </CardContent>
     </Card>
@@ -134,7 +151,9 @@ export function StrategyBuilding() {
   const [loadingLeft, setLoadingLeft] = useState(false)
   const [loadingRight, setLoadingRight] = useState(false)
   const [leftCollapsed, setLeftCollapsed] = useState(false)
-  const [mutatingRight, setMutatingRight] = useState(false)
+  const [savingObjectiveId, setSavingObjectiveId] = useState<string | null>(null)
+  const [savingRegionKey, setSavingRegionKey] = useState<string | null>(null)
+  const [savingMetaField, setSavingMetaField] = useState<MetaField | null>(null)
 
   const rightOptions = useMemo(() => editableNodes, [editableNodes])
   const leftOptions = useMemo(() => viewableNodes, [viewableNodes])
@@ -157,9 +176,17 @@ export function StrategyBuilding() {
     }
   }
 
-  const reloadRightMap = async () => {
-    if (!rightNodeId) return
-    await loadMap(rightNodeId, 'right')
+  const updateRightMap = (updater: (current: StrategyMapData) => StrategyMapData) => {
+    setRightMap((current) => (current ? updater(current) : current))
+  }
+
+  const mapRegionToKey = (mapRegion: string): keyof StrategyMapData['regions'] | null => {
+    if (mapRegion === 'GROWTH_FOCUS') return 'growthFocus'
+    if (mapRegion === 'PILLAR_OFFER') return 'pillarOffer'
+    if (mapRegion === 'PILLAR_REVENUE') return 'pillarRevenue'
+    if (mapRegion === 'PILLAR_EFFICIENCY') return 'pillarEfficiency'
+    if (mapRegion === 'PEOPLE_BASE') return 'peopleBase'
+    return null
   }
 
   useEffect(() => {
@@ -184,59 +211,171 @@ export function StrategyBuilding() {
     void loadScope()
   }, [])
 
-  const createObjective = async (mapRegion: string, title: string) => {
+  const createObjective = async (mapRegion: string, title: string, regionKey: string) => {
     if (!rightMap?.orgNode?.id) return
-    setMutatingRight(true)
+
+    setSavingRegionKey(regionKey)
     try {
-      await createObjectiveInRegion({ orgNodeId: rightMap.orgNode.id, mapRegion, title })
-      await reloadRightMap()
+      const created = await createObjectiveInRegion({ orgNodeId: rightMap.orgNode.id, mapRegion, title })
+      const targetKey = mapRegionToKey(mapRegion)
+
+      if (targetKey) {
+        updateRightMap((current) => {
+          const normalizedCreated: StrategicObjective = {
+            id: created.id,
+            title: created.title,
+            mapRegion: created.mapRegion,
+            orderIndex: created.orderIndex,
+            perspective: created.perspective ? { name: created.perspective.name } : null,
+            status: created.status ? { name: created.status.name, color: created.status.color } : null,
+          }
+
+          const region = [...(current.regions[targetKey] as StrategicObjective[]), normalizedCreated]
+          region.sort((a, b) => a.orderIndex - b.orderIndex)
+          return {
+            ...current,
+            regions: {
+              ...current.regions,
+              [targetKey]: region,
+            },
+          }
+        })
+      }
+
       toast.success('Objetivo criado')
     } catch (error) {
       console.error('Error creating objective in building:', error)
       toast.error(error instanceof Error ? error.message : 'Erro ao criar objetivo')
     } finally {
-      setMutatingRight(false)
+      setSavingRegionKey(null)
     }
   }
 
   const renameObjective = async (id: string, title: string) => {
-    setMutatingRight(true)
+    const previous = rightMap
+    setSavingObjectiveId(id)
+
+    updateRightMap((current) => {
+      const updateArray = (items: StrategicObjective[]) => items.map((item) => (item.id === id ? { ...item, title } : item))
+      return {
+        ...current,
+        regions: {
+          ...current.regions,
+          growthFocus: updateArray(current.regions.growthFocus),
+          pillarOffer: updateArray(current.regions.pillarOffer),
+          pillarRevenue: updateArray(current.regions.pillarRevenue),
+          pillarEfficiency: updateArray(current.regions.pillarEfficiency),
+          peopleBase: updateArray(current.regions.peopleBase),
+        },
+      }
+    })
+
     try {
       await updateObjectivePartial(id, { title })
-      await reloadRightMap()
       toast.success('Objetivo atualizado')
     } catch (error) {
       console.error('Error renaming objective in building:', error)
+      setRightMap(previous)
       toast.error(error instanceof Error ? error.message : 'Erro ao atualizar objetivo')
     } finally {
-      setMutatingRight(false)
+      setSavingObjectiveId(null)
     }
   }
 
   const removeObjective = async (id: string) => {
-    setMutatingRight(true)
+    const previous = rightMap
+    setSavingObjectiveId(id)
+
+    updateRightMap((current) => {
+      const removeFrom = (items: StrategicObjective[]) => items.filter((item) => item.id !== id)
+      return {
+        ...current,
+        regions: {
+          ...current.regions,
+          growthFocus: removeFrom(current.regions.growthFocus),
+          pillarOffer: removeFrom(current.regions.pillarOffer),
+          pillarRevenue: removeFrom(current.regions.pillarRevenue),
+          pillarEfficiency: removeFrom(current.regions.pillarEfficiency),
+          peopleBase: removeFrom(current.regions.peopleBase),
+        },
+      }
+    })
+
     try {
       await deleteObjective(id)
-      await reloadRightMap()
       toast.success('Objetivo removido')
     } catch (error) {
       console.error('Error deleting objective in building:', error)
+      setRightMap(previous)
       toast.error(error instanceof Error ? error.message : 'Erro ao remover objetivo')
     } finally {
-      setMutatingRight(false)
+      setSavingObjectiveId(null)
     }
   }
 
   const moveObjective = async (id: string, direction: 'up' | 'down') => {
-    setMutatingRight(true)
+    const previous = rightMap
+    setSavingObjectiveId(id)
+
+    const swapInRegion = (items: StrategicObjective[]) => {
+      const index = items.findIndex((item) => item.id === id)
+      if (index === -1) return items
+      const target = direction === 'up' ? index - 1 : index + 1
+      if (target < 0 || target >= items.length) return items
+
+      const cloned = [...items]
+      const first = cloned[index]
+      const second = cloned[target]
+      cloned[index] = { ...second, orderIndex: first.orderIndex }
+      cloned[target] = { ...first, orderIndex: second.orderIndex }
+      return cloned.sort((a, b) => a.orderIndex - b.orderIndex)
+    }
+
+    updateRightMap((current) => ({
+      ...current,
+      regions: {
+        ...current.regions,
+        growthFocus: swapInRegion(current.regions.growthFocus),
+        pillarOffer: swapInRegion(current.regions.pillarOffer),
+        pillarRevenue: swapInRegion(current.regions.pillarRevenue),
+        pillarEfficiency: swapInRegion(current.regions.pillarEfficiency),
+        peopleBase: swapInRegion(current.regions.peopleBase),
+      },
+    }))
+
     try {
       await reorderObjective(id, direction)
-      await reloadRightMap()
     } catch (error) {
       console.error('Error reordering objective in building:', error)
+      setRightMap(previous)
       toast.error(error instanceof Error ? error.message : 'Erro ao reordenar objetivo')
     } finally {
-      setMutatingRight(false)
+      setSavingObjectiveId(null)
+    }
+  }
+
+  const saveMeta = async (field: MetaField, value: string) => {
+    if (!rightMap?.orgNode?.id) return
+
+    const previous = rightMap
+    setSavingMetaField(field)
+    updateRightMap((current) => ({
+      ...current,
+      meta: {
+        ...current.meta,
+        [field]: value,
+      },
+    }))
+
+    try {
+      await upsertStrategyMapMetaForOrgNode({ orgNodeId: rightMap.orgNode.id, [field]: value })
+      toast.success('Texto salvo com sucesso')
+    } catch (error) {
+      console.error('Error saving strategy meta in building:', error)
+      setRightMap(previous)
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar texto')
+    } finally {
+      setSavingMetaField(null)
     }
   }
 
@@ -320,11 +459,14 @@ export function StrategyBuilding() {
             data={rightMap}
             loading={loadingRight}
             editable
-            busy={mutatingRight}
+            savingObjectiveId={savingObjectiveId}
+            savingRegionKey={savingRegionKey}
+            savingMetaField={savingMetaField}
             onCreateObjective={createObjective}
             onRenameObjective={renameObjective}
             onDeleteObjective={removeObjective}
             onReorderObjective={moveObjective}
+            onSaveMeta={saveMeta}
           />
         </div>
       </div>

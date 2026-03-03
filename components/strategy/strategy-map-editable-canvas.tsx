@@ -1,14 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowUp, ArrowDown, Edit, Trash2, Plus, BarChart3 } from 'lucide-react'
+import { ArrowDown, ArrowUp, BarChart3, Edit, Loader2, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type CardStyle = 'default' | 'pillar' | 'base'
+type MetaField = 'ambitionText' | 'valuePropositionText'
 
 interface StrategicObjective {
   id: string
   title: string
+  mapRegion: string
+  orderIndex: number
   perspective?: { name: string } | null
   status?: { name: string; color?: string | null } | null
 }
@@ -28,23 +31,103 @@ interface StrategyMapEditableCanvasProps {
     }
   }
   editable: boolean
-  busy?: boolean
   objectiveKRStatus?: Record<string, boolean>
   selectedObjectiveId?: string | null
+  savingObjectiveId?: string | null
+  savingRegionKey?: string | null
+  savingMetaField?: MetaField | null
   onObjectiveView?: (objective: StrategicObjective) => void
-  onCreateObjective?: (mapRegion: string, title: string) => Promise<void>
+  onCreateObjective?: (mapRegion: string, title: string, regionKey: string) => Promise<void>
   onRenameObjective?: (objectiveId: string, title: string) => Promise<void>
   onDeleteObjective?: (objectiveId: string) => Promise<void>
   onReorderObjective?: (objectiveId: string, direction: 'up' | 'down') => Promise<void>
+  onSaveMeta?: (field: MetaField, value: string) => Promise<void>
+}
+
+function EditableMetaBlock({
+  field,
+  value,
+  editable,
+  isSaving,
+  placeholder,
+  textClassName,
+  onSave,
+}: {
+  field: MetaField
+  value?: string | null
+  editable: boolean
+  isSaving: boolean
+  placeholder: string
+  textClassName: string
+  onSave?: (field: MetaField, value: string) => Promise<void>
+}) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [draft, setDraft] = useState(value || '')
+
+  if (!editable) {
+    return <p className={textClassName}>{value || placeholder}</p>
+  }
+
+  if (isEditing) {
+    return (
+      <div className="space-y-2">
+        <textarea
+          className="w-full rounded-md border p-3 text-sm"
+          rows={4}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          autoFocus
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            disabled={isSaving}
+            className="bg-[#E87722] hover:bg-[#d06a1e]"
+            onClick={async () => {
+              await onSave?.(field, draft)
+              setIsEditing(false)
+            }}
+          >
+            {isSaving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+            {isSaving ? 'Salvando...' : 'Salvar'}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isSaving}
+            onClick={() => {
+              setDraft(value || '')
+              setIsEditing(false)
+            }}
+          >
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className="w-full rounded-md p-2 text-left hover:bg-gray-50"
+      onClick={() => {
+        setDraft(value || '')
+        setIsEditing(true)
+      }}
+    >
+      <p className={textClassName}>{value || placeholder}</p>
+    </button>
+  )
 }
 
 function ObjectiveCard({
   objective,
   editable,
-  busy,
   style = 'default',
   hasKRs = false,
   isSelected = false,
+  isSaving = false,
   onView,
   onRename,
   onDelete,
@@ -52,10 +135,10 @@ function ObjectiveCard({
 }: {
   objective: StrategicObjective
   editable: boolean
-  busy?: boolean
   style?: CardStyle
   hasKRs?: boolean
   isSelected?: boolean
+  isSaving?: boolean
   onView?: () => void
   onRename?: (title: string) => Promise<void> | void
   onDelete?: () => Promise<void> | void
@@ -77,20 +160,21 @@ function ObjectiveCard({
 
   return (
     <div
-      className={`${getContainerClass()} mb-1 relative ${!editable ? 'cursor-pointer hover:ring-2 hover:ring-[#E87722]' : ''} ${isSelected ? 'ring-2 ring-blue-400 shadow-lg' : ''}`}
+      className={`${getContainerClass()} mb-1 relative transition-opacity ${isSaving ? 'opacity-70' : ''} ${!editable ? 'cursor-pointer hover:ring-2 hover:ring-[#E87722]' : ''} ${isSelected ? 'ring-2 ring-blue-400 shadow-lg' : ''}`}
       onClick={() => !editable && onView?.()}
     >
-      <div className="absolute top-1 right-1 z-10">
-        <BarChart3 className={`w-3 h-3 ${hasKRs ? 'text-green-600' : 'text-gray-400'}`} />
+      <div className="absolute right-1 top-1 z-10 flex items-center gap-1">
+        {isSaving ? <Loader2 className="h-3 w-3 animate-spin text-[#E87722]" /> : null}
+        <BarChart3 className={`h-3 w-3 ${hasKRs ? 'text-green-600' : 'text-gray-400'}`} />
       </div>
 
-      <div className="flex items-start justify-between pr-4">
+      <div className="flex items-start justify-between pr-6">
         <div className="flex-1">
           {isEditingTitle ? (
             <div className="space-y-1">
               <input
                 type="text"
-                className="w-full p-1 border rounded text-xs"
+                className="w-full rounded border p-1 text-xs"
                 value={titleValue}
                 onChange={(event) => setTitleValue(event.target.value)}
                 onKeyDown={(event) => {
@@ -110,7 +194,7 @@ function ObjectiveCard({
                   size="sm"
                   variant="ghost"
                   className="h-5 px-1 text-xs"
-                  disabled={busy || !titleValue.trim()}
+                  disabled={isSaving || !titleValue.trim()}
                   onClick={() => {
                     void onRename?.(titleValue.trim())
                     setIsEditingTitle(false)
@@ -122,7 +206,7 @@ function ObjectiveCard({
                   size="sm"
                   variant="ghost"
                   className="h-5 px-1 text-xs"
-                  disabled={busy}
+                  disabled={isSaving}
                   onClick={() => {
                     setTitleValue(objective.title)
                     setIsEditingTitle(false)
@@ -134,11 +218,11 @@ function ObjectiveCard({
             </div>
           ) : (
             <h4
-              className={`font-medium text-xs ${editable ? 'cursor-pointer hover:text-[#E87722]' : ''}`}
+              className={`text-xs font-medium ${editable ? 'cursor-pointer hover:text-[#E87722]' : ''}`}
               onClick={() => {
                 if (editable) {
-                  setIsEditingTitle(true)
                   setTitleValue(objective.title)
+                  setIsEditingTitle(true)
                 }
               }}
             >
@@ -146,10 +230,10 @@ function ObjectiveCard({
             </h4>
           )}
 
-          <div className="flex items-center justify-between mt-1 text-[10px] text-gray-500">
+          <div className="mt-1 flex items-center justify-between text-[10px] text-gray-500">
             <span>{objective.perspective?.name || 'Sem perspectiva'}</span>
             <span
-              className={`px-1 py-0.5 rounded text-[10px] ${objective.status?.color ? '' : 'bg-gray-100'}`}
+              className={`rounded px-1 py-0.5 text-[10px] ${objective.status?.color ? '' : 'bg-gray-100'}`}
               style={objective.status?.color ? { backgroundColor: objective.status.color } : {}}
             >
               {objective.status?.name || 'Sem status'}
@@ -158,17 +242,17 @@ function ObjectiveCard({
         </div>
 
         {editable && (
-          <div className="flex items-center gap-0.5 ml-1">
-            <Button variant="ghost" size="sm" onClick={() => void onReorder?.('up')} className="p-0.5 h-5 w-5" disabled={busy}>
+          <div className="ml-1 flex items-center gap-0.5">
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving} onClick={() => void onReorder?.('up')}>
               <ArrowUp className="h-2.5 w-2.5" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => void onReorder?.('down')} className="p-0.5 h-5 w-5" disabled={busy}>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving} onClick={() => void onReorder?.('down')}>
               <ArrowDown className="h-2.5 w-2.5" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setIsEditingTitle(true)} className="p-0.5 h-5 w-5" disabled={busy}>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving} onClick={() => setIsEditingTitle(true)}>
               <Edit className="h-2.5 w-2.5" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => void onDelete?.()} className="p-0.5 h-5 w-5 text-red-600" disabled={busy}>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5 text-red-600" disabled={isSaving} onClick={() => void onDelete?.()}>
               <Trash2 className="h-2.5 w-2.5" />
             </Button>
           </div>
@@ -181,14 +265,17 @@ function ObjectiveCard({
 export function StrategyMapEditableCanvas({
   data,
   editable,
-  busy = false,
   objectiveKRStatus = {},
   selectedObjectiveId,
+  savingObjectiveId,
+  savingRegionKey,
+  savingMetaField,
   onObjectiveView,
   onCreateObjective,
   onRenameObjective,
   onDeleteObjective,
   onReorderObjective,
+  onSaveMeta,
 }: StrategyMapEditableCanvasProps) {
   const [creatingInRegion, setCreatingInRegion] = useState<string | null>(null)
   const [inlineTitle, setInlineTitle] = useState('')
@@ -197,19 +284,21 @@ export function StrategyMapEditableCanvas({
   const renderInlineCreate = (regionKey: string, mapRegion: string, placeholder: string) => {
     if (!editable) return null
 
+    const isSavingThisRegion = savingRegionKey === regionKey
+
     if (creatingInRegion === regionKey) {
       return (
-        <div className="border border-[#E87722] rounded-md p-4">
+        <div className={`rounded-md border border-[#E87722] p-4 transition ${isSavingThisRegion ? 'animate-pulse bg-orange-50' : ''}`}>
           <input
             type="text"
-            className="w-full p-2 border rounded text-sm"
+            className="w-full rounded border p-2 text-sm"
             placeholder={placeholder}
             autoFocus
             value={inlineTitle}
             onChange={(event) => setInlineTitle(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && inlineTitle.trim()) {
-                void onCreateObjective?.(mapRegion, inlineTitle.trim())
+              if (event.key === 'Enter' && inlineTitle.trim() && !isSavingThisRegion) {
+                void onCreateObjective?.(mapRegion, inlineTitle.trim(), regionKey)
                 setInlineTitle('')
                 setCreatingInRegion(null)
               } else if (event.key === 'Escape') {
@@ -218,23 +307,24 @@ export function StrategyMapEditableCanvas({
               }
             }}
           />
-          <div className="flex gap-2 mt-2">
+          <div className="mt-2 flex gap-2">
             <Button
               size="sm"
               className="bg-[#E87722] hover:bg-[#d06a1e]"
-              disabled={busy || !inlineTitle.trim()}
+              disabled={isSavingThisRegion || !inlineTitle.trim()}
               onClick={() => {
-                void onCreateObjective?.(mapRegion, inlineTitle.trim())
+                void onCreateObjective?.(mapRegion, inlineTitle.trim(), regionKey)
                 setInlineTitle('')
                 setCreatingInRegion(null)
               }}
             >
-              Salvar
+              {isSavingThisRegion ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+              {isSavingThisRegion ? 'Salvando...' : 'Salvar'}
             </Button>
             <Button
               size="sm"
               variant="outline"
-              disabled={busy}
+              disabled={isSavingThisRegion}
               onClick={() => {
                 setInlineTitle('')
                 setCreatingInRegion(null)
@@ -248,9 +338,9 @@ export function StrategyMapEditableCanvas({
     }
 
     return (
-      <div className="text-center py-4">
-        <Button variant="outline" size="sm" onClick={() => setCreatingInRegion(regionKey)} disabled={busy}>
-          <Plus className="h-3 w-3 mr-1" />
+      <div className="py-4 text-center">
+        <Button variant="outline" size="sm" onClick={() => setCreatingInRegion(regionKey)} disabled={Boolean(savingRegionKey)}>
+          <Plus className="mr-1 h-3 w-3" />
           Adicionar
         </Button>
       </div>
@@ -259,27 +349,35 @@ export function StrategyMapEditableCanvas({
 
   return (
     <>
-      <div className="text-center mt-2 mb-2">
+      <div className="mt-2 mb-2 text-center">
         <h2 className="text-sm font-bold text-gray-800">Ambicao Estrategica</h2>
-        <p className="text-base text-gray-500 max-w-2xl mx-auto mt-4">
-          {data.meta?.ambitionText || 'Texto da ambicao nao definido'}
-        </p>
+        <div className="mx-auto mt-2 max-w-2xl rounded-md border border-gray-200 bg-white p-2">
+          <EditableMetaBlock
+            field="ambitionText"
+            value={data.meta?.ambitionText}
+            editable={editable}
+            isSaving={savingMetaField === 'ambitionText'}
+            placeholder="Clique para editar a ambicao estrategica..."
+            textClassName="text-base text-gray-600"
+            onSave={onSaveMeta}
+          />
+        </div>
       </div>
 
       <div className="mb-2">
-        <h2 className="text-sm font-semibold mb-2 text-center text-gray-700">Focos de Crescimento</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <h2 className="mb-2 text-center text-sm font-semibold text-gray-700">Focos de Crescimento</h2>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
           {[0, 1, 2].map((index) => {
             const objective = data.regions.growthFocus[index]
-            const slot = `GROWTH_FOCUS_${index}`
+            const slotKey = `GROWTH_FOCUS_${index}`
             return (
-              <div key={index} className="bg-white rounded-md border border-[#CFCFCF] p-1.5 shadow-sm">
+              <div key={index} className="rounded-md border border-[#CFCFCF] bg-white p-1.5 shadow-sm">
                 {objective ? (
                   <ObjectiveCard
                     objective={objective}
                     editable={editable}
-                    busy={busy}
                     style="default"
+                    isSaving={savingObjectiveId === objective.id}
                     hasKRs={objectiveKRStatus[objective.id] || false}
                     isSelected={selectedObjectiveId === objective.id}
                     onView={() => onObjectiveView?.(objective)}
@@ -288,8 +386,8 @@ export function StrategyMapEditableCanvas({
                     onReorder={(direction) => onReorderObjective?.(objective.id, direction)}
                   />
                 ) : (
-                  renderInlineCreate(slot, 'GROWTH_FOCUS', 'Digite o titulo do foco estrategico...') || (
-                    <div className="text-center py-4 text-gray-400">Foco nao definido</div>
+                  renderInlineCreate(slotKey, 'GROWTH_FOCUS', 'Digite o titulo do foco estrategico...') || (
+                    <div className="py-4 text-center text-gray-400">Foco nao definido</div>
                   )
                 )}
               </div>
@@ -299,37 +397,43 @@ export function StrategyMapEditableCanvas({
       </div>
 
       <div className="mb-2">
-        <h2 className="text-sm font-semibold mb-2 text-center text-gray-700">Proposta de Valor</h2>
-        <div className="bg-white rounded-lg border border-[#CFCFCF] overflow-hidden shadow-sm">
-          <div className="h-[4px] bg-[#E87722]"></div>
+        <h2 className="mb-2 text-center text-sm font-semibold text-gray-700">Proposta de Valor</h2>
+        <div className="overflow-hidden rounded-lg border border-[#CFCFCF] bg-white shadow-sm">
+          <div className="h-[4px] bg-[#E87722]" />
           <div className="p-2 text-center">
-            <p className="text-lg font-semibold text-gray-700">
-              {data.meta?.valuePropositionText || 'Texto da proposta de valor nao definido'}
-            </p>
+            <EditableMetaBlock
+              field="valuePropositionText"
+              value={data.meta?.valuePropositionText}
+              editable={editable}
+              isSaving={savingMetaField === 'valuePropositionText'}
+              placeholder="Clique para editar a proposta de valor..."
+              textClassName="text-lg font-semibold text-gray-700"
+              onSave={onSaveMeta}
+            />
           </div>
         </div>
       </div>
 
       <div className="mb-2">
-        <h2 className="text-sm font-semibold mb-2 text-center text-gray-700">Pilares</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+        <h2 className="mb-2 text-center text-sm font-semibold text-gray-700">Pilares</h2>
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
           {[
-            { key: 'pillarOffer', label: 'Oferta', region: 'PILLAR_OFFER' },
-            { key: 'pillarRevenue', label: 'Receita', region: 'PILLAR_REVENUE' },
-            { key: 'pillarEfficiency', label: 'Eficiencia', region: 'PILLAR_EFFICIENCY' },
+            { key: 'pillarOffer', label: 'Oferta', mapRegion: 'PILLAR_OFFER' },
+            { key: 'pillarRevenue', label: 'Receita', mapRegion: 'PILLAR_REVENUE' },
+            { key: 'pillarEfficiency', label: 'Eficiencia', mapRegion: 'PILLAR_EFFICIENCY' },
           ].map((section) => {
             const objectives = (data.regions as any)[section.key] as StrategicObjective[]
             return (
-              <div key={section.key} className="bg-white rounded-lg border border-[#CFCFCF] p-1.5 shadow-sm">
-                <h3 className="font-semibold mb-1 text-center text-gray-700 pb-1 border-b border-gray-200">{section.label}</h3>
+              <div key={section.key} className="rounded-lg border border-[#CFCFCF] bg-white p-1.5 shadow-sm">
+                <h3 className="mb-1 border-b border-gray-200 pb-1 text-center font-semibold text-gray-700">{section.label}</h3>
                 <div className="space-y-1">
                   {objectives.map((objective) => (
                     <ObjectiveCard
                       key={objective.id}
                       objective={objective}
                       editable={editable}
-                      busy={busy}
                       style="pillar"
+                      isSaving={savingObjectiveId === objective.id}
                       hasKRs={objectiveKRStatus[objective.id] || false}
                       isSelected={selectedObjectiveId === objective.id}
                       onView={() => onObjectiveView?.(objective)}
@@ -338,16 +442,15 @@ export function StrategyMapEditableCanvas({
                       onReorder={(direction) => onReorderObjective?.(objective.id, direction)}
                     />
                   ))}
-
                   {editable && (
-                    creatingInRegion === section.region ? (
-                      renderInlineCreate(section.region, section.region, 'Digite o titulo do objetivo...')
+                    creatingInRegion === section.mapRegion ? (
+                      renderInlineCreate(section.mapRegion, section.mapRegion, 'Digite o titulo do objetivo...')
                     ) : (
                       <div
-                        className="bg-[#F2C7A8] rounded-md p-3 cursor-pointer hover:bg-[#e8b896] transition-colors"
-                        onClick={() => setCreatingInRegion(section.region)}
+                        className="cursor-pointer rounded-md bg-[#F2C7A8] p-3 transition-colors hover:bg-[#e8b896]"
+                        onClick={() => setCreatingInRegion(section.mapRegion)}
                       >
-                        <div className="text-sm text-center text-gray-700">+ Adicionar objetivo</div>
+                        <div className="text-center text-sm text-gray-700">+ Adicionar objetivo</div>
                       </div>
                     )
                   )}
@@ -359,22 +462,23 @@ export function StrategyMapEditableCanvas({
       </div>
 
       <div className="mb-2">
-        <h2 className="text-sm font-semibold mb-2 text-center text-gray-700">Base</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <h2 className="mb-2 text-center text-sm font-semibold text-gray-700">Base</h2>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
           {[0, 1, 2].map((index) => {
             const objective = data.regions.peopleBase[index]
-            const slot = `PEOPLE_BASE_${index}`
+            const slotKey = `PEOPLE_BASE_${index}`
+            const baseLabels = ['Pessoas', 'Cultura', 'Talentos']
             return (
-              <div key={index} className="bg-[#DCEFE8] rounded-lg p-1.5">
-                <div className="text-center mb-1">
+              <div key={index} className="rounded-lg bg-[#DCEFE8] p-1.5">
+                <div className="mb-1 text-center">
                   <span className="text-xs font-semibold text-gray-700">{baseLabels[index]}</span>
                 </div>
                 {objective ? (
                   <ObjectiveCard
                     objective={objective}
                     editable={editable}
-                    busy={busy}
                     style="base"
+                    isSaving={savingObjectiveId === objective.id}
                     hasKRs={objectiveKRStatus[objective.id] || false}
                     isSelected={selectedObjectiveId === objective.id}
                     onView={() => onObjectiveView?.(objective)}
@@ -383,8 +487,8 @@ export function StrategyMapEditableCanvas({
                     onReorder={(direction) => onReorderObjective?.(objective.id, direction)}
                   />
                 ) : (
-                  renderInlineCreate(slot, 'PEOPLE_BASE', 'Digite o titulo do objetivo...') || (
-                    <div className="text-center py-4 text-gray-500 text-sm">Nao definido</div>
+                  renderInlineCreate(slotKey, 'PEOPLE_BASE', 'Digite o titulo do objetivo...') || (
+                    <div className="py-4 text-center text-sm text-gray-500">Nao definido</div>
                   )
                 )}
               </div>
