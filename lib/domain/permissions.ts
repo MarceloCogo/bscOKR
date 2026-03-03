@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { OrgAccessGranteeType } from '@prisma/client'
 
 export interface AppPermissions {
   canManageUsers: boolean
@@ -43,7 +44,7 @@ export function normalizePermissions(raw: Partial<AppPermissions>): AppPermissio
 }
 
 export async function getUserPermissions(userId: string, tenantId: string): Promise<AppPermissions> {
-  const [userRoles, membershipCount] = await Promise.all([
+  const [userRoles, membershipCount, leaderCount] = await Promise.all([
     prisma.userRole.findMany({
       where: {
         userId,
@@ -58,7 +59,26 @@ export async function getUserPermissions(userId: string, tenantId: string): Prom
         userId,
       },
     }),
+    prisma.orgNode.count({
+      where: {
+        tenantId,
+        leaderUserId: userId,
+      },
+    }),
   ])
+
+  const roleIds = userRoles.map((userRole) => userRole.roleId)
+  const grantCount = await prisma.orgNodeAccessGrant.count({
+    where: {
+      tenantId,
+      OR: [
+        { granteeType: OrgAccessGranteeType.USER, granteeId: userId },
+        ...(roleIds.length > 0
+          ? [{ granteeType: OrgAccessGranteeType.ROLE, granteeId: { in: roleIds } }]
+          : []),
+      ],
+    },
+  })
 
   const merged = userRoles.reduce((acc, userRole) => {
     return { ...acc, ...parsePermissionsJson(userRole.role.permissionsJson) }
@@ -66,7 +86,7 @@ export async function getUserPermissions(userId: string, tenantId: string): Prom
 
   const normalized = normalizePermissions(merged)
 
-  if (membershipCount > 0) {
+  if (membershipCount > 0 || leaderCount > 0 || grantCount > 0) {
     normalized.canViewStrategyMap = true
     normalized.canViewObjectives = true
     normalized.canViewKRs = true

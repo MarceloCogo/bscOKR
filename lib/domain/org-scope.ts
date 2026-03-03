@@ -8,7 +8,7 @@ export interface UserOrgScope {
 }
 
 export async function getUserOrgScope(userId: string, tenantId: string): Promise<UserOrgScope> {
-  const [permissions, allNodes, memberships, userRoles] = await Promise.all([
+  const [permissions, allNodes, memberships, userRoles, leaderNodes] = await Promise.all([
     getUserPermissions(userId, tenantId),
     prisma.orgNode.findMany({
       where: { tenantId },
@@ -24,6 +24,13 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
         role: { tenantId },
       },
       select: { roleId: true },
+    }),
+    prisma.orgNode.findMany({
+      where: {
+        tenantId,
+        leaderUserId: userId,
+      },
+      select: { id: true },
     }),
   ])
 
@@ -91,7 +98,12 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
     return result
   }
 
-  const directNodeIds = memberships.map((membership) => membership.orgNodeId)
+  const directNodeIds = Array.from(
+    new Set([
+      ...memberships.map((membership) => membership.orgNodeId),
+      ...leaderNodes.map((node) => node.id),
+    ]),
+  )
   const editable = new Set<string>()
   const viewable = new Set<string>()
 
@@ -112,11 +124,13 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
 
     if (grant.permission === OrgAccessPermission.VIEW) {
       grantedNodes.forEach((id) => viewable.add(id))
+      collectAncestors(grant.orgNodeId).forEach((id) => viewable.add(id))
       continue
     }
 
     grantedNodes.forEach((id) => editable.add(id))
     grantedNodes.forEach((id) => viewable.add(id))
+    collectAncestors(grant.orgNodeId).forEach((id) => viewable.add(id))
   }
 
   return {
