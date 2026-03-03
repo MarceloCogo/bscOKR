@@ -12,10 +12,14 @@ export async function GET() {
 
     const userContext = await getUserOrgContext()
 
-    const activeContext = userContext.primaryOrgNode ? {
-      name: userContext.primaryOrgNode.name,
-      type: userContext.primaryOrgNode.type.name,
-    } : null
+    const activeNode = userContext.availableNodes?.find((node) => node.id === userContext.activeOrgNodeId)
+
+    const activeContext = activeNode
+      ? {
+          name: activeNode.name,
+          type: activeNode.type.name,
+        }
+      : null
 
     return NextResponse.json({ activeContext })
   } catch (error) {

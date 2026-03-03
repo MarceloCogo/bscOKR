@@ -371,13 +371,46 @@ export async function getUserOrgContext() {
       id: { in: scope.viewableNodeIds },
     },
     include: {
-      type: true,
+      type: {
+        select: {
+          id: true,
+          key: true,
+          name: true,
+        },
+      },
     },
     orderBy: { createdAt: 'asc' },
   })
 
+  const currentActive = preference?.activeOrgNodeId
+  const activeIsValid = Boolean(currentActive && availableNodes.some((node) => node.id === currentActive))
+
+  const companyNode = availableNodes.find((node) => node.parentId === null && node.type.key === 'company')
+  const rootNode = companyNode || availableNodes.find((node) => node.parentId === null)
+  const fallbackActiveOrgNodeId = rootNode?.id || availableNodes[0]?.id || null
+  const resolvedActiveOrgNodeId = activeIsValid ? currentActive! : fallbackActiveOrgNodeId
+
+  if (!activeIsValid && resolvedActiveOrgNodeId) {
+    await prisma.userPreference.upsert({
+      where: {
+        tenantId_userId: {
+          tenantId: session.user.tenantId,
+          userId: session.user.id,
+        },
+      },
+      update: {
+        activeOrgNodeId: resolvedActiveOrgNodeId,
+      },
+      create: {
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        activeOrgNodeId: resolvedActiveOrgNodeId,
+      },
+    })
+  }
+
   return {
-    activeOrgNodeId: preference?.activeOrgNodeId,
+    activeOrgNodeId: resolvedActiveOrgNodeId,
     memberships,
     availableNodes,
     primaryOrgNode: primaryMemberships[0]?.orgNode || null,
@@ -390,13 +423,14 @@ export async function setActiveOrgNode(orgNodeId: string | null) {
     throw new Error('Unauthorized')
   }
 
-  // If setting to a specific node, ensure user can view this node in hierarchy
-  if (orgNodeId) {
-    const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
+  if (!orgNodeId) {
+    throw new Error('orgNodeId is required')
+  }
 
-    if (!scope.viewableNodeIds.includes(orgNodeId)) {
-      throw new Error('User cannot view this org node')
-    }
+  const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
+
+  if (!scope.viewableNodeIds.includes(orgNodeId)) {
+    throw new Error('User cannot view this org node')
   }
 
   await prisma.userPreference.upsert({

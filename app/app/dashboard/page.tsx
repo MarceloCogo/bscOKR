@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getUserOrgScope } from '@/lib/domain/org-scope'
 import { StatCard } from '@/components/layout/stat-card'
 import { Button } from '@/components/ui/button'
 import { Target, TrendingUp, Calendar, Users, Map, Network } from 'lucide-react'
@@ -14,7 +15,10 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  // Get real data
+  const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
+  const viewableNodeIds = scope.viewableNodeIds
+
+  // Get data constrained by user visibility scope
   const [
     orgNodesCount,
     objectivesCount,
@@ -23,25 +27,26 @@ export default async function DashboardPage() {
     recentObjectives,
     recentOrgNodes,
   ] = await Promise.all([
-    prisma.orgNode.count({ where: { tenantId: session.user.tenantId } }),
-    prisma.strategicObjective.count({ where: { tenantId: session.user.tenantId } }),
+    prisma.orgNode.count({ where: { tenantId: session.user.tenantId, id: { in: viewableNodeIds } } }),
+    prisma.strategicObjective.count({ where: { tenantId: session.user.tenantId, orgNodeId: { in: viewableNodeIds } } }),
     prisma.strategicObjective.count({
       where: {
         tenantId: session.user.tenantId,
+        orgNodeId: { in: viewableNodeIds },
         status: { key: 'active' }
       }
     }),
     prisma.user.count({ where: { tenantId: session.user.tenantId } }),
     // Recent objectives
     prisma.strategicObjective.findMany({
-      where: { tenantId: session.user.tenantId },
+      where: { tenantId: session.user.tenantId, orgNodeId: { in: viewableNodeIds } },
       include: { status: true },
       orderBy: { createdAt: 'desc' },
       take: 3,
     }),
     // Recent org nodes
     prisma.orgNode.findMany({
-      where: { tenantId: session.user.tenantId },
+      where: { tenantId: session.user.tenantId, id: { in: viewableNodeIds } },
       include: { type: true },
       orderBy: { createdAt: 'desc' },
       take: 3,
