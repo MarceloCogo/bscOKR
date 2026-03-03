@@ -63,58 +63,62 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        const clientIp = getClientIpFromHeaders((req as any)?.headers)
-        const now = new Date()
+        try {
+          const clientIp = getClientIpFromHeaders((req as any)?.headers)
+          const now = new Date()
 
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            lastLoginAt: now,
-            lastSeenAt: now,
-            lastLoginIp: clientIp,
-            lastSeenIp: clientIp,
-          } as any,
-        })
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              lastLoginAt: now,
+              lastSeenAt: now,
+              lastLoginIp: clientIp,
+              lastSeenIp: clientIp,
+            } as any,
+          })
 
-        const companyNode = await prisma.orgNode.findFirst({
-          where: {
-            tenantId: tenant.id,
-            parentId: null,
-            type: { key: 'company' },
-          },
-          select: { id: true },
-        })
-
-        const fallbackRootNode = companyNode
-          ? null
-          : await prisma.orgNode.findFirst({
-              where: {
-                tenantId: tenant.id,
-                parentId: null,
-              },
-              orderBy: { createdAt: 'asc' },
-              select: { id: true },
-            })
-
-        const loginContextNodeId = companyNode?.id || fallbackRootNode?.id
-
-        if (loginContextNodeId) {
-          await prisma.userPreference.upsert({
+          const companyNode = await prisma.orgNode.findFirst({
             where: {
-              tenantId_userId: {
+              tenantId: tenant.id,
+              parentId: null,
+              type: { key: 'company' },
+            },
+            select: { id: true },
+          })
+
+          const fallbackRootNode = companyNode
+            ? null
+            : await prisma.orgNode.findFirst({
+                where: {
+                  tenantId: tenant.id,
+                  parentId: null,
+                },
+                orderBy: { createdAt: 'asc' },
+                select: { id: true },
+              })
+
+          const loginContextNodeId = companyNode?.id || fallbackRootNode?.id
+
+          if (loginContextNodeId) {
+            await prisma.userPreference.upsert({
+              where: {
+                tenantId_userId: {
+                  tenantId: tenant.id,
+                  userId: user.id,
+                },
+              },
+              update: {
+                activeOrgNodeId: loginContextNodeId,
+              },
+              create: {
                 tenantId: tenant.id,
                 userId: user.id,
+                activeOrgNodeId: loginContextNodeId,
               },
-            },
-            update: {
-              activeOrgNodeId: loginContextNodeId,
-            },
-            create: {
-              tenantId: tenant.id,
-              userId: user.id,
-              activeOrgNodeId: loginContextNodeId,
-            },
-          })
+            })
+          }
+        } catch (trackingError) {
+          console.error('Auth tracking/context update failed:', trackingError)
         }
 
         return {
@@ -158,12 +162,9 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async redirect({ url, baseUrl }) {
-      // For sign-in, determine where to redirect based on user state
-      if (url === baseUrl || url === `${baseUrl}/`) {
-        const { getPostLoginRedirect } = await import('@/lib/actions/auth')
-        return await getPostLoginRedirect()
-      }
-      return url
+      if (url.startsWith('/')) return `${baseUrl}${url}`
+      if (new URL(url).origin === baseUrl) return url
+      return `${baseUrl}/app/dashboard`
     },
   },
   pages: {
