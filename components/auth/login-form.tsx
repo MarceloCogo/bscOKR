@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { signIn, useSession } from 'next-auth/react'
+import { getSession, signIn, useSession } from 'next-auth/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -20,7 +20,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 export function LoginForm() {
-  const { data: session, status, update } = useSession()
+  const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -30,6 +30,9 @@ export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const forceFirstAccess = searchParams.get('firstAccess') === '1'
+  const showFirstAccessForm =
+    status === 'authenticated' &&
+    Boolean(session?.user?.mustChangePassword || forceFirstAccess || mustChangePassword)
 
   useEffect(() => {
     const message = searchParams.get('message')
@@ -41,6 +44,10 @@ export function LoginForm() {
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.mustChangePassword) {
       setMustChangePassword(true)
+    }
+
+    if (status !== 'authenticated') {
+      setMustChangePassword(false)
     }
   }, [session?.user?.mustChangePassword, status])
 
@@ -68,9 +75,8 @@ export function LoginForm() {
       if (result?.error) {
         setError('Credenciais inválidas ou organização não encontrada')
       } else {
-        const sessionResponse = await fetch('/api/auth/session')
-        const sessionPayload = await sessionResponse.json().catch(() => ({}))
-        const mustChange = Boolean(sessionPayload?.user?.mustChangePassword)
+        const currentSession = await getSession()
+        const mustChange = Boolean(currentSession?.user?.mustChangePassword)
 
         if (mustChange) {
           setMustChangePassword(true)
@@ -91,6 +97,11 @@ export function LoginForm() {
   async function onSubmitPasswordChange(event: React.FormEvent) {
     event.preventDefault()
     setError('')
+
+    if (status !== 'authenticated') {
+      setError('Sua sessão expirou. Faça login novamente com a senha temporária.')
+      return
+    }
 
     if (newPassword.length < 8) {
       setError('Senha deve ter no mínimo 8 caracteres')
@@ -115,7 +126,24 @@ export function LoginForm() {
         throw new Error(payload.error?.formErrors?.[0] || payload.error || 'Erro ao trocar senha')
       }
 
-      await update({ mustChangePassword: false } as any)
+      const tenantSlug = session?.user?.tenantSlug
+      const email = session?.user?.email
+
+      if (!tenantSlug || !email) {
+        throw new Error('Sessao invalida. Faca login novamente.')
+      }
+
+      const relogin = await signIn('credentials', {
+        tenantSlug,
+        email,
+        password: newPassword,
+        redirect: false,
+      })
+
+      if (relogin?.error) {
+        throw new Error('Senha alterada, mas nao foi possivel atualizar a sessao. Entre novamente.')
+      }
+
       setMustChangePassword(false)
       setNewPassword('')
       setConfirmPassword('')
@@ -128,7 +156,7 @@ export function LoginForm() {
     }
   }
 
-  if (mustChangePassword || (forceFirstAccess && status === 'authenticated')) {
+  if (showFirstAccessForm) {
     return (
       <Card className="auth-form-card">
         <CardHeader className="space-y-1">
@@ -154,7 +182,7 @@ export function LoginForm() {
               </div>
             )}
 
-            <Button type="submit" className="w-full h-11 btn-primary" disabled={isLoading || status !== 'authenticated'}>
+            <Button type="submit" className="w-full h-11 btn-primary" disabled={isLoading}>
               {isLoading ? 'Salvando...' : 'Salvar nova senha'}
             </Button>
           </form>
