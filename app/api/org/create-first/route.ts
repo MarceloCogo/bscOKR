@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
+import { getUserPermissions } from '@/lib/domain/permissions'
 
 const createFirstOrgSchema = z.object({
   name: z.string().min(1).max(100),
@@ -14,6 +15,11 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.tenantId || !session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const permissions = await getUserPermissions(session.user.id, session.user.tenantId)
+    if (!permissions.canManageConfig) {
+      return NextResponse.json({ error: 'Only admins can create organization nodes' }, { status: 403 })
     }
 
     const body = await request.json()

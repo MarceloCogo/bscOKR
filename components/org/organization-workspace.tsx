@@ -21,6 +21,7 @@ interface OrganizationWorkspaceProps {
     primaryOrgNode?: any
   }
   canManageGrants: boolean
+  canManageStructure: boolean
 }
 
 function flattenTree(nodes: OrgNode[]): OrgNode[] {
@@ -39,7 +40,7 @@ function flattenTree(nodes: OrgNode[]): OrgNode[] {
   return result
 }
 
-export function OrganizationWorkspace({ tree, userContext, canManageGrants }: OrganizationWorkspaceProps) {
+export function OrganizationWorkspace({ tree, userContext, canManageGrants, canManageStructure }: OrganizationWorkspaceProps) {
   const nodes = useMemo(() => flattenTree(tree), [tree])
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(
     userContext.activeOrgNodeId || userContext.primaryOrgNode?.id || nodes[0]?.id || null,
@@ -64,6 +65,7 @@ export function OrganizationWorkspace({ tree, userContext, canManageGrants }: Or
             userContext={userContext}
             selectedNodeId={selectedNodeId}
             onSelectNode={(node) => setSelectedNodeId(node.id)}
+            canManageStructure={canManageStructure}
           />
         </div>
 

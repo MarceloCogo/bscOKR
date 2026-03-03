@@ -21,7 +21,7 @@ async function getUserPermissions(userId: string, tenantId: string) {
 // Helper to check if user can manage org nodes
 async function canManageOrgNodes(userId: string, tenantId: string) {
   const perms = await getUserPermissions(userId, tenantId)
-  return perms.canManageUsers || perms.canManageConfig // assuming admin has these
+  return perms.canManageConfig
 }
 
 // Helper to check if user is leader of a specific node

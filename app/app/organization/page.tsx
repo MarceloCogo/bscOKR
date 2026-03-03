@@ -56,6 +56,7 @@ export default async function OrganizationPage({
         tree={orgTree}
         userContext={userContext}
         canManageGrants={Boolean(permissions.canManageUsers || permissions.canManageConfig)}
+        canManageStructure={Boolean(permissions.canManageConfig)}
       />
     </div>
   )

@@ -76,6 +76,47 @@ export const authOptions: NextAuthOptions = {
           } as any,
         })
 
+        const companyNode = await prisma.orgNode.findFirst({
+          where: {
+            tenantId: tenant.id,
+            parentId: null,
+            type: { key: 'company' },
+          },
+          select: { id: true },
+        })
+
+        const fallbackRootNode = companyNode
+          ? null
+          : await prisma.orgNode.findFirst({
+              where: {
+                tenantId: tenant.id,
+                parentId: null,
+              },
+              orderBy: { createdAt: 'asc' },
+              select: { id: true },
+            })
+
+        const loginContextNodeId = companyNode?.id || fallbackRootNode?.id
+
+        if (loginContextNodeId) {
+          await prisma.userPreference.upsert({
+            where: {
+              tenantId_userId: {
+                tenantId: tenant.id,
+                userId: user.id,
+              },
+            },
+            update: {
+              activeOrgNodeId: loginContextNodeId,
+            },
+            create: {
+              tenantId: tenant.id,
+              userId: user.id,
+              activeOrgNodeId: loginContextNodeId,
+            },
+          })
+        }
+
         return {
           id: user.id,
           email: user.email,

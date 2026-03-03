@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getUserPermissions } from '@/lib/domain/permissions'
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.tenantId || !session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const permissions = await getUserPermissions(session.user.id, session.user.tenantId)
+    if (!permissions.canManageConfig) {
+      return NextResponse.json({ error: 'Only admins can create organization nodes' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -20,16 +26,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify parent exists and user has access
+    // Verify parent exists
     const parentNode = await prisma.orgNode.findFirst({
       where: {
         id: parentId,
         tenantId: session.user.tenantId,
-        memberships: {
-          some: {
-            userId: session.user.id,
-          },
-        },
       },
     })
 

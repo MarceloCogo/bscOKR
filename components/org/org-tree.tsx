@@ -29,9 +29,10 @@ interface OrgTreeProps {
   }
   selectedNodeId?: string | null
   onSelectNode?: (node: OrgNode) => void
+  canManageStructure?: boolean
 }
 
-export function OrgTree({ tree, userContext, selectedNodeId = null, onSelectNode }: OrgTreeProps) {
+export function OrgTree({ tree, userContext, selectedNodeId = null, onSelectNode, canManageStructure = false }: OrgTreeProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -166,14 +167,16 @@ export function OrgTree({ tree, userContext, selectedNodeId = null, onSelectNode
                 </div>
               </div>
               <div className="flex space-x-2 mt-2" onClick={(event) => event.stopPropagation()}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleCreateChild(node.id)}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Adicionar filho
-                </Button>
+                {canManageStructure && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCreateChild(node.id)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Adicionar filho
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -215,10 +218,14 @@ export function OrgTree({ tree, userContext, selectedNodeId = null, onSelectNode
               <p className="text-muted-foreground mb-4">
                 Nenhum nó organizacional encontrado. Comece criando um nó raiz.
               </p>
-              <Button onClick={handleCreateRootNode}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Nó Raiz
-              </Button>
+              {canManageStructure ? (
+                <Button onClick={handleCreateRootNode}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Nó Raiz
+                </Button>
+              ) : (
+                <p className="text-sm text-muted-foreground">Somente administradores podem criar a estrutura organizacional.</p>
+              )}
             </div>
           </div>
         </CardContent>
