@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { StrategyMapCanvas } from './strategy-map-canvas'
+import { StrategyMapEditableCanvas } from './strategy-map-editable-canvas'
 import { createObjectiveInRegion, deleteObjective, reorderObjective, updateObjectivePartial } from '@/lib/actions/strategy'
 
 interface OrgNode {
@@ -104,16 +105,19 @@ function StrategyMapPreview({
         {!data?.orgNode ? (
           <div className="py-10 text-center text-sm text-neutral-500">Selecione um mapa para visualizar.</div>
         ) : (
-          <StrategyMapCanvas
-            data={data}
-            compact={!showEditable}
-            editable={showEditable}
-            busy={busy}
-            onCreateObjective={onCreateObjective}
-            onRenameObjective={onRenameObjective}
-            onDeleteObjective={onDeleteObjective}
-            onReorderObjective={onReorderObjective}
-          />
+          showEditable ? (
+            <StrategyMapEditableCanvas
+              data={data}
+              editable
+              busy={busy}
+              onCreateObjective={onCreateObjective}
+              onRenameObjective={onRenameObjective}
+              onDeleteObjective={onDeleteObjective}
+              onReorderObjective={onReorderObjective}
+            />
+          ) : (
+            <StrategyMapCanvas data={data} compact />
+          )
         )}
       </CardContent>
     </Card>
