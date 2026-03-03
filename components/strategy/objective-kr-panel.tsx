@@ -314,7 +314,7 @@ export function ObjectiveKRPanel({
                       <div className="flex justify-between text-xs text-gray-600">
                         <span>
                           {kr.type === 'ENTREGAVEL'
-                            ? `${Math.round(progress)}% concluido`
+                            ? `${Math.round(progress)}% concluído`
                             : `${kr.currentValue ?? 0} / ${kr.targetValue ?? kr.thresholdValue ?? 0} ${kr.unit ?? ''}`}
                         </span>
                         <span>{Math.round(progress)}%</span>
@@ -358,7 +358,7 @@ export function ObjectiveKRPanel({
                               size="sm"
                               onClick={() => handleSaveUpdate(kr)}
                               disabled={isSaving}
-                              aria-label={`Salvar atualizacao do Key Result: ${kr.title}`}
+                              aria-label={`Salvar atualização do Key Result: ${kr.title}`}
                             >
                               {isSaving ? (
                                 <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
@@ -374,7 +374,7 @@ export function ObjectiveKRPanel({
                                 setEditingValue('')
                               }}
                               disabled={isSaving}
-                              aria-label={`Cancelar atualizacao do Key Result: ${kr.title}`}
+                              aria-label={`Cancelar atualização do Key Result: ${kr.title}`}
                             >
                               Cancelar
                             </Button>
@@ -389,7 +389,7 @@ export function ObjectiveKRPanel({
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-600">Checklist</span>
                           <span className="text-[11px] text-neutral-500">
                             {checklistSaveState[kr.id] === 'saving' && 'Salvando...'}
-                            {checklistSaveState[kr.id] === 'pending' && 'Alteracoes pendentes'}
+                            {checklistSaveState[kr.id] === 'pending' && 'Alterações pendentes'}
                             {checklistSaveState[kr.id] === 'saved' && 'Salvo'}
                             {checklistSaveState[kr.id] === 'error' && 'Adicione ao menos 1 item valido'}
                           </span>
@@ -506,7 +506,7 @@ export function ObjectiveKRPanel({
 
                     {kr.updateHistories && kr.updateHistories.length > 0 && (
                       <div className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1.5">
-                        <p className="text-[11px] font-medium text-neutral-700">Ultimas atualizacoes</p>
+                        <p className="text-[11px] font-medium text-neutral-700">Últimas atualizações</p>
                         <div className="mt-1 space-y-0.5">
                           {kr.updateHistories.slice(0, 3).map((history) => (
                             <p key={history.id} className="text-[11px] text-neutral-600">
@@ -545,7 +545,7 @@ export function ObjectiveKRPanel({
             <DialogTitle>Excluir KR</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-neutral-600">
-            Tem certeza que deseja excluir a KR <span className="font-medium text-neutral-900">{deletingKR?.title}</span>? Essa acao nao pode ser desfeita.
+             Tem certeza que deseja excluir a KR <span className="font-medium text-neutral-900">{deletingKR?.title}</span>? Essa ação não pode ser desfeita.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeletingKR(null)} disabled={!!deletingKRId}>

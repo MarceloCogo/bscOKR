@@ -17,7 +17,7 @@ export function AuthShell({ title, subtitle, ctaLabel, ctaHref, ctaText, childre
           <div className="mb-5 inline-flex items-center rounded-full border border-[#E87722]/20 bg-[#E87722]/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#B45309]">
             BSC OKR Platform
           </div>
-          <h1 className="text-3xl font-bold leading-tight text-neutral-900 md:text-4xl">Gestao estrategica com foco em execucao</h1>
+          <h1 className="text-3xl font-bold leading-tight text-neutral-900 md:text-4xl">Gestão estratégica com foco em execução</h1>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-neutral-600 md:text-base">
             Conecte estrategia, objetivos e resultados em um fluxo unico. Acompanhe progresso, alinhe prioridades e simplifique a gestao entre equipes.
           </p>

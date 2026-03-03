@@ -54,7 +54,7 @@ export default function Home() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-base font-semibold text-neutral-900">Criar conta</h3>
-                  <p className="text-sm text-neutral-600">Cadastre sua organizacao e inicie em minutos.</p>
+                  <p className="text-sm text-neutral-600">Cadastre sua organização e inicie em minutos.</p>
                 </div>
                 <span className="text-[#E87722] transition-transform group-hover:translate-x-1">-&gt;</span>
               </div>

@@ -11,7 +11,7 @@ export default function SignupPage() {
   return (
     <AuthShell
       title="Criar sua conta"
-      subtitle="Configure sua organizacao e comece rapido"
+      subtitle="Configure sua organização e comece rápido"
       ctaText="Ja tem conta?"
       ctaLabel="Entrar"
       ctaHref="/login"

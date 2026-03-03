@@ -64,7 +64,7 @@ export function KREditDialog({ kr, open, onOpenChange, onSaved }: KREditDialogPr
 
   const handleSave = async () => {
     if (!form.title.trim()) {
-      toast.error('Informe o titulo da KR')
+      toast.error('Informe o título da KR')
       return
     }
 
@@ -78,7 +78,7 @@ export function KREditDialog({ kr, open, onOpenChange, onSaved }: KREditDialogPr
       const targetValue = parseNumber(form.targetValue)
       const currentValue = parseNumber(form.currentValue)
       if (targetValue == null || currentValue == null) {
-        toast.error('Target e Current sao obrigatorios')
+        toast.error('Alvo e Atual são obrigatórios')
         return
       }
       payload.targetValue = targetValue
@@ -92,7 +92,7 @@ export function KREditDialog({ kr, open, onOpenChange, onSaved }: KREditDialogPr
       const targetValue = parseNumber(form.targetValue)
       const currentValue = parseNumber(form.currentValue)
       if (baselineValue == null || targetValue == null || currentValue == null) {
-        toast.error('Baseline, Target e Current sao obrigatorios')
+        toast.error('Linha de base, Alvo e Atual são obrigatórios')
         return
       }
       payload.baselineValue = baselineValue
@@ -105,7 +105,7 @@ export function KREditDialog({ kr, open, onOpenChange, onSaved }: KREditDialogPr
       const thresholdValue = parseNumber(form.thresholdValue)
       const currentValue = parseNumber(form.currentValue)
       if (thresholdValue == null || currentValue == null) {
-        toast.error('Limiar e Current sao obrigatorios')
+        toast.error('Limiar e Atual são obrigatórios')
         return
       }
       payload.thresholdValue = thresholdValue
@@ -151,12 +151,12 @@ export function KREditDialog({ kr, open, onOpenChange, onSaved }: KREditDialogPr
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium">Titulo</label>
+            <label className="mb-1 block text-xs font-medium">Título</label>
             <Input value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium">Due date</label>
+            <label className="mb-1 block text-xs font-medium">Data limite</label>
             <Input type="date" value={form.dueDate} onChange={(e) => setForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
           </div>
 
@@ -185,16 +185,16 @@ export function KREditDialog({ kr, open, onOpenChange, onSaved }: KREditDialogPr
           {kr.type === 'AUMENTO' && (
             <div className="grid grid-cols-3 gap-2">
               <Input placeholder="Baseline" type="number" value={form.baselineValue} onChange={(e) => setForm((prev) => ({ ...prev, baselineValue: e.target.value }))} />
-              <Input placeholder="Target" type="number" value={form.targetValue} onChange={(e) => setForm((prev) => ({ ...prev, targetValue: e.target.value }))} />
-              <Input placeholder="Current" type="number" value={form.currentValue} onChange={(e) => setForm((prev) => ({ ...prev, currentValue: e.target.value }))} />
+              <Input placeholder="Alvo" type="number" value={form.targetValue} onChange={(e) => setForm((prev) => ({ ...prev, targetValue: e.target.value }))} />
+              <Input placeholder="Atual" type="number" value={form.currentValue} onChange={(e) => setForm((prev) => ({ ...prev, currentValue: e.target.value }))} />
             </div>
           )}
 
           {kr.type === 'REDUCAO' && (
             <div className="grid grid-cols-3 gap-2">
               <Input placeholder="Baseline" type="number" value={form.baselineValue} onChange={(e) => setForm((prev) => ({ ...prev, baselineValue: e.target.value }))} />
-              <Input placeholder="Target" type="number" value={form.targetValue} onChange={(e) => setForm((prev) => ({ ...prev, targetValue: e.target.value }))} />
-              <Input placeholder="Current" type="number" value={form.currentValue} onChange={(e) => setForm((prev) => ({ ...prev, currentValue: e.target.value }))} />
+              <Input placeholder="Alvo" type="number" value={form.targetValue} onChange={(e) => setForm((prev) => ({ ...prev, targetValue: e.target.value }))} />
+              <Input placeholder="Atual" type="number" value={form.currentValue} onChange={(e) => setForm((prev) => ({ ...prev, currentValue: e.target.value }))} />
             </div>
           )}
 
@@ -202,22 +202,22 @@ export function KREditDialog({ kr, open, onOpenChange, onSaved }: KREditDialogPr
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <Input placeholder="Limiar" type="number" value={form.thresholdValue} onChange={(e) => setForm((prev) => ({ ...prev, thresholdValue: e.target.value }))} />
-                <Input placeholder="Current" type="number" value={form.currentValue} onChange={(e) => setForm((prev) => ({ ...prev, currentValue: e.target.value }))} />
+                <Input placeholder="Atual" type="number" value={form.currentValue} onChange={(e) => setForm((prev) => ({ ...prev, currentValue: e.target.value }))} />
               </div>
               <select
                 className="h-9 w-full rounded border px-2"
                 value={form.thresholdDirection}
                 onChange={(e) => setForm((prev) => ({ ...prev, thresholdDirection: e.target.value as 'MAXIMO' | 'MINIMO' }))}
               >
-                <option value="MAXIMO">Maximo (&lt;= limite)</option>
-                <option value="MINIMO">Minimo (&gt;= limite)</option>
+                <option value="MAXIMO">Máximo (&lt;= limite)</option>
+                <option value="MINIMO">Mínimo (&gt;= limite)</option>
               </select>
             </div>
           )}
 
           {kr.type === 'ENTREGAVEL' && (
             <p className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
-              Checklist do entregavel continua editavel direto no painel lateral.
+              Checklist do entregável continua editável direto no painel lateral.
             </p>
           )}
         </div>

@@ -338,7 +338,7 @@ export default function KeyResultsPage() {
                       <div className="text-right">
                         <p className="text-sm font-medium">
                           {kr.type === 'ENTREGAVEL'
-                            ? `${Math.round(progress)}% concluido`
+                            ? `${Math.round(progress)}% concluído`
                             : `${kr.currentValue ?? 0} / ${kr.targetValue ?? kr.thresholdValue ?? 0} ${kr.unit ?? ''}`}
                         </p>
                         <p className="text-xs text-gray-500">

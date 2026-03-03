@@ -376,7 +376,7 @@ export function StrategyMapEditableCanvas({
             editable={editable}
             isSaving={savingMetaField === 'ambitionText'}
             isBlocked={hasPendingMutation && savingMetaField !== 'ambitionText'}
-            placeholder="Clique para editar a ambicao estrategica..."
+            placeholder="Clique para editar a ambição estratégica..."
             textClassName="text-base text-gray-600"
             onSave={onSaveMeta}
           />
@@ -406,8 +406,8 @@ export function StrategyMapEditableCanvas({
                     onReorder={(direction) => onReorderObjective?.(objective.id, direction)}
                   />
                 ) : (
-                  renderInlineCreate(slotKey, 'GROWTH_FOCUS', 'Digite o titulo do foco estrategico...') || (
-                    <div className="py-4 text-center text-gray-400">Foco nao definido</div>
+                  renderInlineCreate(slotKey, 'GROWTH_FOCUS', 'Digite o título do foco estratégico...') || (
+                    <div className="py-4 text-center text-gray-400">Foco não definido</div>
                   )
                 )}
               </div>
@@ -466,7 +466,7 @@ export function StrategyMapEditableCanvas({
                   ))}
                   {editable && (
                     creatingInRegion === section.mapRegion ? (
-                      renderInlineCreate(section.mapRegion, section.mapRegion, 'Digite o titulo do objetivo...')
+                      renderInlineCreate(section.mapRegion, section.mapRegion, 'Digite o título do objetivo...')
                     ) : (
                       <div
                         className="cursor-pointer rounded-md bg-[#F2C7A8] p-3 transition-colors hover:bg-[#e8b896]"
@@ -510,8 +510,8 @@ export function StrategyMapEditableCanvas({
                     onReorder={(direction) => onReorderObjective?.(objective.id, direction)}
                   />
                 ) : (
-                  renderInlineCreate(slotKey, 'PEOPLE_BASE', 'Digite o titulo do objetivo...') || (
-                    <div className="py-4 text-center text-sm text-gray-500">Nao definido</div>
+                  renderInlineCreate(slotKey, 'PEOPLE_BASE', 'Digite o título do objetivo...') || (
+                    <div className="py-4 text-center text-sm text-gray-500">Não definido</div>
                   )
                 )}
               </div>

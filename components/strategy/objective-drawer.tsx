@@ -127,7 +127,7 @@ export function ObjectiveDrawer({
 
   const handleSaveDetails = async () => {
     if (!formData.title.trim()) {
-      toast.error('Informe um titulo para o objetivo')
+      toast.error('Informe um título para o objetivo')
       return
     }
 
@@ -265,7 +265,7 @@ export function ObjectiveDrawer({
 
                 <div className="flex justify-end">
                   <Button onClick={handleSaveDetails} disabled={isSavingDetails}>
-                    {isSavingDetails ? 'Salvando...' : 'Salvar alteracoes'}
+                    {isSavingDetails ? 'Salvando...' : 'Salvar alterações'}
                   </Button>
                 </div>
               </CardContent>

@@ -366,7 +366,7 @@ export function OrgNodePanel({ selectedNode, canManageGrants }: OrgNodePanelProp
               </Button>
 
               <p className="text-xs text-muted-foreground">
-                Para compartilhar com varias pessoas de uma vez, use um papel e atribua os usuarios em
+                Para compartilhar com várias pessoas de uma vez, use um papel e atribua os usuários em
                 <Link href="/app/admin/users" className="ml-1 underline hover:text-foreground">
                   Admin &gt; Usuarios
                 </Link>

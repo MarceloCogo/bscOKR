@@ -141,7 +141,7 @@ export function LoginForm() {
       })
 
       if (relogin?.error) {
-        throw new Error('Senha alterada, mas nao foi possivel atualizar a sessao. Entre novamente.')
+        throw new Error('Senha alterada, mas não foi possível atualizar a sessão. Entre novamente.')
       }
 
       setMustChangePassword(false)

@@ -243,7 +243,7 @@ export function StrategyMapCanvas({
       <div className={`${sectionGap} text-center`}>
         <h2 className="text-sm font-bold text-gray-800">Ambicao Estrategica</h2>
         <p className={`mx-auto mt-2 max-w-2xl ${textMain} text-gray-500`}>
-          {data.meta?.ambitionText || 'Texto da ambicao nao definido'}
+          {data.meta?.ambitionText || 'Texto da ambição não definido'}
         </p>
       </div>
 
@@ -287,7 +287,7 @@ export function StrategyMapCanvas({
                     </div>
                   )
                 ) : (
-                  <div className="py-4 text-center text-gray-400">Foco nao definido</div>
+                  <div className="py-4 text-center text-gray-400">Foco não definido</div>
                 )}
               </div>
             )
@@ -301,7 +301,7 @@ export function StrategyMapCanvas({
           <div className="h-[4px] bg-[#E87722]" />
           <div className={`${compact ? 'p-2' : 'p-3'} text-center`}>
             <p className={`${compact ? 'text-base' : 'text-lg'} font-semibold text-gray-700`}>
-              {data.meta?.valuePropositionText || 'Texto da proposta de valor nao definido'}
+              {data.meta?.valuePropositionText || 'Texto da proposta de valor não definido'}
             </p>
           </div>
         </div>
@@ -410,7 +410,7 @@ export function StrategyMapCanvas({
                     </div>
                   )
                 ) : (
-                  <div className="py-3 text-center text-sm text-gray-500">Nao definido</div>
+                  <div className="py-3 text-center text-sm text-gray-500">Não definido</div>
                 )}
               </div>
             )

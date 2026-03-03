@@ -238,7 +238,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
     }
 
     if (newKR.type === 'AUMENTO' && !newKR.targetValue) {
-      toast.error('Target é obrigatório para KR do tipo Aumento')
+      toast.error('Alvo é obrigatório para KR do tipo Aumento')
       return
     }
 
@@ -248,7 +248,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
     }
 
     if (newKR.type === 'REDUCAO' && !newKR.targetValue) {
-      toast.error('Target é obrigatório para KR do tipo Redução')
+      toast.error('Alvo é obrigatório para KR do tipo Redução')
       return
     }
 
@@ -275,7 +275,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
         const targetValue = parseFloat(newKR.targetValue)
         const currentValue = parseFloat(newKR.currentValue) || 0
         if (Number.isNaN(targetValue)) {
-          toast.error('Target inválido para KR do tipo Aumento')
+          toast.error('Alvo inválido para KR do tipo Aumento')
           setIsCreating(false)
           return
         }
@@ -291,7 +291,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
         const targetValue = parseFloat(newKR.targetValue)
         const currentValue = parseFloat(newKR.currentValue) || 0
         if (Number.isNaN(baselineValue) || Number.isNaN(targetValue)) {
-          toast.error('Baseline/Target inválido para KR do tipo Redução')
+          toast.error('Linha de base/Alvo inválido para KR do tipo Redução')
           setIsCreating(false)
           return
         }
@@ -562,7 +562,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
                             <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-600">Checklist</span>
                             <span className="text-[11px] text-neutral-500">
                               {checklistSaveState[kr.id] === 'saving' && 'Salvando...'}
-                              {checklistSaveState[kr.id] === 'pending' && 'Alteracoes pendentes'}
+                              {checklistSaveState[kr.id] === 'pending' && 'Alterações pendentes'}
                               {checklistSaveState[kr.id] === 'saved' && 'Salvo'}
                               {checklistSaveState[kr.id] === 'error' && 'Adicione ao menos 1 item valido'}
                             </span>
@@ -701,8 +701,8 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
                 onChange={(e) => setNewKR({ ...newKR, type: e.target.value as any })}
               >
                 <option value="AUMENTO">Aumento</option>
-                <option value="REDUCAO">Reducao</option>
-                <option value="ENTREGAVEL">Entregavel</option>
+                 <option value="REDUCAO">Redução</option>
+                 <option value="ENTREGAVEL">Entregável</option>
                 <option value="LIMIAR">Limiar</option>
               </select>
             </div>
@@ -716,7 +716,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Due date</label>
+              <label className="block text-xs font-medium mb-1">Data limite</label>
               <Input
                 type="date"
                 value={newKR.dueDate}
@@ -727,7 +727,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1">
-                  {newKR.type === 'LIMIAR' ? 'Limiar' : 'Target'}
+                  {newKR.type === 'LIMIAR' ? 'Limiar' : 'Alvo'}
                 </label>
                 <Input
                   type="number"
@@ -772,7 +772,7 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs font-medium mb-1">Current</label>
+                  <label className="block text-xs font-medium mb-1">Atual</label>
                   <Input
                     type="number"
                     placeholder="0"
@@ -785,14 +785,14 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
 
             {newKR.type === 'LIMIAR' && (
               <div>
-                <label className="block text-xs font-medium mb-1">Direction</label>
+                <label className="block text-xs font-medium mb-1">Direção</label>
                 <select
                   className="w-full h-9 px-2 border rounded"
                   value={newKR.thresholdDirection}
                   onChange={(e) => setNewKR({ ...newKR, thresholdDirection: e.target.value as 'MAXIMO' | 'MINIMO' })}
                 >
-                  <option value="MAXIMO">Maximo (&lt;= limite)</option>
-                  <option value="MINIMO">Minimo (&gt;= limite)</option>
+                  <option value="MAXIMO">Máximo (&lt;= limite)</option>
+                  <option value="MINIMO">Mínimo (&gt;= limite)</option>
                 </select>
               </div>
             )}
@@ -800,14 +800,14 @@ export function KeyResultsTab({ objectiveId, isEditMode = true, autoOpenCreateFo
             {newKR.type === 'ENTREGAVEL' && (
               <div className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium">Checklist do entregavel</label>
+                  <label className="text-xs font-medium">Checklist do entregável</label>
                   <span className="text-[11px] text-neutral-500">Enter cria novo item</span>
                 </div>
 
                 {newKR.checklistItems.map((item) => (
                   <div key={item.id} className="flex items-center gap-2">
                     <Input
-                      placeholder="Ex: Entregar dashboard em producao"
+                      placeholder="Ex: Entregar dashboard em produção"
                       value={item.title}
                       onChange={(e) => updateNewKRChecklistItem(item.id, e.target.value)}
                       onKeyDown={(e) => {
