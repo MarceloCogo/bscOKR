@@ -227,6 +227,20 @@ export function ObjectiveKRPanel({
     }
   }
 
+  const handleCreateKRClick = () => {
+    if (!canEdit) {
+      toast.error('Você não possui permissão para criar KR neste contexto')
+      return
+    }
+
+    if (!objective || !onCreateKR) {
+      toast.error('Não foi possível abrir o formulário de KR')
+      return
+    }
+
+    onCreateKR(objective)
+  }
+
   return (
     <div
       className="flex h-full flex-col border-l border-neutral-200 bg-white"
@@ -239,11 +253,11 @@ export function ObjectiveKRPanel({
           {objective?.title || 'Key Results'}
         </h2>
         <div className="flex items-center gap-2">
-          {objective && onCreateKR && krs.length > 0 && (
+          {objective && onCreateKR && canEdit && krs.length > 0 && (
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onCreateKR(objective)}
+              onClick={handleCreateKRClick}
               className="border-neutral-300 bg-white"
             >
               Criar KR
@@ -276,8 +290,8 @@ export function ObjectiveKRPanel({
             <Target className="mx-auto mb-4 h-12 w-12 text-gray-300" />
             <h3 className="mb-2 text-lg font-medium text-gray-900">Nenhum Key Result</h3>
             <p className="mb-4 text-sm text-gray-500">Crie KRs na aba do objetivo para acompanhar aqui.</p>
-            {objective && onCreateKR && (
-              <Button onClick={() => onCreateKR(objective)}>
+            {objective && onCreateKR && canEdit && (
+              <Button onClick={handleCreateKRClick}>
                 Criar KR
               </Button>
             )}

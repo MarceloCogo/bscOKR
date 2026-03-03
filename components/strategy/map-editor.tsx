@@ -230,9 +230,28 @@ export function MapEditor() {
       autoOpenCreateKR?: boolean
     }
   ) => {
+    if (!objective?.id) {
+      toast.error('Não foi possível abrir o objetivo selecionado')
+      return
+    }
+
+    const fallbackPerspective = perspectives[0] || { id: '', name: 'Sem perspectiva' }
+    const fallbackStatus = statuses[0] || { id: '', name: 'Sem status', color: null }
+    const fallbackSponsor = users[0] || { id: '', name: 'Sem sponsor', email: '' }
+
+    const normalizedObjective = {
+      ...objective,
+      description: objective.description || '',
+      perspective: objective.perspective || fallbackPerspective,
+      status: objective.status || fallbackStatus,
+      sponsor: objective.sponsor || fallbackSponsor,
+      orgNode: objective.orgNode || data?.orgNode || { id: '', name: '', type: { name: '' } },
+      responsibilities: objective.responsibilities || [],
+    }
+
     setObjectiveModalInitialTab(options?.initialTab || 'details')
     setObjectiveModalAutoOpenCreateKR(Boolean(options?.autoOpenCreateKR))
-    setEditingObjective(objective)
+    setEditingObjective(normalizedObjective)
   }
 
   const refreshObjectiveKRStatus = async () => {
