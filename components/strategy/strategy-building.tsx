@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ChevronLeft, ChevronRight, Loader2, Pencil, Trash2, ArrowUp, ArrowDown, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { StrategyMapCanvas } from './strategy-map-canvas'
 import { createObjectiveInRegion, deleteObjective, reorderObjective, updateObjectivePartial } from '@/lib/actions/strategy'
@@ -20,8 +18,6 @@ interface OrgNode {
 interface StrategicObjective {
   id: string
   title: string
-  mapRegion: string
-  orderIndex: number
   perspective?: { name: string } | null
   status?: { name: string; color?: string | null } | null
 }
@@ -44,26 +40,28 @@ interface StrategyMapData {
   }
 }
 
-const REGION_CONFIG = [
-  { key: 'ambition', mapRegion: 'AMBITION', label: 'Ambicao Estrategica', single: true },
-  { key: 'growthFocus', mapRegion: 'GROWTH_FOCUS', label: 'Focos de Crescimento', single: false },
-  { key: 'valueProposition', mapRegion: 'VALUE_PROPOSITION', label: 'Proposta de Valor', single: true },
-  { key: 'pillarOffer', mapRegion: 'PILLAR_OFFER', label: 'Pilar Oferta', single: false },
-  { key: 'pillarRevenue', mapRegion: 'PILLAR_REVENUE', label: 'Pilar Receita', single: false },
-  { key: 'pillarEfficiency', mapRegion: 'PILLAR_EFFICIENCY', label: 'Pilar Eficiencia', single: false },
-  { key: 'peopleBase', mapRegion: 'PEOPLE_BASE', label: 'Base Pessoas/Cultura/Talentos', single: false },
-] as const
-
 function StrategyMapPreview({
   title,
   data,
   loading,
   forceReadonly = false,
+  editable = false,
+  busy = false,
+  onCreateObjective,
+  onRenameObjective,
+  onDeleteObjective,
+  onReorderObjective,
 }: {
   title: string
   data: StrategyMapData | null
   loading: boolean
   forceReadonly?: boolean
+  editable?: boolean
+  busy?: boolean
+  onCreateObjective?: (mapRegion: string, title: string) => Promise<void>
+  onRenameObjective?: (objectiveId: string, title: string) => Promise<void>
+  onDeleteObjective?: (objectiveId: string) => Promise<void>
+  onReorderObjective?: (objectiveId: string, direction: 'up' | 'down') => Promise<void>
 }) {
   const summary = data
     ? {
@@ -76,7 +74,7 @@ function StrategyMapPreview({
       }
     : null
 
-  const showEditable = data?.isEditAllowed && !forceReadonly
+  const showEditable = editable && data?.isEditAllowed && !forceReadonly
 
   return (
     <Card className="flex h-full flex-col border-neutral-200">
@@ -106,150 +104,19 @@ function StrategyMapPreview({
         {!data?.orgNode ? (
           <div className="py-10 text-center text-sm text-neutral-500">Selecione um mapa para visualizar.</div>
         ) : (
-          <StrategyMapCanvas data={data} compact />
+          <StrategyMapCanvas
+            data={data}
+            compact={!showEditable}
+            editable={showEditable}
+            busy={busy}
+            onCreateObjective={onCreateObjective}
+            onRenameObjective={onRenameObjective}
+            onDeleteObjective={onDeleteObjective}
+            onReorderObjective={onReorderObjective}
+          />
         )}
       </CardContent>
     </Card>
-  )
-}
-
-function RegionEditor({
-  label,
-  mapRegion,
-  objectives,
-  canEdit,
-  onCreate,
-  onRename,
-  onDelete,
-  onReorder,
-  single,
-  busy,
-}: {
-  label: string
-  mapRegion: string
-  objectives: StrategicObjective[]
-  canEdit: boolean
-  onCreate: (mapRegion: string, title: string) => Promise<void>
-  onRename: (id: string, title: string) => Promise<void>
-  onDelete: (id: string) => Promise<void>
-  onReorder: (id: string, direction: 'up' | 'down') => Promise<void>
-  single: boolean
-  busy: boolean
-}) {
-  const [newTitle, setNewTitle] = useState('')
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingTitle, setEditingTitle] = useState('')
-
-  return (
-    <div className="rounded-md border border-neutral-200 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-sm font-medium text-neutral-800">{label}</h4>
-        <span className="text-xs text-neutral-500">{objectives.length}</span>
-      </div>
-
-      <div className="space-y-2">
-        {objectives.length === 0 && <p className="text-xs text-neutral-500">Sem objetivos.</p>}
-        {objectives.map((objective) => (
-          <div key={objective.id} className="rounded-md border border-neutral-200 px-2 py-1.5">
-            {editingId === objective.id ? (
-              <div className="space-y-2">
-                <Input
-                  value={editingTitle}
-                  onChange={(event) => setEditingTitle(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && editingTitle.trim()) {
-                      void onRename(objective.id, editingTitle.trim()).then(() => {
-                        setEditingId(null)
-                        setEditingTitle('')
-                      })
-                    }
-                    if (event.key === 'Escape') {
-                      setEditingId(null)
-                      setEditingTitle('')
-                    }
-                  }}
-                />
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    disabled={busy || !editingTitle.trim()}
-                    onClick={() => {
-                      void onRename(objective.id, editingTitle.trim()).then(() => {
-                        setEditingId(null)
-                        setEditingTitle('')
-                      })
-                    }}
-                  >
-                    Salvar
-                  </Button>
-                  <Button size="sm" variant="outline" disabled={busy} onClick={() => setEditingId(null)}>
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-neutral-800">{objective.title}</p>
-                  <p className="text-[11px] text-neutral-500">
-                    {objective.perspective?.name || 'Sem perspectiva'} • {objective.status?.name || 'Sem status'}
-                  </p>
-                </div>
-                {canEdit && (
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" disabled={busy} onClick={() => onReorder(objective.id, 'up')}>
-                      <ArrowUp className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="sm" disabled={busy} onClick={() => onReorder(objective.id, 'down')}>
-                      <ArrowDown className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => {
-                        setEditingId(objective.id)
-                        setEditingTitle(objective.title)
-                      }}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-red-600" disabled={busy} onClick={() => onDelete(objective.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {canEdit && (!single || objectives.length === 0) && (
-        <div className="mt-3 flex items-center gap-2">
-          <Input
-            value={newTitle}
-            onChange={(event) => setNewTitle(event.target.value)}
-            placeholder="Novo objetivo..."
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && newTitle.trim()) {
-                void onCreate(mapRegion, newTitle.trim()).then(() => setNewTitle(''))
-              }
-            }}
-          />
-          <Button
-            size="sm"
-            disabled={busy || !newTitle.trim()}
-            onClick={() => {
-              void onCreate(mapRegion, newTitle.trim()).then(() => setNewTitle(''))
-            }}
-          >
-            <Plus className="mr-1 h-3 w-3" />
-            Adicionar
-          </Button>
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -369,18 +236,12 @@ export function StrategyBuilding() {
     }
   }
 
-  const getRegionObjectives = (data: StrategyMapData, key: string): StrategicObjective[] => {
-    if (key === 'ambition') return data.regions.ambition ? [data.regions.ambition] : []
-    if (key === 'valueProposition') return data.regions.valueProposition ? [data.regions.valueProposition] : []
-    return (data.regions as any)[key] || []
-  }
-
   return (
     <div className="relative space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-bold text-foreground">Strategy Building</h1>
         <p className="text-sm text-muted-foreground">
-          A esquerda e sempre referencia readonly. A direita e o mapa de trabalho editavel quando permitido.
+          A esquerda e sempre referencia readonly. A direita permite edicao direta no proprio mapa quando permitido.
         </p>
       </div>
 
@@ -450,40 +311,17 @@ export function StrategyBuilding() {
             </button>
           )}
 
-          <div className="flex h-full flex-col gap-3">
-            <div className="min-h-0 flex-1">
-              <StrategyMapPreview title="Seu mapa (direita)" data={rightMap} loading={loadingRight} />
-            </div>
-
-            <Card className="border-neutral-200">
-              <CardHeader className="border-b border-neutral-200 bg-neutral-50 py-3">
-                <CardTitle className="text-sm">Editor de objetivos (direita)</CardTitle>
-              </CardHeader>
-              <CardContent className="max-h-[320px] space-y-3 overflow-y-auto p-3">
-                {!rightMap?.orgNode ? (
-                  <p className="text-sm text-neutral-500">Selecione um contexto editavel para comecar.</p>
-                ) : !rightMap.isEditAllowed ? (
-                  <p className="text-sm text-neutral-500">Voce possui apenas visualizacao para este contexto.</p>
-                ) : (
-                  REGION_CONFIG.map((region) => (
-                    <RegionEditor
-                      key={region.mapRegion}
-                      label={region.label}
-                      mapRegion={region.mapRegion}
-                      objectives={getRegionObjectives(rightMap, region.key)}
-                      canEdit={rightMap.isEditAllowed}
-                      onCreate={createObjective}
-                      onRename={renameObjective}
-                      onDelete={removeObjective}
-                      onReorder={moveObjective}
-                      single={region.single}
-                      busy={mutatingRight}
-                    />
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <StrategyMapPreview
+            title="Seu mapa (direita)"
+            data={rightMap}
+            loading={loadingRight}
+            editable
+            busy={mutatingRight}
+            onCreateObjective={createObjective}
+            onRenameObjective={renameObjective}
+            onDeleteObjective={removeObjective}
+            onReorderObjective={moveObjective}
+          />
         </div>
       </div>
     </div>
