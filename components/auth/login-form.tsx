@@ -22,6 +22,7 @@ type LoginFormData = z.infer<typeof loginSchema>
 export function LoginForm() {
   const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
+  const [isMicrosoftLoading, setIsMicrosoftLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [mustChangePassword, setMustChangePassword] = useState(false)
@@ -91,6 +92,27 @@ export function LoginForm() {
       setError('Erro ao fazer login')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function onMicrosoftSignIn() {
+    setError('')
+
+    const tenantSlug = form.getValues('tenantSlug')?.trim()
+    if (!tenantSlug) {
+      setError('Informe o slug da organização para entrar com Microsoft Entra ID.')
+      return
+    }
+
+    setIsMicrosoftLoading(true)
+    try {
+      await signIn('azure-ad', {
+        callbackUrl: '/app/dashboard',
+        tenantSlug,
+      })
+    } catch (_error) {
+      setError('Não foi possível iniciar o login com Microsoft. Tente novamente.')
+      setIsMicrosoftLoading(false)
     }
   }
 
@@ -276,8 +298,27 @@ export function LoginForm() {
               </div>
             )}
 
-            <Button type="submit" className="w-full h-11 btn-primary" disabled={isLoading}>
+            <Button type="submit" className="w-full h-11 btn-primary" disabled={isLoading || isMicrosoftLoading}>
               {isLoading ? 'Entrando...' : 'Entrar'}
+            </Button>
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-neutral-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-neutral-500">ou</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 border-neutral-300"
+              onClick={onMicrosoftSignIn}
+              disabled={isLoading || isMicrosoftLoading}
+            >
+              {isMicrosoftLoading ? 'Entrando com Microsoft...' : 'Entrar com Microsoft Entra ID'}
             </Button>
           </form>
         </Form>

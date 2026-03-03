@@ -73,6 +73,7 @@ model Tenant {
   objectiveLinks    ObjectiveLink[]
   strategyMapMeta   StrategyMapMeta[]
   orgNodeAccessGrants OrgNodeAccessGrant[]
+  identityProviders TenantIdentityProvider[]
   keyResults        KeyResult[]
   krUpdateHistories KRUpdateHistory[]
 
@@ -85,6 +86,10 @@ model User {
   name         String
   email        String
   passwordHash String
+  isActive     Boolean  @default(true)
+  identityProvider String @default("local")
+  externalId   String?
+  entraObjectId String?
   mustChangePassword Boolean @default(false)
   passwordChangedAt DateTime?
   lastLoginAt  DateTime?
@@ -103,7 +108,30 @@ model User {
   krUpdateHistories    KRUpdateHistory[]
 
   @@unique([tenantId, email])
+  @@unique([tenantId, externalId])
+  @@unique([tenantId, entraObjectId])
   @@map("users")
+}
+
+model TenantIdentityProvider {
+  id                String   @id @default(cuid())
+  tenantId          String
+  provider          String
+  enabled           Boolean  @default(false)
+  entraTenantId     String?
+  entraClientId     String?
+  entraClientSecret String?
+  scimTokenHash     String?
+  scimTokenCreatedAt DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider])
+  @@index([provider, enabled])
+  @@index([scimTokenHash])
+  @@map("tenant_identity_providers")
 }
 
 model Role {

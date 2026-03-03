@@ -1,9 +1,11 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import AzureADProvider from 'next-auth/providers/azure-ad'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/db'
-import { verifyPassword } from '@/lib/security/password'
+import { hashPassword, verifyPassword } from '@/lib/security/password'
 import { getClientIpFromHeaders } from '@/lib/security/request-ip'
+import { generateTemporaryPassword } from '@/lib/security/temp-password'
 import { z } from 'zod'
 
 const loginSchema = z.object({
@@ -53,6 +55,10 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (!user) {
+          return null
+        }
+
+        if ((user as any).isActive === false) {
           return null
         }
 
@@ -132,11 +138,112 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
+    ...(process.env.ENTRA_CLIENT_ID && process.env.ENTRA_CLIENT_SECRET && process.env.ENTRA_TENANT_ID
+      ? [
+          AzureADProvider({
+            clientId: process.env.ENTRA_CLIENT_ID,
+            clientSecret: process.env.ENTRA_CLIENT_SECRET,
+            tenantId: process.env.ENTRA_TENANT_ID,
+          }),
+        ]
+      : []),
   ],
   session: {
     strategy: 'jwt',
   },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider !== 'azure-ad') {
+        return true
+      }
+
+      const profileEmail =
+        (typeof user.email === 'string' && user.email) ||
+        ((profile as any)?.preferred_username as string | undefined) ||
+        ((profile as any)?.email as string | undefined)
+
+      if (!profileEmail) {
+        return false
+      }
+
+      const tenantSlug = process.env.ENTRA_DEFAULT_TENANT_SLUG
+      if (!tenantSlug) {
+        return false
+      }
+
+      const tenant = await prisma.tenant.findUnique({
+        where: { slug: tenantSlug },
+      })
+
+      if (!tenant) {
+        return false
+      }
+
+      const identityProvider = await (prisma as any).tenantIdentityProvider.findFirst({
+        where: {
+          tenantId: tenant.id,
+          provider: 'entra',
+          enabled: true,
+        },
+      })
+
+      if (!identityProvider) {
+        return false
+      }
+
+      const entraObjectId =
+        ((profile as any)?.oid as string | undefined) ||
+        ((profile as any)?.sub as string | undefined) ||
+        null
+
+      const userName =
+        (typeof user.name === 'string' && user.name) ||
+        ((profile as any)?.name as string | undefined) ||
+        profileEmail
+
+      const temporaryPassword = generateTemporaryPassword()
+      const passwordHash = await hashPassword(temporaryPassword)
+
+      const existing = await prisma.user.findUnique({
+        where: {
+          tenantId_email: {
+            tenantId: tenant.id,
+            email: profileEmail.toLowerCase(),
+          },
+        },
+      })
+
+      const persistedUser = existing
+        ? await prisma.user.update({
+            where: { id: existing.id },
+            data: {
+              name: userName,
+              isActive: true,
+              identityProvider: 'entra',
+              ...(entraObjectId ? { entraObjectId } : {}),
+            } as any,
+          })
+        : await prisma.user.create({
+            data: {
+              tenantId: tenant.id,
+              name: userName,
+              email: profileEmail.toLowerCase(),
+              passwordHash,
+              mustChangePassword: false,
+              identityProvider: 'entra',
+              entraObjectId,
+              isActive: true,
+            } as any,
+          })
+
+      ;(user as any).id = persistedUser.id
+      ;(user as any).tenantId = tenant.id
+      ;(user as any).tenantSlug = tenant.slug
+      ;(user as any).tenantName = tenant.name
+      ;(user as any).mustChangePassword = false
+
+      return true
+    },
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.tenantId = user.tenantId
