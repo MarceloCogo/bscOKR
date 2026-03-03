@@ -333,6 +333,7 @@ export async function deleteObjective(id: string) {
 
 // Create objective in region
 export async function createObjectiveInRegion(data: {
+  orgNodeId?: string
   mapRegion: string
   title: string
   description?: string
@@ -347,11 +348,13 @@ export async function createObjectiveInRegion(data: {
   }
 
   const activeOrgNodeId = await getActiveOrgNode(session.user.id, session.user.tenantId)
-  if (!activeOrgNodeId) {
+  const targetOrgNodeId = data.orgNodeId || activeOrgNodeId
+
+  if (!targetOrgNodeId) {
     throw new Error('No active org node')
   }
 
-  if (!(await canManageObjectives(session.user.id, session.user.tenantId, activeOrgNodeId))) {
+  if (!(await canManageObjectives(session.user.id, session.user.tenantId, targetOrgNodeId))) {
     throw new Error('Insufficient permissions')
   }
 
@@ -359,7 +362,7 @@ export async function createObjectiveInRegion(data: {
   const maxOrder = await prisma.strategicObjective.findFirst({
     where: {
       tenantId: session.user.tenantId,
-      orgNodeId: activeOrgNodeId,
+      orgNodeId: targetOrgNodeId,
       mapRegion: data.mapRegion,
     },
     orderBy: { orderIndex: 'desc' },
@@ -388,7 +391,7 @@ export async function createObjectiveInRegion(data: {
   const result = await prisma.strategicObjective.create({
     data: {
       tenantId: session.user.tenantId,
-      orgNodeId: activeOrgNodeId,
+      orgNodeId: targetOrgNodeId,
       mapRegion: data.mapRegion,
       title: data.title,
       description: data.description,
