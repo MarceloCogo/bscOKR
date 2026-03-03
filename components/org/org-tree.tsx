@@ -27,9 +27,11 @@ interface OrgTreeProps {
     memberships: any[]
     primaryOrgNode?: any
   }
+  selectedNodeId?: string | null
+  onSelectNode?: (node: OrgNode) => void
 }
 
-export function OrgTree({ tree, userContext }: OrgTreeProps) {
+export function OrgTree({ tree, userContext, selectedNodeId = null, onSelectNode }: OrgTreeProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -145,11 +147,15 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
     const isExpanded = expandedNodes.has(node.id)
     const isActive = userContext.activeOrgNodeId === node.id
     const isPrimary = userContext.primaryOrgNode?.id === node.id
+    const isSelected = selectedNodeId === node.id
     const hasChildren = node.children.length > 0
 
     return (
       <div>
-        <Card className={`mb-2 ${isActive ? 'ring-2 ring-primary' : ''} ${isPrimary ? 'border-primary' : ''}`}>
+        <Card
+          className={`mb-2 cursor-pointer transition-colors hover:bg-muted/20 ${isActive ? 'ring-2 ring-primary' : ''} ${isPrimary ? 'border-primary' : ''} ${isSelected ? 'ring-2 ring-[#E87722]' : ''}`}
+          onClick={() => onSelectNode?.(node)}
+        >
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -173,7 +179,7 @@ export function OrgTree({ tree, userContext }: OrgTreeProps) {
                   </div>
                 </div>
               </div>
-              <div className="flex space-x-2 mt-2">
+              <div className="flex space-x-2 mt-2" onClick={(event) => event.stopPropagation()}>
                 <Button
                   variant="outline"
                   size="sm"

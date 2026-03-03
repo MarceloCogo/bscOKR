@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { StrategyMapCanvas } from './strategy-map-canvas'
 
@@ -27,7 +29,17 @@ interface StrategyMapData {
   }
 }
 
-function StrategyMapPreview({ title, data, loading }: { title: string; data: StrategyMapData | null; loading: boolean }) {
+function StrategyMapPreview({
+  title,
+  data,
+  loading,
+  onOpenEditor,
+}: {
+  title: string
+  data: StrategyMapData | null
+  loading: boolean
+  onOpenEditor?: (data: StrategyMapData) => void
+}) {
   const summary = data
     ? {
         growth: data.regions.growthFocus.length,
@@ -51,7 +63,14 @@ function StrategyMapPreview({ title, data, loading }: { title: string; data: Str
               </span>
             )}
           </div>
-          {data?.isEditAllowed ? <Badge variant="default">Editável</Badge> : <Badge variant="secondary">Somente leitura</Badge>}
+          <div className="flex items-center gap-2">
+            {data?.isEditAllowed ? <Badge variant="default">Editável</Badge> : <Badge variant="secondary">Somente leitura</Badge>}
+            {data?.isEditAllowed && onOpenEditor && (
+              <Button size="sm" variant="outline" onClick={() => onOpenEditor(data)}>
+                Editar neste contexto
+              </Button>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="relative flex-1 overflow-y-auto p-3">
@@ -75,6 +94,7 @@ function StrategyMapPreview({ title, data, loading }: { title: string; data: Str
 }
 
 export function StrategyBuilding() {
+  const router = useRouter()
   const [viewableNodes, setViewableNodes] = useState<OrgNode[]>([])
   const [editableNodes, setEditableNodes] = useState<OrgNode[]>([])
   const [leftNodeId, setLeftNodeId] = useState('')
@@ -87,6 +107,24 @@ export function StrategyBuilding() {
 
   const rightOptions = useMemo(() => editableNodes, [editableNodes])
   const leftOptions = useMemo(() => viewableNodes, [viewableNodes])
+
+  const openFullEditor = async (map: StrategyMapData) => {
+    if (!map.orgNode?.id || !map.isEditAllowed) return
+
+    try {
+      window.dispatchEvent(new Event('org-context-changing'))
+      await fetch('/api/org/set-active-context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgNodeId: map.orgNode.id }),
+      })
+      window.dispatchEvent(new Event('org-context-changed'))
+      router.push('/app/strategy/map')
+    } catch (error) {
+      console.error('Error opening full editor:', error)
+      window.dispatchEvent(new Event('org-context-change-ended'))
+    }
+  }
 
   const loadMap = async (orgNodeId: string, side: 'left' | 'right') => {
     if (!orgNodeId) return
@@ -172,7 +210,11 @@ export function StrategyBuilding() {
       <div className={`grid h-[calc(100vh-220px)] min-h-[560px] gap-3 ${leftCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-2'}`}>
         {!leftCollapsed && (
           <div className="relative h-full">
-            <StrategyMapPreview title="Referência (esquerda)" data={leftMap} loading={loadingLeft} />
+            <StrategyMapPreview
+              title="Referência (esquerda)"
+              data={leftMap ? { ...leftMap, isEditAllowed: false } : null}
+              loading={loadingLeft}
+            />
             <button
               type="button"
               onClick={() => setLeftCollapsed(true)}
@@ -197,7 +239,12 @@ export function StrategyBuilding() {
               <ChevronRight className="h-4 w-4" />
             </button>
           )}
-          <StrategyMapPreview title="Seu mapa (direita)" data={rightMap} loading={loadingRight} />
+          <StrategyMapPreview
+            title="Seu mapa (direita)"
+            data={rightMap}
+            loading={loadingRight}
+            onOpenEditor={openFullEditor}
+          />
         </div>
       </div>
     </div>

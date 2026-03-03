@@ -2,8 +2,8 @@ import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { getOrgTree, getUserOrgContext } from '@/lib/actions/org'
-import { OrgTree } from '@/components/org/org-tree'
-import { OrgNodePanel } from '@/components/org/org-node-panel'
+import { getUserPermissions } from '@/lib/domain/permissions'
+import { OrganizationWorkspace } from '@/components/org/organization-workspace'
 import { OrgOnboardingWizard } from '@/components/org/org-onboarding'
 
 export default async function OrganizationPage({
@@ -28,9 +28,10 @@ export default async function OrganizationPage({
     )
   }
 
-  const [orgTree, userContext] = await Promise.all([
+  const [orgTree, userContext, permissions] = await Promise.all([
     getOrgTree(),
     getUserOrgContext(),
+    getUserPermissions(session.user.id, session.user.tenantId),
   ])
 
   // If no org nodes, show onboarding wizard automatically
@@ -51,17 +52,11 @@ export default async function OrganizationPage({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Árvore Organizacional</h2>
-          <OrgTree tree={orgTree} userContext={userContext} />
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Detalhes do Nó</h2>
-          <OrgNodePanel />
-        </div>
-      </div>
+      <OrganizationWorkspace
+        tree={orgTree}
+        userContext={userContext}
+        canManageGrants={Boolean(permissions.canManageUsers || permissions.canManageConfig)}
+      />
     </div>
   )
 }
