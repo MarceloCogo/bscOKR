@@ -379,6 +379,29 @@ export function MapEditor() {
             }}
           />
         </div>
+
+        {editingObjective && (
+          <ObjectiveDrawer
+            objective={editingObjective}
+            open={!!editingObjective}
+            onOpenChange={(open) => {
+              if (!open) {
+                setEditingObjective(null)
+                setObjectiveModalInitialTab('details')
+                setObjectiveModalAutoOpenCreateKR(false)
+              }
+            }}
+            perspectives={perspectives}
+            pillars={pillars}
+            statuses={statuses}
+            orgNodes={orgNodes}
+            users={users}
+            roles={roles}
+            initialTab={objectiveModalInitialTab}
+            autoOpenCreateKR={objectiveModalAutoOpenCreateKR}
+            onKRMutation={handleKRMutation}
+          />
+        )}
       </div>
     )
   }
