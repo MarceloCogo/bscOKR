@@ -29,6 +29,7 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
 
   const allNodeIds = allNodes.map((node) => node.id)
   const allNodeIdSet = new Set(allNodeIds)
+  const nodeById = new Map(allNodes.map((node) => [node.id, node]))
 
   if (permissions.canManageConfig) {
     return {
@@ -78,6 +79,18 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
     return result
   }
 
+  const collectAncestors = (startId: string) => {
+    const result = new Set<string>()
+    let current = nodeById.get(startId)
+
+    while (current?.parentId) {
+      result.add(current.parentId)
+      current = nodeById.get(current.parentId)
+    }
+
+    return result
+  }
+
   const directNodeIds = memberships.map((membership) => membership.orgNodeId)
   const editable = new Set<string>()
   const viewable = new Set<string>()
@@ -86,6 +99,8 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
     const editableSubtree = collectDescendants(nodeId)
     editableSubtree.forEach((id) => editable.add(id))
     editableSubtree.forEach((id) => viewable.add(id))
+    const membershipAncestors = collectAncestors(nodeId)
+    membershipAncestors.forEach((id) => viewable.add(id))
   }
 
   for (const grant of grants) {

@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Trash2, Shield, Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { Trash2, Shield, Loader2, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 interface OrgNode {
   id: string
@@ -54,11 +56,15 @@ export function OrgNodePanel({ selectedNode, canManageGrants }: OrgNodePanelProp
   const [roles, setRoles] = useState<SelectOption[]>([])
   const [loading, setLoading] = useState(false)
   const [isSavingGrant, setIsSavingGrant] = useState(false)
+  const [isUpdatingGrant, setIsUpdatingGrant] = useState(false)
   const [grantToDelete, setGrantToDelete] = useState<Grant | null>(null)
+  const [grantToEdit, setGrantToEdit] = useState<Grant | null>(null)
   const [granteeType, setGranteeType] = useState<'USER' | 'ROLE'>('ROLE')
   const [granteeId, setGranteeId] = useState('')
   const [permission, setPermission] = useState<'VIEW' | 'EDIT'>('VIEW')
   const [includeDescendants, setIncludeDescendants] = useState(false)
+  const [editPermission, setEditPermission] = useState<'VIEW' | 'EDIT'>('VIEW')
+  const [editIncludeDescendants, setEditIncludeDescendants] = useState(false)
 
   const granteeOptions = useMemo(() => {
     return granteeType === 'ROLE' ? roles : users
@@ -176,6 +182,43 @@ export function OrgNodePanel({ selectedNode, canManageGrants }: OrgNodePanelProp
     }
   }
 
+  const openEditGrant = (grant: Grant) => {
+    setGrantToEdit(grant)
+    setEditPermission(grant.permission)
+    setEditIncludeDescendants(grant.includeDescendants)
+  }
+
+  const handleUpdateGrant = async () => {
+    if (!selectedNode || !grantToEdit) return
+
+    setIsUpdatingGrant(true)
+    try {
+      const response = await fetch('/api/org/grants', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: grantToEdit.id,
+          permission: editPermission,
+          includeDescendants: editIncludeDescendants,
+        }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload.error || 'Falha ao atualizar compartilhamento')
+      }
+
+      toast.success('Compartilhamento atualizado')
+      setGrantToEdit(null)
+      await loadPanelData(selectedNode.id)
+    } catch (error) {
+      console.error('Error updating grant:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao atualizar compartilhamento')
+    } finally {
+      setIsUpdatingGrant(false)
+    }
+  }
+
   if (!selectedNode) {
     return (
       <Card>
@@ -240,14 +283,19 @@ export function OrgNodePanel({ selectedNode, canManageGrants }: OrgNodePanelProp
                     </div>
                   </div>
                   {canManageGrants && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive"
-                      onClick={() => setGrantToDelete(grant)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEditGrant(grant)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => setGrantToDelete(grant)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -316,6 +364,14 @@ export function OrgNodePanel({ selectedNode, canManageGrants }: OrgNodePanelProp
               <Button onClick={handleCreateGrant} disabled={!granteeId || isSavingGrant}>
                 {isSavingGrant ? 'Salvando...' : 'Salvar compartilhamento'}
               </Button>
+
+              <p className="text-xs text-muted-foreground">
+                Para compartilhar com varias pessoas de uma vez, use um papel e atribua os usuarios em
+                <Link href="/app/admin/users" className="ml-1 underline hover:text-foreground">
+                  Admin &gt; Usuarios
+                </Link>
+                .
+              </p>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Você não possui permissão para gerenciar compartilhamentos.</p>
@@ -339,6 +395,50 @@ export function OrgNodePanel({ selectedNode, canManageGrants }: OrgNodePanelProp
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={Boolean(grantToEdit)} onOpenChange={(open) => !open && setGrantToEdit(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar compartilhamento</DialogTitle>
+            <DialogDescription>
+              Ajuste o nivel de acesso e a abrangencia para {grantToEdit?.granteeName || 'o favorecido'}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Permissão</Label>
+              <Select value={editPermission} onValueChange={(value: 'VIEW' | 'EDIT') => setEditPermission(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="VIEW">Visualizar (VIEW)</SelectItem>
+                  <SelectItem value="EDIT">Editar (EDIT)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Abrangência</Label>
+              <button
+                type="button"
+                onClick={() => setEditIncludeDescendants((prev) => !prev)}
+                className={`h-10 w-full rounded-md border px-3 text-left text-sm transition-colors ${editIncludeDescendants ? 'border-[#E87722] bg-orange-50 text-orange-900' : 'border-input bg-background'}`}
+              >
+                {editIncludeDescendants ? 'Este nó + descendentes' : 'Somente este nó'}
+              </button>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGrantToEdit(null)} disabled={isUpdatingGrant}>Cancelar</Button>
+            <Button onClick={handleUpdateGrant} disabled={isUpdatingGrant}>
+              {isUpdatingGrant ? 'Salvando...' : 'Salvar alterações'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -13,6 +13,12 @@ const createGrantSchema = z.object({
   includeDescendants: z.boolean().optional().default(false),
 })
 
+const updateGrantSchema = z.object({
+  id: z.string().min(1),
+  permission: z.enum(['VIEW', 'EDIT']),
+  includeDescendants: z.boolean().optional().default(false),
+})
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -129,19 +135,32 @@ export async function POST(request: NextRequest) {
       if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const grant = await prisma.orgNodeAccessGrant.upsert({
-      where: {
-        tenantId_orgNodeId_granteeType_granteeId_permission: {
+    const oppositePermission = payload.permission === 'VIEW' ? 'EDIT' : 'VIEW'
+
+    const grant = await prisma.$transaction(async (tx) => {
+      await tx.orgNodeAccessGrant.deleteMany({
+        where: {
           tenantId: session.user.tenantId,
           orgNodeId: payload.orgNodeId,
           granteeType: payload.granteeType as any,
           granteeId: payload.granteeId,
-          permission: payload.permission as any,
+          permission: oppositePermission as any,
         },
-      },
-      update: {
-        includeDescendants: payload.includeDescendants,
-      },
+      })
+
+      return tx.orgNodeAccessGrant.upsert({
+        where: {
+          tenantId_orgNodeId_granteeType_granteeId_permission: {
+            tenantId: session.user.tenantId,
+            orgNodeId: payload.orgNodeId,
+            granteeType: payload.granteeType as any,
+            granteeId: payload.granteeId,
+            permission: payload.permission as any,
+          },
+        },
+        update: {
+          includeDescendants: payload.includeDescendants,
+        },
         create: {
           tenantId: session.user.tenantId,
           orgNodeId: payload.orgNodeId,
@@ -150,11 +169,103 @@ export async function POST(request: NextRequest) {
           permission: payload.permission as any,
           includeDescendants: payload.includeDescendants,
         },
+      })
     })
 
     return NextResponse.json({ grant })
   } catch (error) {
     console.error('Error creating org grant:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.tenantId || !session.user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const permissions = await getUserPermissions(session.user.id, session.user.tenantId)
+    if (!permissions.canManageConfig && !permissions.canManageUsers) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const parsed = updateGrantSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+    }
+
+    const payload = parsed.data
+
+    const existing = await prisma.orgNodeAccessGrant.findFirst({
+      where: {
+        id: payload.id,
+        tenantId: session.user.tenantId,
+      },
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Grant not found' }, { status: 404 })
+    }
+
+    const oppositePermission = payload.permission === 'VIEW' ? 'EDIT' : 'VIEW'
+
+    const grant = await prisma.$transaction(async (tx) => {
+      await tx.orgNodeAccessGrant.deleteMany({
+        where: {
+          tenantId: session.user.tenantId,
+          orgNodeId: existing.orgNodeId,
+          granteeType: existing.granteeType,
+          granteeId: existing.granteeId,
+          permission: oppositePermission as any,
+        },
+      })
+
+      if (existing.permission !== payload.permission) {
+        await tx.orgNodeAccessGrant.deleteMany({
+          where: {
+            id: existing.id,
+            tenantId: session.user.tenantId,
+          },
+        })
+
+        return tx.orgNodeAccessGrant.upsert({
+          where: {
+            tenantId_orgNodeId_granteeType_granteeId_permission: {
+              tenantId: session.user.tenantId,
+              orgNodeId: existing.orgNodeId,
+              granteeType: existing.granteeType,
+              granteeId: existing.granteeId,
+              permission: payload.permission as any,
+            },
+          },
+          update: {
+            includeDescendants: payload.includeDescendants,
+          },
+          create: {
+            tenantId: session.user.tenantId,
+            orgNodeId: existing.orgNodeId,
+            granteeType: existing.granteeType,
+            granteeId: existing.granteeId,
+            permission: payload.permission as any,
+            includeDescendants: payload.includeDescendants,
+          },
+        })
+      }
+
+      return tx.orgNodeAccessGrant.update({
+        where: { id: existing.id },
+        data: {
+          includeDescendants: payload.includeDescendants,
+        },
+      })
+    })
+
+    return NextResponse.json({ grant })
+  } catch (error) {
+    console.error('Error updating org grant:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
