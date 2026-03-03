@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Users, UserPlus, Edit, Trash2, Save, Copy } from 'lucide-react'
+import { Users, UserPlus, Edit, Trash2, Save, Copy, KeyRound } from 'lucide-react'
 import { maskIp } from '@/lib/security/request-ip'
 
 interface User {
@@ -50,7 +50,9 @@ export default function UsersPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editUser, setEditUser] = useState<User | null>(null)
   const [deleteUser, setDeleteUser] = useState<User | null>(null)
+  const [resetUser, setResetUser] = useState<User | null>(null)
   const [tempPassword, setTempPassword] = useState<string | null>(null)
+  const [tempPasswordReason, setTempPasswordReason] = useState<'create' | 'reset'>('create')
 
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
@@ -168,6 +170,7 @@ export default function UsersPage() {
       }
 
       setCreateOpen(false)
+      setTempPasswordReason('create')
       setTempPassword(data.temporaryPassword)
       toast.success('Usuário criado com sucesso')
       await loadData()
@@ -243,6 +246,32 @@ export default function UsersPage() {
       await loadData()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao remover usuário')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleResetUserPassword = async () => {
+    if (!resetUser) return
+
+    setSaving(true)
+    try {
+      const response = await fetch(`/api/admin/users/${resetUser.id}/reset-password`, {
+        method: 'POST',
+      })
+
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao resetar senha')
+      }
+
+      setResetUser(null)
+      setTempPasswordReason('reset')
+      setTempPassword(data.temporaryPassword)
+      toast.success('Senha resetada com sucesso')
+      await loadData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao resetar senha')
     } finally {
       setSaving(false)
     }
@@ -352,6 +381,10 @@ export default function UsersPage() {
                       <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
                         <Edit className="mr-1 h-4 w-4" />
                         Editar
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setResetUser(user)}>
+                        <KeyRound className="mr-1 h-4 w-4" />
+                        Resetar senha
                       </Button>
                       <Button
                         variant="outline"
@@ -497,7 +530,7 @@ export default function UsersPage() {
       <Dialog open={!!tempPassword} onOpenChange={(open) => !open && setTempPassword(null)}>
         <DialogContent className="sm:max-w-md p-0 gap-0">
           <DialogHeader className="border-b border-neutral-200 bg-neutral-50 px-6 py-4">
-            <DialogTitle>Senha temporária gerada</DialogTitle>
+            <DialogTitle>{tempPasswordReason === 'reset' ? 'Senha resetada com sucesso' : 'Senha temporária gerada'}</DialogTitle>
             <DialogDescription>
               Copie e compartilhe com segurança. A senha é exibida uma única vez.
             </DialogDescription>
@@ -510,6 +543,26 @@ export default function UsersPage() {
             <Button onClick={handleCopyTemporaryPassword}>
               <Copy className="mr-1 h-4 w-4" />
               Copiar senha
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!resetUser} onOpenChange={(open) => !open && setResetUser(null)}>
+        <DialogContent className="sm:max-w-md p-0 gap-0">
+          <DialogHeader className="border-b border-neutral-200 bg-neutral-50 px-6 py-4">
+            <DialogTitle>Resetar senha do usuário</DialogTitle>
+            <DialogDescription>
+              Esta ação gera uma nova senha temporária e exige troca no próximo login.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="px-6 py-5 text-sm text-muted-foreground">
+            Deseja resetar a senha de <span className="font-medium text-foreground">{resetUser?.name}</span>?
+          </p>
+          <DialogFooter className="border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <Button variant="outline" onClick={() => setResetUser(null)} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleResetUserPassword} disabled={saving}>
+              {saving ? 'Resetando...' : 'Confirmar reset'}
             </Button>
           </DialogFooter>
         </DialogContent>
