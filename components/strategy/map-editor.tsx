@@ -64,7 +64,7 @@ export function MapEditor() {
   const [selectedRegion, setSelectedRegion] = useState<string>('')
   const [showObjectiveDialog, setShowObjectiveDialog] = useState(false)
   const [editingObjective, setEditingObjective] = useState<any>(null)
-  const [objectiveModalInitialTab, setObjectiveModalInitialTab] = useState<'details' | 'keyresults' | 'responsibilities' | 'links'>('details')
+  const [objectiveModalInitialTab, setObjectiveModalInitialTab] = useState<'details' | 'keyresults'>('details')
   const [objectiveModalAutoOpenCreateKR, setObjectiveModalAutoOpenCreateKR] = useState(false)
   const [creatingInRegion, setCreatingInRegion] = useState<string | null>(null)
   const [editingMeta, setEditingMeta] = useState<string | null>(null)
@@ -226,7 +226,7 @@ export function MapEditor() {
   const handleOpenObjectiveModal = (
     objective: any,
     options?: {
-      initialTab?: 'details' | 'keyresults' | 'responsibilities' | 'links'
+      initialTab?: 'details' | 'keyresults'
       autoOpenCreateKR?: boolean
     }
   ) => {

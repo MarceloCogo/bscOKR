@@ -75,7 +75,7 @@ interface ObjectiveDrawerProps {
   orgNodes: OrgNode[]
   users: User[]
   roles: ResponsibilityRole[]
-  initialTab?: 'details' | 'keyresults' | 'responsibilities' | 'links'
+  initialTab?: 'details' | 'keyresults'
   autoOpenCreateKR?: boolean
   onKRMutation?: (payload: { objectiveId: string; action: 'create' | 'edit' | 'delete' }) => void | Promise<void>
 }
@@ -93,7 +93,7 @@ export function ObjectiveDrawer({
   onKRMutation,
 }: ObjectiveDrawerProps) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'details' | 'keyresults' | 'responsibilities' | 'links'>(initialTab)
+  const [activeTab, setActiveTab] = useState<'details' | 'keyresults'>(initialTab)
   const [isSavingDetails, setIsSavingDetails] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
@@ -151,14 +151,6 @@ export function ObjectiveDrawer({
     }
   }
 
-  const handleAddResponsibility = () => {
-    toast.info('Responsabilidades ainda em implementacao neste painel')
-  }
-
-  const handleAddLink = () => {
-    toast.info('Links ainda em implementacao neste painel')
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[860px] max-h-[85vh] overflow-y-auto p-0">
@@ -171,14 +163,12 @@ export function ObjectiveDrawer({
 
         <Tabs
           value={activeTab}
-          onValueChange={(value) => setActiveTab(value as 'details' | 'keyresults' | 'responsibilities' | 'links')}
+          onValueChange={(value) => setActiveTab(value as 'details' | 'keyresults')}
           className="px-6 pb-6"
         >
-          <TabsList className="mt-4 grid w-full grid-cols-4 bg-neutral-100">
+          <TabsList className="mt-4 grid w-full grid-cols-2 bg-neutral-100">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="keyresults">KRs</TabsTrigger>
-            <TabsTrigger value="responsibilities">Responsabilidades</TabsTrigger>
-            <TabsTrigger value="links">Links</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-4">
@@ -200,7 +190,7 @@ export function ObjectiveDrawer({
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                    className="min-h-[96px]"
+                    className="min-h-[112px] border-neutral-200 bg-neutral-50 text-neutral-700 placeholder:text-neutral-400 focus-visible:border-[#E87722] focus-visible:ring-[#E87722]"
                   />
                 </div>
 
@@ -289,45 +279,6 @@ export function ObjectiveDrawer({
               autoOpenCreateForm={autoOpenCreateKR && activeTab === 'keyresults'}
               onKRMutation={onKRMutation}
             />
-          </TabsContent>
-
-          <TabsContent value="responsibilities" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Responsabilidades</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {objective.responsibilities.length === 0 ? (
-                  <p className="text-muted-foreground">Nenhuma responsabilidade definida</p>
-                ) : (
-                  <div className="space-y-2">
-                    {objective.responsibilities.map(r => (
-                      <div key={r.id} className="flex justify-between items-center p-2 border rounded">
-                        <span>{r.responsibilityRole.name} - Peso: {r.contributionWeight}%</span>
-                        <Button variant="outline" size="sm">Editar</Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Button onClick={handleAddResponsibility} className="mt-4">
-                  Adicionar Responsabilidade
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="links" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Links</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Nenhum link definido</p>
-                <Button onClick={handleAddLink} className="mt-4">
-                  Adicionar Link
-                </Button>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </DialogContent>
