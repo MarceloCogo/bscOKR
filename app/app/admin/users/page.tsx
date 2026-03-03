@@ -1,13 +1,16 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Users, UserPlus, Edit, Trash2, Save, Copy } from 'lucide-react'
+import { maskIp } from '@/lib/security/request-ip'
 
 interface User {
   id: string
@@ -15,6 +18,11 @@ interface User {
   email: string
   createdAt: string
   mustChangePassword: boolean
+  lastLoginAt?: string | null
+  lastSeenAt?: string | null
+  lastLoginIp?: string | null
+  lastSeenIp?: string | null
+  isOnline: boolean
   userRoles: Array<{
     role: {
       id: string
@@ -31,10 +39,13 @@ interface Role {
 }
 
 export default function UsersPage() {
+  const { data: session } = useSession()
   const [users, setUsers] = useState<User[]>([])
   const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'offline'>('all')
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editUser, setEditUser] = useState<User | null>(null)
@@ -52,18 +63,13 @@ export default function UsersPage() {
 
   const loadData = async () => {
     try {
-      const [usersRes, rolesRes, sessionRes] = await Promise.all([
+      const [usersRes, rolesRes] = await Promise.all([
         fetch('/api/users'),
         fetch('/api/config/roles'),
-        fetch('/api/auth/session'),
       ])
 
       if (usersRes.ok) setUsers(await usersRes.json())
       if (rolesRes.ok) setRoles(await rolesRes.json())
-      if (sessionRes.ok) {
-        const session = await sessionRes.json()
-        setCurrentUserId(session.user?.id || '')
-      }
     } catch (error) {
       console.error('Error loading users data:', error)
       toast.error('Erro ao carregar usuários')
@@ -75,6 +81,42 @@ export default function UsersPage() {
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    setCurrentUserId(session?.user?.id || '')
+  }, [session?.user?.id])
+
+  const formatLastAccess = (user: User) => {
+    const timestamp = user.lastSeenAt || user.lastLoginAt
+    if (!timestamp) return 'Nunca acessou'
+
+    const date = new Date(timestamp)
+    const diffMs = Date.now() - date.getTime()
+    const minutes = Math.floor(diffMs / 60000)
+    const hours = Math.floor(diffMs / 3600000)
+    const days = Math.floor(diffMs / 86400000)
+
+    if (minutes < 1) return 'Agora'
+    if (minutes < 60) return `Há ${minutes} min`
+    if (hours < 24) return `Há ${hours} h`
+    return `Há ${days} dias`
+  }
+
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const matchesQuery =
+        !query.trim() ||
+        user.name.toLowerCase().includes(query.toLowerCase()) ||
+        user.email.toLowerCase().includes(query.toLowerCase())
+
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'online' && user.isOnline) ||
+        (statusFilter === 'offline' && !user.isOnline)
+
+      return matchesQuery && matchesStatus
+    })
+  }, [users, query, statusFilter])
 
   const resetForm = () => {
     setFormData({
@@ -229,66 +271,117 @@ export default function UsersPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6">
-        {users.map((user) => (
-          <Card key={user.id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{user.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
-                    <Edit className="mr-1 h-4 w-4" />
-                    Editar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-red-200 text-red-600 hover:bg-red-50"
-                    onClick={() => setDeleteUser(user)}
-                    disabled={user.id === currentUserId}
-                  >
-                    <Trash2 className="mr-1 h-4 w-4" />
-                    Remover
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {user.userRoles.length > 0 ? (
-                    user.userRoles.map((userRole) => (
-                      <span key={userRole.role.id} className="rounded-md bg-primary/10 px-2 py-1 text-xs text-primary">
-                        {userRole.role.name}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Usuários cadastrados</CardTitle>
+          <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center">
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar por nome ou email"
+              className="h-9 md:max-w-sm"
+            />
+            <Select value={statusFilter} onValueChange={(value: 'all' | 'online' | 'offline') => setStatusFilter(value)}>
+              <SelectTrigger className="h-9 w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="online">Online</SelectItem>
+                <SelectItem value="offline">Offline</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Usuário</TableHead>
+                <TableHead>Grupo</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Último acesso</TableHead>
+                <TableHead>IP</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium text-foreground">{user.name}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {user.userRoles.length > 0 ? (
+                        user.userRoles.map((userRole) => (
+                          <span key={userRole.role.id} className="rounded-md bg-primary/10 px-2 py-1 text-xs text-primary">
+                            {userRole.role.name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Nenhum grupo</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${user.isOnline ? 'bg-green-100 text-green-700' : 'bg-neutral-100 text-neutral-600'}`}>
+                        {user.isOnline ? 'Online' : 'Offline'}
                       </span>
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Nenhum grupo atribuído</span>
-                  )}
-                </div>
-                {user.mustChangePassword && (
-                  <p className="text-xs font-medium text-amber-700">Pendente: troca de senha no primeiro acesso</p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Criado em: {new Date(user.createdAt).toLocaleDateString('pt-BR')}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                      {user.mustChangePassword && (
+                        <p className="text-[11px] font-medium text-amber-700">Troca de senha pendente</p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-xs text-muted-foreground" title={(user.lastSeenAt || user.lastLoginAt) ? new Date(user.lastSeenAt || user.lastLoginAt || '').toLocaleString('pt-BR') : ''}>
+                      {formatLastAccess(user)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {maskIp(user.lastSeenIp || user.lastLoginIp)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
+                        <Edit className="mr-1 h-4 w-4" />
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-red-200 text-red-600 hover:bg-red-50"
+                        onClick={() => setDeleteUser(user)}
+                        disabled={user.id === currentUserId}
+                      >
+                        <Trash2 className="mr-1 h-4 w-4" />
+                        Remover
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-        {users.length === 0 && (
+      <div className="grid gap-6">
+        {filteredUsers.length === 0 && (
           <Card>
             <CardContent className="p-8 text-center">
               <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
               <h3 className="mb-2 text-lg font-semibold">Nenhum usuário encontrado</h3>
-              <p className="mb-4 text-muted-foreground">Comece criando o primeiro usuário do sistema.</p>
+              <p className="mb-4 text-muted-foreground">Ajuste os filtros ou crie um novo usuário.</p>
               <Button onClick={openCreateDialog}>
                 <UserPlus className="mr-2 h-4 w-4" />
-                Criar Primeiro Usuário
+                Novo Usuário
               </Button>
             </CardContent>
           </Card>

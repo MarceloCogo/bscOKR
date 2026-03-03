@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/db'
 import { verifyPassword } from '@/lib/security/password'
+import { getClientIpFromHeaders } from '@/lib/security/request-ip'
 import { z } from 'zod'
 
 const loginSchema = z.object({
@@ -22,7 +23,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
         tenantSlug: { label: 'Tenant Slug', type: 'text' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password || !credentials?.tenantSlug) {
           return null
         }
@@ -61,6 +62,19 @@ export const authOptions: NextAuthOptions = {
         if (!isValidPassword) {
           return null
         }
+
+        const clientIp = getClientIpFromHeaders((req as any)?.headers)
+        const now = new Date()
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            lastLoginAt: now,
+            lastSeenAt: now,
+            lastLoginIp: clientIp,
+            lastSeenIp: clientIp,
+          } as any,
+        })
 
         return {
           id: user.id,

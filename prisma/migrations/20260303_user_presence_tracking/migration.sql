@@ -1,0 +1,5 @@
+ALTER TABLE "users"
+ADD COLUMN "lastLoginAt" TIMESTAMP(3),
+ADD COLUMN "lastSeenAt" TIMESTAMP(3),
+ADD COLUMN "lastLoginIp" TEXT,
+ADD COLUMN "lastSeenIp" TEXT;

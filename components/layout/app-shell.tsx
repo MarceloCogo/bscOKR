@@ -31,6 +31,42 @@ export function AppShell({ children, session, title }: AppShellProps) {
     }
   }, [])
 
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    const sendPresence = async () => {
+      if (document.visibilityState !== 'visible') return
+      try {
+        await fetch('/api/user/presence', {
+          method: 'POST',
+          keepalive: true,
+        })
+      } catch (error) {
+        console.error('Error sending presence heartbeat:', error)
+      }
+    }
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void sendPresence()
+      }
+    }
+
+    void sendPresence()
+    intervalId = setInterval(() => {
+      void sendPresence()
+    }, 60_000)
+
+    window.addEventListener('focus', handleVisibility)
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+      window.removeEventListener('focus', handleVisibility)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [])
+
   return (
     <div className="flex h-screen bg-background">
       <SidebarNav collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />

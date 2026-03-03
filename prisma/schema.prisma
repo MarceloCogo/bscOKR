@@ -87,6 +87,10 @@ model User {
   passwordHash String
   mustChangePassword Boolean @default(false)
   passwordChangedAt DateTime?
+  lastLoginAt  DateTime?
+  lastSeenAt   DateTime?
+  lastLoginIp  String?
+  lastSeenIp   String?
   createdAt    DateTime @default(now())
 
   // Relations

@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation'
 import { Session } from 'next-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { LogOut, Search, User, Target, Map, BarChart3 } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { LogOut, Search, User, Target, Map, BarChart3, ChevronDown, KeyRound } from 'lucide-react'
 import { OrgContextSelector } from './org-context-selector'
+import { toast } from 'sonner'
 
 interface SearchResult {
   id: string
@@ -27,7 +29,15 @@ export function TopBar({ session, title = 'Dashboard' }: TopBarProps) {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [showResults, setShowResults] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
   const searchRef = useRef<HTMLDivElement>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/login' })
@@ -37,6 +47,10 @@ export function TopBar({ session, title = 'Dashboard' }: TopBarProps) {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowResults(false)
+      }
+
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -80,6 +94,58 @@ export function TopBar({ session, title = 'Dashboard' }: TopBarProps) {
       case 'kpi': return BarChart3
       case 'map': return Map
       default: return Target
+    }
+  }
+
+  const resetPasswordForm = () => {
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setPasswordError('')
+  }
+
+  const handleChangePassword = async () => {
+    setPasswordError('')
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Preencha todos os campos')
+      return
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError('Nova senha deve ter no mínimo 8 caracteres')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('As senhas não conferem')
+      return
+    }
+
+    setIsSavingPassword(true)
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+          confirmPassword,
+        }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.error?.formErrors?.[0] || data.error || 'Erro ao alterar senha')
+      }
+
+      toast.success('Senha alterada com sucesso')
+      setChangePasswordOpen(false)
+      resetPasswordForm()
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : 'Erro ao alterar senha')
+    } finally {
+      setIsSavingPassword(false)
     }
   }
 
@@ -141,8 +207,12 @@ export function TopBar({ session, title = 'Dashboard' }: TopBarProps) {
           </div>
 
           {/* User info and logout */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
+          <div className="relative" ref={userMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowUserMenu((prev) => !prev)}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/60"
+            >
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                 <User className="h-4 w-4 text-primary" />
               </div>
@@ -151,19 +221,72 @@ export function TopBar({ session, title = 'Dashboard' }: TopBarProps) {
                   {session.user.name}
                 </p>
               </div>
-            </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </button>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            {showUserMenu && (
+              <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-neutral-200 bg-white p-1 shadow-lg">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-neutral-700 transition-colors hover:bg-neutral-100"
+                  onClick={() => {
+                    setShowUserMenu(false)
+                    setChangePasswordOpen(true)
+                  }}
+                >
+                  <KeyRound className="h-4 w-4" />
+                  Alterar senha
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sair
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      <Dialog open={changePasswordOpen} onOpenChange={(open) => {
+        setChangePasswordOpen(open)
+        if (!open) resetPasswordForm()
+      }}>
+        <DialogContent className="sm:max-w-md p-0 gap-0">
+          <DialogHeader className="border-b border-neutral-200 bg-neutral-50 px-6 py-4">
+            <DialogTitle>Alterar senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para sua conta.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 px-6 py-5">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Senha atual</label>
+              <Input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Nova senha</label>
+              <Input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Confirmar nova senha</label>
+              <Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+            </div>
+            {passwordError && (
+              <p className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">{passwordError}</p>
+            )}
+          </div>
+          <DialogFooter className="border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <Button variant="outline" onClick={() => setChangePasswordOpen(false)} disabled={isSavingPassword}>Cancelar</Button>
+            <Button onClick={handleChangePassword} disabled={isSavingPassword}>
+              {isSavingPassword ? 'Salvando...' : 'Salvar nova senha'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   )
 }
