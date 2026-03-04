@@ -5,7 +5,7 @@ type ScimUserInput = {
   name: string
   isActive: boolean
   createdAt: Date
-  updatedAt: Date
+  updatedAt?: Date | null
 }
 
 export function toScimUser(user: ScimUserInput) {
@@ -29,7 +29,7 @@ export function toScimUser(user: ScimUserInput) {
     meta: {
       resourceType: 'User',
       created: user.createdAt.toISOString(),
-      lastModified: user.updatedAt.toISOString(),
+      lastModified: (user.updatedAt || user.createdAt).toISOString(),
     },
   }
 }
