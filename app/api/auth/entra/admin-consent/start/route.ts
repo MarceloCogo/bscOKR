@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createConsentState } from '@/lib/security/consent-state'
 import { prisma } from '@/lib/db'
+import { getEntraClientId } from '@/lib/security/entra-config'
 
 const startSchema = z.object({
   tenantSlug: z.string().min(1),
@@ -22,9 +23,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 })
     }
 
-    const clientId = process.env.ENTRA_CLIENT_ID
+    const clientId = getEntraClientId()
     if (!clientId) {
-      return NextResponse.json({ error: 'Entra ID não configurado no servidor' }, { status: 500 })
+      return NextResponse.json(
+        {
+          error:
+            'Entra ID não configurado no servidor. Defina ENTRA_CLIENT_ID (ou AZURE_AD_CLIENT_ID).',
+        },
+        { status: 500 },
+      )
     }
 
     const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin

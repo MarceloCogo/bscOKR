@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyConsentState } from '@/lib/security/consent-state'
 import { hashScimToken } from '@/lib/security/scim-token'
+import { getEntraClientId, getEntraClientSecret } from '@/lib/security/entra-config'
 import { randomBytes } from 'crypto'
 
 function createScimToken() {
@@ -81,8 +82,8 @@ export async function GET(request: NextRequest) {
       update: {
         enabled: true,
         entraTenantId: tenantGuid,
-        entraClientId: process.env.ENTRA_CLIENT_ID || null,
-        entraClientSecret: process.env.ENTRA_CLIENT_SECRET || null,
+        entraClientId: getEntraClientId(),
+        entraClientSecret: getEntraClientSecret(),
         scimTokenHash,
         scimTokenCreatedAt: new Date(),
       },
@@ -91,8 +92,8 @@ export async function GET(request: NextRequest) {
         provider: 'entra',
         enabled: true,
         entraTenantId: tenantGuid,
-        entraClientId: process.env.ENTRA_CLIENT_ID || null,
-        entraClientSecret: process.env.ENTRA_CLIENT_SECRET || null,
+        entraClientId: getEntraClientId(),
+        entraClientSecret: getEntraClientSecret(),
         scimTokenHash,
         scimTokenCreatedAt: new Date(),
       },

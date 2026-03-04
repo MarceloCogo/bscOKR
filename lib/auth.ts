@@ -6,7 +6,12 @@ import { prisma } from '@/lib/db'
 import { hashPassword, verifyPassword } from '@/lib/security/password'
 import { getClientIpFromHeaders } from '@/lib/security/request-ip'
 import { generateTemporaryPassword } from '@/lib/security/temp-password'
+import { getEntraClientId, getEntraClientSecret, getEntraTenantId } from '@/lib/security/entra-config'
 import { z } from 'zod'
+
+const entraClientId = getEntraClientId()
+const entraClientSecret = getEntraClientSecret()
+const entraTenantId = getEntraTenantId()
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -138,12 +143,12 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
-    ...(process.env.ENTRA_CLIENT_ID && process.env.ENTRA_CLIENT_SECRET && process.env.ENTRA_TENANT_ID
+    ...(entraClientId && entraClientSecret && entraTenantId
       ? [
           AzureADProvider({
-            clientId: process.env.ENTRA_CLIENT_ID,
-            clientSecret: process.env.ENTRA_CLIENT_SECRET,
-            tenantId: process.env.ENTRA_TENANT_ID,
+            clientId: entraClientId,
+            clientSecret: entraClientSecret,
+            tenantId: entraTenantId,
           }),
         ]
       : []),
