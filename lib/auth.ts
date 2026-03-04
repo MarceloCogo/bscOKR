@@ -177,7 +177,7 @@ export const authOptions: NextAuthOptions = {
         null
 
       const identityProvider = entraTenantId
-        ? await (prisma as any).tenantIdentityProvider.findFirst({
+        ? await prisma.tenantIdentityProvider.findFirst({
             where: {
               provider: 'entra',
               enabled: true,
@@ -201,7 +201,7 @@ export const authOptions: NextAuthOptions = {
           return false
         }
 
-        const fallbackIdentityProvider = await (prisma as any).tenantIdentityProvider.findFirst({
+        const fallbackIdentityProvider = await prisma.tenantIdentityProvider.findFirst({
           where: {
             tenantId: tenant.id,
             provider: 'entra',

@@ -8,7 +8,7 @@ export async function resolveScimTenant(request: NextRequest) {
 
   const tokenHash = hashScimToken(token)
 
-  const provider = await (prisma as any).tenantIdentityProvider.findFirst({
+  const provider = await prisma.tenantIdentityProvider.findFirst({
     where: {
       provider: 'entra',
       enabled: true,

@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
-import { verifyConsentState } from '@/lib/security/consent-state'
+import { hashConsentNonce, verifyConsentState } from '@/lib/security/consent-state'
 import { hashScimToken } from '@/lib/security/scim-token'
-import { getEntraClientId, getEntraClientSecret } from '@/lib/security/entra-config'
+import { getEntraClientId } from '@/lib/security/entra-config'
+import { getUserPermissions } from '@/lib/domain/permissions'
 import { randomBytes } from 'crypto'
 
 function createScimToken() {
@@ -53,12 +54,12 @@ export async function GET(request: NextRequest) {
     if (!parsed) {
       return htmlPage(
         'Conexão Microsoft - expirada',
-        `<h1 class="err">Sessão de consentimento expirada</h1><p>Reinicie o processo pela tela de login.</p>`,
+        `<h1 class="err">Sessão de consentimento expirada</h1><p>Reinicie o processo pela área administrativa.</p>`,
       )
     }
 
     const tenant = await prisma.tenant.findUnique({
-      where: { slug: parsed.tenantSlug },
+      where: { id: parsed.tenantId },
       select: { id: true, name: true, slug: true },
     })
 
@@ -69,10 +70,41 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const nonceHash = hashConsentNonce(parsed.nonce)
+    const nonceRow = await prisma.authConsentNonce.findFirst({
+      where: {
+        tenantId: parsed.tenantId,
+        userId: parsed.userId,
+        nonceHash,
+        usedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    if (!nonceRow || nonceRow.expiresAt.getTime() < Date.now()) {
+      return htmlPage(
+        'Conexão Microsoft - expirada',
+        `<h1 class="err">Nonce de consentimento inválido</h1><p>Reinicie o processo pela área administrativa.</p>`,
+      )
+    }
+
+    const permissions = await getUserPermissions(parsed.userId, parsed.tenantId)
+    if (!permissions.canManageConfig) {
+      return htmlPage(
+        'Conexão Microsoft - sem permissão',
+        `<h1 class="err">Usuário sem permissão</h1><p>Apenas administradores podem concluir esta conexão.</p>`,
+      )
+    }
+
+    await prisma.authConsentNonce.update({
+      where: { id: nonceRow.id },
+      data: { usedAt: new Date() },
+    })
+
     const plainToken = createScimToken()
     const scimTokenHash = hashScimToken(plainToken)
 
-    await (prisma as any).tenantIdentityProvider.upsert({
+    await prisma.tenantIdentityProvider.upsert({
       where: {
         tenantId_provider: {
           tenantId: tenant.id,
@@ -83,7 +115,7 @@ export async function GET(request: NextRequest) {
         enabled: true,
         entraTenantId: tenantGuid,
         entraClientId: getEntraClientId(),
-        entraClientSecret: getEntraClientSecret(),
+        entraClientSecret: null,
         scimTokenHash,
         scimTokenCreatedAt: new Date(),
       },
@@ -93,7 +125,7 @@ export async function GET(request: NextRequest) {
         enabled: true,
         entraTenantId: tenantGuid,
         entraClientId: getEntraClientId(),
-        entraClientSecret: getEntraClientSecret(),
+        entraClientSecret: null,
         scimTokenHash,
         scimTokenCreatedAt: new Date(),
       },

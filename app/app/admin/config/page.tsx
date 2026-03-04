@@ -70,6 +70,7 @@ import { PillarTab } from '@/components/config/pillar-tab'
 import { OrgTypesTab } from '@/components/config/org-types-tab'
 import { StatusesTab } from '@/components/config/statuses-tab'
 import { RolesTab } from '@/components/config/roles-tab'
+import { EntraConnectionCard } from '@/components/config/entra-connection-card'
 
 async function getConfigCounts(tenantId: string) {
   const [
@@ -137,6 +138,8 @@ export default async function AdminConfigPage() {
           Gerencie as configurações da organização: {session.user.tenantName}
         </p>
       </div>
+
+      <EntraConnectionCard />
 
       <Tabs defaultValue="perspectives" className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-12 bg-muted p-1 rounded-lg">

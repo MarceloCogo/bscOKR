@@ -74,6 +74,7 @@ model Tenant {
   strategyMapMeta   StrategyMapMeta[]
   orgNodeAccessGrants OrgNodeAccessGrant[]
   identityProviders TenantIdentityProvider[]
+  authConsentNonces AuthConsentNonce[]
   keyResults        KeyResult[]
   krUpdateHistories KRUpdateHistory[]
 
@@ -106,6 +107,7 @@ model User {
   userPreference       UserPreference?
   sponsoredObjectives  StrategicObjective[] @relation("ObjectiveSponsor")
   krUpdateHistories    KRUpdateHistory[]
+  authConsentNonces    AuthConsentNonce[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, externalId])
@@ -132,6 +134,24 @@ model TenantIdentityProvider {
   @@index([provider, enabled])
   @@index([scimTokenHash])
   @@map("tenant_identity_providers")
+}
+
+model AuthConsentNonce {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String
+  nonceHash  String
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@index([nonceHash])
+  @@index([expiresAt])
+  @@map("auth_consent_nonces")
 }
 
 model Role {

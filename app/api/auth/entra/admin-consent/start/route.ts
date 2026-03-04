@@ -1,26 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-import { createConsentState } from '@/lib/security/consent-state'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { createConsentState, hashConsentNonce } from '@/lib/security/consent-state'
 import { prisma } from '@/lib/db'
 import { getEntraClientId } from '@/lib/security/entra-config'
-
-const startSchema = z.object({
-  tenantSlug: z.string().min(1),
-})
+import { getUserPermissions } from '@/lib/domain/permissions'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const parsed = startSchema.safeParse(body)
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'tenantSlug is required' }, { status: 400 })
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.tenantId || !session.user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const tenantSlug = parsed.data.tenantSlug.trim().toLowerCase()
-
-    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true } })
-    if (!tenant) {
-      return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 })
+    const permissions = await getUserPermissions(session.user.id, session.user.tenantId)
+    if (!permissions.canManageConfig) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
     const clientId = getEntraClientId()
@@ -36,12 +31,22 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin
     const redirectUri = `${baseUrl}/api/auth/entra/admin-consent/callback`
-    const state = createConsentState(tenantSlug)
+    const statePayload = createConsentState({ tenantId: session.user.tenantId, userId: session.user.id })
+    const parsedState = JSON.parse(Buffer.from(statePayload.split('.')[0], 'base64url').toString('utf8')) as { nonce: string; exp: number }
+
+    await prisma.authConsentNonce.create({
+      data: {
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        nonceHash: hashConsentNonce(parsedState.nonce),
+        expiresAt: new Date(parsedState.exp * 1000),
+      },
+    })
 
     const consentUrl = new URL('https://login.microsoftonline.com/common/v2.0/adminconsent')
     consentUrl.searchParams.set('client_id', clientId)
     consentUrl.searchParams.set('redirect_uri', redirectUri)
-    consentUrl.searchParams.set('state', state)
+    consentUrl.searchParams.set('state', statePayload)
 
     return NextResponse.json({ consentUrl: consentUrl.toString() })
   } catch (error) {

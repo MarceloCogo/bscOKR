@@ -1,7 +1,8 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'crypto'
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto'
 
 type ConsentStatePayload = {
-  tenantSlug: string
+  tenantId: string
+  userId: string
   nonce: string
   exp: number
 }
@@ -18,9 +19,14 @@ function sign(payloadBase64: string) {
   return createHmac('sha256', getSecret()).update(payloadBase64).digest('base64url')
 }
 
-export function createConsentState(tenantSlug: string, ttlSeconds = 600) {
+export function hashConsentNonce(nonce: string) {
+  return createHash('sha256').update(nonce).digest('hex')
+}
+
+export function createConsentState(input: { tenantId: string; userId: string }, ttlSeconds = 600) {
   const payload: ConsentStatePayload = {
-    tenantSlug,
+    tenantId: input.tenantId,
+    userId: input.userId,
     nonce: randomBytes(12).toString('hex'),
     exp: Math.floor(Date.now() / 1000) + ttlSeconds,
   }
@@ -43,7 +49,7 @@ export function verifyConsentState(state: string): ConsentStatePayload | null {
 
   try {
     const parsed = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString('utf8')) as ConsentStatePayload
-    if (!parsed?.tenantSlug || !parsed?.nonce || !parsed?.exp) return null
+    if (!parsed?.tenantId || !parsed?.userId || !parsed?.nonce || !parsed?.exp) return null
     if (parsed.exp < Math.floor(Date.now() / 1000)) return null
     return parsed
   } catch {
