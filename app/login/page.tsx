@@ -16,6 +16,8 @@ export default function LoginPage() {
       ctaText="Primeiro acesso?"
       ctaLabel="Crie uma conta"
       ctaHref="/signup"
+      ctaDisabled
+      ctaDisabledLabel="Cadastro de nova conta em breve."
     >
         <Suspense fallback={<div className="p-4">Carregando...</div>}>
           <LoginForm />

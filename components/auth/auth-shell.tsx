@@ -6,10 +6,21 @@ interface AuthShellProps {
   ctaLabel: string
   ctaHref: string
   ctaText: string
+  ctaDisabled?: boolean
+  ctaDisabledLabel?: string
   children: React.ReactNode
 }
 
-export function AuthShell({ title, subtitle, ctaLabel, ctaHref, ctaText, children }: AuthShellProps) {
+export function AuthShell({
+  title,
+  subtitle,
+  ctaLabel,
+  ctaHref,
+  ctaText,
+  ctaDisabled = false,
+  ctaDisabledLabel,
+  children,
+}: AuthShellProps) {
   return (
     <div className="auth-shell flex min-h-[100svh] items-center px-4 py-6 md:px-8 md:py-8">
       <div className="mx-auto grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
@@ -44,10 +55,17 @@ export function AuthShell({ title, subtitle, ctaLabel, ctaHref, ctaText, childre
             <p className="mt-1 text-sm text-neutral-600">{subtitle}</p>
             <p className="mt-2 text-sm text-neutral-600">
               {ctaText}{' '}
-              <Link href={ctaHref} className="font-semibold text-[#E87722] transition-colors hover:text-[#CF6111]">
-                {ctaLabel}
-              </Link>
+              {ctaDisabled ? (
+                <span className="cursor-not-allowed font-semibold text-neutral-400" aria-disabled="true">
+                  {ctaLabel}
+                </span>
+              ) : (
+                <Link href={ctaHref} className="font-semibold text-[#E87722] transition-colors hover:text-[#CF6111]">
+                  {ctaLabel}
+                </Link>
+              )}
             </p>
+            {ctaDisabled && ctaDisabledLabel && <p className="mt-1 text-xs text-neutral-500">{ctaDisabledLabel}</p>}
           </div>
           {children}
         </section>
