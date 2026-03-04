@@ -265,7 +265,8 @@ export function LoginForm() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Button
               type="button"
-              className="w-full h-11 btn-primary"
+              variant="outline"
+              className="h-11 w-full border border-neutral-300 bg-white text-neutral-900 shadow-sm hover:bg-neutral-50"
               onClick={onMicrosoftSignIn}
               disabled={isLoading || isMicrosoftLoading}
             >
@@ -290,15 +291,15 @@ export function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowLocalLogin((current) => !current)}
-                className="text-xs font-medium text-neutral-600 hover:text-neutral-900"
+                className="text-[11px] font-medium text-neutral-500 hover:text-neutral-800"
                 aria-expanded={showLocalLogin}
               >
-                {showLocalLogin ? 'Ocultar login local' : 'Usar email e senha'}
+                {showLocalLogin ? 'Ocultar login local' : 'ou usar email e senha'}
               </button>
             </div>
 
             {showLocalLogin && (
-              <div className="space-y-4 rounded-lg border border-neutral-200 bg-neutral-50/60 p-4">
+              <div className="space-y-4 rounded-lg border border-neutral-200 bg-neutral-50/60 p-4 transition-all">
                 <FormField
                   control={form.control}
                   name="tenantSlug"
