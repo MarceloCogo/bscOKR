@@ -17,7 +17,7 @@ export default function LoginPage() {
       ctaLabel="Crie uma conta"
       ctaHref="/signup"
       ctaDisabled
-      ctaDisabledLabel="Cadastro de nova conta em breve."
+      ctaDisabledLabel="Cadastro de nova conta desabilitado."
     >
         <Suspense fallback={<div className="p-4">Carregando...</div>}>
           <LoginForm />

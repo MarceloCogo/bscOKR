@@ -288,7 +288,7 @@ export function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowLocalLogin((current) => !current)}
-                className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-neutral-200 px-3 text-[11px] font-semibold text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E87722]/40"
+                className="inline-flex items-center justify-center gap-1 text-[11px] font-medium text-neutral-500 underline decoration-neutral-300 underline-offset-4 transition-colors hover:text-neutral-800 hover:decoration-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E87722]/40"
                 aria-expanded={showLocalLogin}
               >
                 {showLocalLogin ? 'Ocultar login local' : 'ou usar email e senha'}
