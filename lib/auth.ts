@@ -149,6 +149,11 @@ export const authOptions: NextAuthOptions = {
             clientId: entraClientId,
             clientSecret: entraClientSecret,
             tenantId: entraTenantId,
+            authorization: {
+              params: {
+                scope: 'openid profile email offline_access User.Read',
+              },
+            },
           }),
         ]
       : []),

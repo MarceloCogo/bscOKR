@@ -109,6 +109,7 @@ export function LoginForm() {
       await signIn('azure-ad', {
         callbackUrl: '/app/dashboard',
         tenantSlug,
+        scope: 'openid profile email offline_access User.Read',
       })
     } catch (_error) {
       setError('Não foi possível iniciar o login com Microsoft. Tente novamente.')
