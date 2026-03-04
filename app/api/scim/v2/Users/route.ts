@@ -4,6 +4,7 @@ import { resolveScimTenant } from '@/lib/scim/auth'
 import { scimError, toScimUser } from '@/lib/scim/format'
 import { generateTemporaryPassword } from '@/lib/security/temp-password'
 import { hashPassword } from '@/lib/security/password'
+import { logScimEvent } from '@/lib/scim/audit'
 
 const scimUserSelect: any = {
   id: true,
@@ -38,8 +39,9 @@ function parsePrimaryEmail(body: any): string | null {
 }
 
 export async function GET(request: NextRequest) {
+  let tenantId: string | null = null
   try {
-    const tenantId = await resolveScimTenant(request)
+    tenantId = await resolveScimTenant(request)
     if (!tenantId) {
       const err = scimError(401, 'Unauthorized')
       return NextResponse.json(err.body, { status: err.status })
@@ -70,6 +72,15 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
+    await logScimEvent({
+      tenantId,
+      operation: filter ? 'users.filter' : 'users.list',
+      status: 'success',
+      httpStatus: 200,
+      request,
+      detail: filter || undefined,
+    })
+
     return NextResponse.json({
       schemas: ['urn:ietf:params:scim:api:messages:2.0:ListResponse'],
       totalResults,
@@ -88,14 +99,25 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('SCIM Users GET error:', error)
+    if (tenantId) {
+      await logScimEvent({
+        tenantId,
+        operation: 'users.list',
+        status: 'error',
+        httpStatus: 500,
+        request,
+        detail: error instanceof Error ? error.message : 'Internal Server Error',
+      })
+    }
     const err = scimError(500, 'Internal Server Error')
     return NextResponse.json(err.body, { status: err.status })
   }
 }
 
 export async function POST(request: NextRequest) {
+  let tenantId: string | null = null
   try {
-    const tenantId = await resolveScimTenant(request)
+    tenantId = await resolveScimTenant(request)
     if (!tenantId) {
       const err = scimError(401, 'Unauthorized')
       return NextResponse.json(err.body, { status: err.status })
@@ -104,6 +126,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const email = parsePrimaryEmail(body)
     if (!email) {
+      await logScimEvent({
+        tenantId,
+        operation: 'users.create',
+        status: 'error',
+        httpStatus: 400,
+        request,
+        detail: 'userName or emails is required',
+      })
       const err = scimError(400, 'userName or emails is required', 'invalidValue')
       return NextResponse.json(err.body, { status: err.status })
     }
@@ -122,6 +152,15 @@ export async function POST(request: NextRequest) {
     })
 
     if (existing) {
+      await logScimEvent({
+        tenantId,
+        operation: 'users.create',
+        status: 'error',
+        httpStatus: 409,
+        request,
+        targetEmail: email,
+        detail: 'User already exists',
+      })
       const err = scimError(409, 'User already exists', 'uniqueness')
       return NextResponse.json(err.body, { status: err.status })
     }
@@ -143,6 +182,17 @@ export async function POST(request: NextRequest) {
       select: scimUserSelect,
     })
 
+    await logScimEvent({
+      tenantId,
+      operation: 'users.create',
+      status: 'success',
+      httpStatus: 201,
+      request,
+      targetUserId: created.id,
+      targetEmail: created.email,
+      externalId: created.externalId,
+    })
+
     return NextResponse.json(
       toScimUser({
         id: created.id,
@@ -156,6 +206,16 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error('SCIM Users POST error:', error)
+    if (tenantId) {
+      await logScimEvent({
+        tenantId,
+        operation: 'users.create',
+        status: 'error',
+        httpStatus: 500,
+        request,
+        detail: error instanceof Error ? error.message : 'Internal Server Error',
+      })
+    }
     const err = scimError(500, 'Internal Server Error')
     return NextResponse.json(err.body, { status: err.status })
   }

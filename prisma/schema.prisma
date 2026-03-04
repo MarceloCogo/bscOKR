@@ -75,6 +75,7 @@ model Tenant {
   orgNodeAccessGrants OrgNodeAccessGrant[]
   identityProviders TenantIdentityProvider[]
   authConsentNonces AuthConsentNonce[]
+  scimProvisioningEvents ScimProvisioningEvent[]
   keyResults        KeyResult[]
   krUpdateHistories KRUpdateHistory[]
 
@@ -152,6 +153,29 @@ model AuthConsentNonce {
   @@index([nonceHash])
   @@index([expiresAt])
   @@map("auth_consent_nonces")
+}
+
+model ScimProvisioningEvent {
+  id          String   @id @default(cuid())
+  tenantId    String
+  provider    String   @default("entra")
+  operation   String
+  status      String
+  httpMethod  String
+  httpPath    String
+  httpStatus  Int
+  targetUserId String?
+  targetEmail String?
+  externalId  String?
+  detail      String?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, operation, createdAt])
+  @@map("scim_provisioning_events")
 }
 
 model Role {

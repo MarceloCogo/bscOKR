@@ -13,12 +13,36 @@ type EntraConfig = {
   scimTokenCreatedAt: string | null
 }
 
+type ScimSummary = {
+  successCount24h: number
+  errorCount24h: number
+  lastSuccessAt: string | null
+  lastSuccessOperation: string | null
+  lastErrorAt: string | null
+  lastErrorOperation: string | null
+  lastErrorDetail: string | null
+  lastErrorStatus: number | null
+}
+
+type ScimEvent = {
+  id: string
+  operation: string
+  status: 'success' | 'error'
+  httpStatus: number
+  targetEmail: string | null
+  detail: string | null
+  createdAt: string
+}
+
 export function EntraConnectionCard() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [isLoadingConfig, setIsLoadingConfig] = useState(true)
   const [isRotatingToken, setIsRotatingToken] = useState(false)
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true)
   const [config, setConfig] = useState<EntraConfig | null>(null)
   const [newScimToken, setNewScimToken] = useState<string | null>(null)
+  const [events, setEvents] = useState<ScimEvent[]>([])
+  const [summary, setSummary] = useState<ScimSummary | null>(null)
 
   const loadConfig = async () => {
     setIsLoadingConfig(true)
@@ -38,8 +62,28 @@ export function EntraConnectionCard() {
     }
   }
 
+  const loadEvents = async () => {
+    setIsLoadingEvents(true)
+    try {
+      const response = await fetch('/api/admin/identity/entra/events', { method: 'GET' })
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Não foi possível carregar os eventos de SCIM')
+      }
+
+      setSummary(payload?.summary || null)
+      setEvents(Array.isArray(payload?.events) ? payload.events : [])
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Falha ao carregar eventos de SCIM')
+    } finally {
+      setIsLoadingEvents(false)
+    }
+  }
+
   useEffect(() => {
     void loadConfig()
+    void loadEvents()
   }, [])
 
   const handleConnect = async () => {
@@ -80,6 +124,7 @@ export function EntraConnectionCard() {
       setNewScimToken(String(payload.scimToken))
       toast.success('Novo token SCIM gerado com sucesso')
       await loadConfig()
+      await loadEvents()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Falha ao gerar novo token SCIM')
     } finally {
@@ -169,6 +214,87 @@ export function EntraConnectionCard() {
         <p className="text-xs text-neutral-500">
           Endpoint SCIM: <span className="font-medium">/api/scim/v2</span>
         </p>
+
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-semibold text-neutral-900">Monitoramento de Provisionamento (SCIM)</p>
+            <Button type="button" variant="ghost" className="h-7 px-2 text-xs" onClick={() => void loadEvents()} disabled={isLoadingEvents}>
+              {isLoadingEvents ? 'Atualizando...' : 'Atualizar'}
+            </Button>
+          </div>
+
+          {isLoadingEvents ? (
+            <p className="text-sm text-neutral-500">Carregando eventos de SCIM...</p>
+          ) : (
+            <>
+              <div className="grid gap-2 text-sm text-neutral-700 sm:grid-cols-2 lg:grid-cols-4">
+                <p>
+                  <span className="font-semibold">Sucessos (24h):</span> {summary?.successCount24h ?? 0}
+                </p>
+                <p>
+                  <span className="font-semibold">Falhas (24h):</span> {summary?.errorCount24h ?? 0}
+                </p>
+                <p>
+                  <span className="font-semibold">Último sucesso:</span>{' '}
+                  {summary?.lastSuccessAt ? new Date(summary.lastSuccessAt).toLocaleString('pt-BR') : '—'}
+                </p>
+                <p>
+                  <span className="font-semibold">Última falha:</span>{' '}
+                  {summary?.lastErrorAt ? new Date(summary.lastErrorAt).toLocaleString('pt-BR') : '—'}
+                </p>
+              </div>
+
+              {summary?.lastErrorDetail && (
+                <p className="mt-2 text-xs text-red-700">
+                  Último erro: {summary.lastErrorOperation || 'scim'} ({summary.lastErrorStatus || 500}) - {summary.lastErrorDetail}
+                </p>
+              )}
+
+              <div className="mt-3 overflow-x-auto rounded border border-neutral-200 bg-white">
+                <table className="w-full min-w-[640px] text-left text-xs">
+                  <thead className="border-b border-neutral-200 bg-neutral-50 text-neutral-600">
+                    <tr>
+                      <th className="px-3 py-2 font-semibold">Data/Hora</th>
+                      <th className="px-3 py-2 font-semibold">Operação</th>
+                      <th className="px-3 py-2 font-semibold">Status</th>
+                      <th className="px-3 py-2 font-semibold">Usuário</th>
+                      <th className="px-3 py-2 font-semibold">Detalhe</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {events.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-3 py-3 text-neutral-500">
+                          Nenhum evento SCIM registrado ainda.
+                        </td>
+                      </tr>
+                    ) : (
+                      events.map((event) => (
+                        <tr key={event.id} className="border-b border-neutral-100 last:border-b-0">
+                          <td className="px-3 py-2 text-neutral-700">{new Date(event.createdAt).toLocaleString('pt-BR')}</td>
+                          <td className="px-3 py-2 text-neutral-700">{event.operation}</td>
+                          <td className="px-3 py-2">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold ${
+                                event.status === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                              }`}
+                            >
+                              {event.status} ({event.httpStatus})
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-neutral-700">{event.targetEmail || '—'}</td>
+                          <td className="max-w-[260px] truncate px-3 py-2 text-neutral-500" title={event.detail || ''}>
+                            {event.detail || '—'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

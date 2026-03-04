@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { resolveScimTenant } from '@/lib/scim/auth'
 import { scimError, toScimUser } from '@/lib/scim/format'
+import { logScimEvent } from '@/lib/scim/audit'
 
 const scimUserSelect: any = {
   id: true,
@@ -18,8 +19,9 @@ function extractPatchedValue(operations: any[], path: string): any {
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let tenantId: string | null = null
   try {
-    const tenantId = await resolveScimTenant(request)
+    tenantId = await resolveScimTenant(request)
     if (!tenantId) {
       const err = scimError(401, 'Unauthorized')
       return NextResponse.json(err.body, { status: err.status })
@@ -35,9 +37,29 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     })
 
     if (!user) {
+      await logScimEvent({
+        tenantId,
+        operation: 'users.get',
+        status: 'error',
+        httpStatus: 404,
+        request,
+        targetUserId: id,
+        detail: 'User not found',
+      })
       const err = scimError(404, 'User not found')
       return NextResponse.json(err.body, { status: err.status })
     }
+
+    await logScimEvent({
+      tenantId,
+      operation: 'users.get',
+      status: 'success',
+      httpStatus: 200,
+      request,
+      targetUserId: user.id,
+      targetEmail: user.email,
+      externalId: user.externalId,
+    })
 
     return NextResponse.json(
       toScimUser({
@@ -51,14 +73,25 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     )
   } catch (error) {
     console.error('SCIM User GET error:', error)
+    if (tenantId) {
+      await logScimEvent({
+        tenantId,
+        operation: 'users.get',
+        status: 'error',
+        httpStatus: 500,
+        request,
+        detail: error instanceof Error ? error.message : 'Internal Server Error',
+      })
+    }
     const err = scimError(500, 'Internal Server Error')
     return NextResponse.json(err.body, { status: err.status })
   }
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let tenantId: string | null = null
   try {
-    const tenantId = await resolveScimTenant(request)
+    tenantId = await resolveScimTenant(request)
     if (!tenantId) {
       const err = scimError(401, 'Unauthorized')
       return NextResponse.json(err.body, { status: err.status })
@@ -74,6 +107,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     })
 
     if (!existing) {
+      await logScimEvent({
+        tenantId,
+        operation: 'users.patch',
+        status: 'error',
+        httpStatus: 404,
+        request,
+        targetUserId: id,
+        detail: 'User not found',
+      })
       const err = scimError(404, 'User not found')
       return NextResponse.json(err.body, { status: err.status })
     }
@@ -109,6 +151,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       select: scimUserSelect,
     })
 
+    await logScimEvent({
+      tenantId,
+      operation: 'users.patch',
+      status: 'success',
+      httpStatus: 200,
+      request,
+      targetUserId: updated.id,
+      targetEmail: updated.email,
+      externalId: updated.externalId,
+    })
+
     return NextResponse.json(
       toScimUser({
         id: updated.id,
@@ -121,14 +174,25 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     )
   } catch (error) {
     console.error('SCIM User PATCH error:', error)
+    if (tenantId) {
+      await logScimEvent({
+        tenantId,
+        operation: 'users.patch',
+        status: 'error',
+        httpStatus: 500,
+        request,
+        detail: error instanceof Error ? error.message : 'Internal Server Error',
+      })
+    }
     const err = scimError(500, 'Internal Server Error')
     return NextResponse.json(err.body, { status: err.status })
   }
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let tenantId: string | null = null
   try {
-    const tenantId = await resolveScimTenant(request)
+    tenantId = await resolveScimTenant(request)
     if (!tenantId) {
       const err = scimError(401, 'Unauthorized')
       return NextResponse.json(err.body, { status: err.status })
@@ -141,6 +205,15 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     })
 
     if (!existing) {
+      await logScimEvent({
+        tenantId,
+        operation: 'users.delete',
+        status: 'error',
+        httpStatus: 404,
+        request,
+        targetUserId: id,
+        detail: 'User not found',
+      })
       const err = scimError(404, 'User not found')
       return NextResponse.json(err.body, { status: err.status })
     }
@@ -152,9 +225,28 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       } as any,
     })
 
+    await logScimEvent({
+      tenantId,
+      operation: 'users.delete',
+      status: 'success',
+      httpStatus: 204,
+      request,
+      targetUserId: existing.id,
+    })
+
     return new NextResponse(null, { status: 204 })
   } catch (error) {
     console.error('SCIM User DELETE error:', error)
+    if (tenantId) {
+      await logScimEvent({
+        tenantId,
+        operation: 'users.delete',
+        status: 'error',
+        httpStatus: 500,
+        request,
+        detail: error instanceof Error ? error.message : 'Internal Server Error',
+      })
+    }
     const err = scimError(500, 'Internal Server Error')
     return NextResponse.json(err.body, { status: err.status })
   }

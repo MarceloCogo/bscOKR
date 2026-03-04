@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveScimTenant } from '@/lib/scim/auth'
+import { logScimEvent } from '@/lib/scim/audit'
 
 export async function GET(request: NextRequest) {
   const tenantId = await resolveScimTenant(request)
@@ -13,6 +14,14 @@ export async function GET(request: NextRequest) {
       { status: 401 },
     )
   }
+
+  await logScimEvent({
+    tenantId,
+    operation: 'resource-types.get',
+    status: 'success',
+    httpStatus: 200,
+    request,
+  })
 
   return NextResponse.json({
     schemas: ['urn:ietf:params:scim:api:messages:2.0:ListResponse'],
