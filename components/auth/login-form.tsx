@@ -38,6 +38,7 @@ export function LoginForm() {
   const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [isMicrosoftLoading, setIsMicrosoftLoading] = useState(false)
+  const [showLocalLogin, setShowLocalLogin] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [mustChangePassword, setMustChangePassword] = useState(false)
@@ -80,6 +81,7 @@ export function LoginForm() {
     const tenantSlug = searchParams.get('tenantSlug')
     if (tenantSlug) {
       form.setValue('tenantSlug', tenantSlug.trim().toLowerCase())
+      setShowLocalLogin(true)
     } else if (typeof window !== 'undefined') {
       const rememberedTenantSlug = window.localStorage.getItem('bscokr:lastTenantSlug')
       if (rememberedTenantSlug) {
@@ -92,6 +94,12 @@ export function LoginForm() {
       setError(mapAuthError(authError))
     }
   }, [form, searchParams])
+
+  useEffect(() => {
+    if (forceFirstAccess) {
+      setShowLocalLogin(true)
+    }
+  }, [forceFirstAccess])
 
   async function onSubmit(data: LoginFormData) {
     setIsLoading(true)
@@ -106,6 +114,7 @@ export function LoginForm() {
       })
 
       if (result?.error) {
+        setShowLocalLogin(true)
         setError('Credenciais inválidas ou organização não encontrada')
       } else {
         if (typeof window !== 'undefined') {
@@ -254,62 +263,119 @@ export function LoginForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="tenantSlug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Slug da Organização</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="minha-empresa-ltda-abc123"
-                      className="h-11"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                  <p className="text-xs text-neutral-500">Usamos este slug para o login local e lembramos no próximo acesso.</p>
-                </FormItem>
-              )}
-            />
+            <Button
+              type="button"
+              className="w-full h-11 btn-primary"
+              onClick={onMicrosoftSignIn}
+              disabled={isLoading || isMicrosoftLoading}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+                className="mr-2"
+              >
+                <rect x="0.5" y="0.5" width="7" height="7" fill="#F25022" />
+                <rect x="8.5" y="0.5" width="7" height="7" fill="#7FBA00" />
+                <rect x="0.5" y="8.5" width="7" height="7" fill="#00A4EF" />
+                <rect x="8.5" y="8.5" width="7" height="7" fill="#FFB900" />
+              </svg>
+              {isMicrosoftLoading ? 'Entrando com Microsoft...' : 'Continuar com Microsoft'}
+            </Button>
 
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="joao@empresa.com"
-                      className="h-11"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setShowLocalLogin((current) => !current)}
+                className="text-xs font-medium text-neutral-600 hover:text-neutral-900"
+                aria-expanded={showLocalLogin}
+              >
+                {showLocalLogin ? 'Ocultar login local' : 'Usar email e senha'}
+              </button>
+            </div>
 
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Senha</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="••••••••"
-                      className="h-11"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {showLocalLogin && (
+              <div className="space-y-4 rounded-lg border border-neutral-200 bg-neutral-50/60 p-4">
+                <FormField
+                  control={form.control}
+                  name="tenantSlug"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Slug da Organização</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="minha-empresa-ltda-abc123"
+                          className="h-11 bg-white"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-xs text-neutral-500">Obrigatório apenas para login local com email e senha.</p>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="joao@empresa.com"
+                          className="h-11 bg-white"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Senha</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="••••••••"
+                          className="h-11 bg-white"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button type="submit" className="w-full h-11" disabled={isLoading || isMicrosoftLoading}>
+                  {isLoading ? 'Entrando...' : 'Entrar com email e senha'}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full h-9 text-xs"
+                  onClick={() => {
+                    form.setValue('tenantSlug', '')
+                    if (typeof window !== 'undefined') {
+                      window.localStorage.removeItem('bscokr:lastTenantSlug')
+                    }
+                  }}
+                  disabled={isLoading || isMicrosoftLoading}
+                >
+                  Trocar organização salva
+                </Button>
+              </div>
+            )}
 
             {successMessage && (
               <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg border border-green-200">
@@ -328,44 +394,6 @@ export function LoginForm() {
                 {error}
               </div>
             )}
-
-            <Button type="submit" className="w-full h-11 btn-primary" disabled={isLoading || isMicrosoftLoading}>
-              {isLoading ? 'Entrando...' : 'Entrar'}
-            </Button>
-
-            <div className="relative py-1">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-neutral-200" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-neutral-500">ou</span>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-11 border-neutral-300"
-              onClick={onMicrosoftSignIn}
-              disabled={isLoading || isMicrosoftLoading}
-            >
-              {isMicrosoftLoading ? 'Entrando com Microsoft...' : 'Entrar com Microsoft Entra ID'}
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full h-9 text-xs"
-              onClick={() => {
-                form.setValue('tenantSlug', '')
-                if (typeof window !== 'undefined') {
-                  window.localStorage.removeItem('bscokr:lastTenantSlug')
-                }
-              }}
-              disabled={isLoading || isMicrosoftLoading}
-            >
-              Trocar organização salva
-            </Button>
 
             <p className="text-xs text-center text-neutral-500">
               A conexão do Microsoft Entra ID deve ser habilitada por um administrador em
