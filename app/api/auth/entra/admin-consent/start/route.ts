@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createConsentState, hashConsentNonce } from '@/lib/security/consent-state'
 import { prisma } from '@/lib/db'
-import { getEntraClientId } from '@/lib/security/entra-config'
+import { getEntraClientId, getEntraTenantId } from '@/lib/security/entra-config'
 import { getUserPermissions } from '@/lib/domain/permissions'
 
 export async function POST(request: NextRequest) {
@@ -43,7 +43,16 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    const consentUrl = new URL('https://login.microsoftonline.com/common/v2.0/adminconsent')
+    const configuredTenant = (getEntraTenantId() || '').trim().toLowerCase()
+    const consentTenant =
+      configuredTenant &&
+      configuredTenant !== 'common' &&
+      configuredTenant !== 'consumers' &&
+      configuredTenant !== 'organizations'
+        ? configuredTenant
+        : 'organizations'
+
+    const consentUrl = new URL(`https://login.microsoftonline.com/${consentTenant}/v2.0/adminconsent`)
     consentUrl.searchParams.set('client_id', clientId)
     consentUrl.searchParams.set('redirect_uri', redirectUri)
     consentUrl.searchParams.set('state', statePayload)
