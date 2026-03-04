@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
     const consentUrl = new URL(`https://login.microsoftonline.com/${consentTenant}/v2.0/adminconsent`)
     consentUrl.searchParams.set('client_id', clientId)
     consentUrl.searchParams.set('redirect_uri', redirectUri)
+    consentUrl.searchParams.set('scope', 'https://graph.microsoft.com/.default')
     consentUrl.searchParams.set('state', statePayload)
 
     return NextResponse.json({ consentUrl: consentUrl.toString() })
