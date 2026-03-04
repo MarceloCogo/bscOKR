@@ -1,7 +1,6 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import AzureADProvider from 'next-auth/providers/azure-ad'
-import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/db'
 import { hashPassword, verifyPassword } from '@/lib/security/password'
 import { getClientIpFromHeaders } from '@/lib/security/request-ip'
@@ -21,7 +20,6 @@ const loginSchema = z.object({
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
-  adapter: PrismaAdapter(prisma) as any,
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -36,10 +34,12 @@ export const authOptions: NextAuthOptions = {
         }
 
         const { email, password, tenantSlug } = loginSchema.parse(credentials)
+        const normalizedEmail = email.trim().toLowerCase()
+        const normalizedTenantSlug = tenantSlug.trim().toLowerCase()
 
         // Find tenant by slug
         const tenant = await prisma.tenant.findUnique({
-          where: { slug: tenantSlug },
+          where: { slug: normalizedTenantSlug },
         })
 
         if (!tenant) {
@@ -51,7 +51,7 @@ export const authOptions: NextAuthOptions = {
           where: {
             tenantId_email: {
               tenantId: tenant.id,
-              email: email,
+              email: normalizedEmail,
             },
           },
           include: {

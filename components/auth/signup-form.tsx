@@ -67,7 +67,14 @@ export function SignupForm() {
       }
 
       // Redirect to login page with success message
-      router.push('/login?message=Conta criada com sucesso. Faça o login.')
+      const params = new URLSearchParams({
+        message: 'Conta criada com sucesso. Faça o login.',
+      })
+      if (result?.tenant?.slug) {
+        params.set('tenantSlug', String(result.tenant.slug))
+      }
+
+      router.push(`/login?${params.toString()}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro inesperado')
     } finally {

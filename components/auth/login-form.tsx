@@ -19,6 +19,21 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>
 
+function mapAuthError(errorCode: string) {
+  switch (errorCode) {
+    case 'Callback':
+      return 'Falha na autenticação Microsoft. Verifique a configuração do Entra ID e tente novamente.'
+    case 'AccessDenied':
+      return 'Acesso negado pelo provedor Microsoft Entra ID.'
+    case 'OAuthSignin':
+    case 'OAuthCallback':
+    case 'OAuthCreateAccount':
+      return 'Não foi possível concluir o login com Microsoft Entra ID.'
+    default:
+      return 'Falha de autenticação. Tente novamente.'
+  }
+}
+
 export function LoginForm() {
   const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
@@ -60,6 +75,18 @@ export function LoginForm() {
       password: '',
     },
   })
+
+  useEffect(() => {
+    const tenantSlug = searchParams.get('tenantSlug')
+    if (tenantSlug) {
+      form.setValue('tenantSlug', tenantSlug)
+    }
+
+    const authError = searchParams.get('error')
+    if (authError) {
+      setError(mapAuthError(authError))
+    }
+  }, [form, searchParams])
 
   async function onSubmit(data: LoginFormData) {
     setIsLoading(true)

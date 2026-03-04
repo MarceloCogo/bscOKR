@@ -17,10 +17,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { tenantName, name, email, password, adminSecret } = signupSchema.parse(body)
+    const normalizedEmail = email.trim().toLowerCase()
 
     // Check if email already exists
     const existingUser = await prisma.user.findFirst({
-      where: { email },
+      where: { email: normalizedEmail },
     })
 
     if (existingUser) {
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
       data: {
         tenantId: tenant.id,
         name,
-        email,
+        email: normalizedEmail,
         passwordHash,
       },
     })
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
     if (adminSecret) {
       if (adminSecret === process.env.ADMIN_SECRET) {
         isAdmin = true
-        console.log(`[ADMIN_SECRET] Usuário ${email} usou segredo correto para se tornar admin`)
+        console.log(`[ADMIN_SECRET] Usuário ${normalizedEmail} usou segredo correto para se tornar admin`)
       } else {
         return NextResponse.json(
           { error: 'Código de administrador inválido' },
