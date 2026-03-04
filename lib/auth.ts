@@ -166,29 +166,47 @@ export const authOptions: NextAuthOptions = {
         return false
       }
 
-      const tenantSlug = process.env.ENTRA_DEFAULT_TENANT_SLUG
-      if (!tenantSlug) {
-        return false
-      }
+      const entraTenantId =
+        ((profile as any)?.tid as string | undefined) ||
+        ((profile as any)?.tenantId as string | undefined) ||
+        null
 
-      const tenant = await prisma.tenant.findUnique({
-        where: { slug: tenantSlug },
-      })
+      const identityProvider = entraTenantId
+        ? await (prisma as any).tenantIdentityProvider.findFirst({
+            where: {
+              provider: 'entra',
+              enabled: true,
+              entraTenantId,
+            },
+          })
+        : null
+
+      let tenant = identityProvider
+        ? await prisma.tenant.findUnique({ where: { id: identityProvider.tenantId } })
+        : null
 
       if (!tenant) {
-        return false
-      }
+        const tenantSlug = process.env.ENTRA_DEFAULT_TENANT_SLUG
+        if (!tenantSlug) {
+          return false
+        }
 
-      const identityProvider = await (prisma as any).tenantIdentityProvider.findFirst({
-        where: {
-          tenantId: tenant.id,
-          provider: 'entra',
-          enabled: true,
-        },
-      })
+        tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } })
+        if (!tenant) {
+          return false
+        }
 
-      if (!identityProvider) {
-        return false
+        const fallbackIdentityProvider = await (prisma as any).tenantIdentityProvider.findFirst({
+          where: {
+            tenantId: tenant.id,
+            provider: 'entra',
+            enabled: true,
+          },
+        })
+
+        if (!fallbackIdentityProvider) {
+          return false
+        }
       }
 
       const entraObjectId =

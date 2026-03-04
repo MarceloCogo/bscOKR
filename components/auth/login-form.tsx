@@ -23,6 +23,7 @@ export function LoginForm() {
   const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [isMicrosoftLoading, setIsMicrosoftLoading] = useState(false)
+  const [isConnectingMicrosoft, setIsConnectingMicrosoft] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [mustChangePassword, setMustChangePassword] = useState(false)
@@ -113,6 +114,35 @@ export function LoginForm() {
     } catch (_error) {
       setError('Não foi possível iniciar o login com Microsoft. Tente novamente.')
       setIsMicrosoftLoading(false)
+    }
+  }
+
+  async function onConnectMicrosoft() {
+    setError('')
+
+    const tenantSlug = form.getValues('tenantSlug')?.trim()
+    if (!tenantSlug) {
+      setError('Informe o slug da organização para conectar o Microsoft Entra ID.')
+      return
+    }
+
+    setIsConnectingMicrosoft(true)
+    try {
+      const response = await fetch('/api/auth/entra/admin-consent/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantSlug }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload.consentUrl) {
+        throw new Error(payload.error || 'Não foi possível iniciar a conexão com Microsoft')
+      }
+
+      window.location.href = payload.consentUrl
+    } catch (connectError) {
+      setError(connectError instanceof Error ? connectError.message : 'Erro ao conectar Microsoft Entra ID')
+      setIsConnectingMicrosoft(false)
     }
   }
 
@@ -316,9 +346,21 @@ export function LoginForm() {
               variant="outline"
               className="w-full h-11 border-neutral-300"
               onClick={onMicrosoftSignIn}
-              disabled={isLoading || isMicrosoftLoading}
+              disabled={isLoading || isMicrosoftLoading || isConnectingMicrosoft}
             >
               {isMicrosoftLoading ? 'Entrando com Microsoft...' : 'Entrar com Microsoft Entra ID'}
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full h-10 text-[#E87722] hover:bg-orange-50"
+              onClick={onConnectMicrosoft}
+              disabled={isLoading || isMicrosoftLoading || isConnectingMicrosoft}
+            >
+              {isConnectingMicrosoft
+                ? 'Conectando Microsoft para sua organização...'
+                : 'Conectar Microsoft para minha organização'}
             </Button>
           </form>
         </Form>
