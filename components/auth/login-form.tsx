@@ -79,7 +79,12 @@ export function LoginForm() {
   useEffect(() => {
     const tenantSlug = searchParams.get('tenantSlug')
     if (tenantSlug) {
-      form.setValue('tenantSlug', tenantSlug)
+      form.setValue('tenantSlug', tenantSlug.trim().toLowerCase())
+    } else if (typeof window !== 'undefined') {
+      const rememberedTenantSlug = window.localStorage.getItem('bscokr:lastTenantSlug')
+      if (rememberedTenantSlug) {
+        form.setValue('tenantSlug', rememberedTenantSlug)
+      }
     }
 
     const authError = searchParams.get('error')
@@ -94,8 +99,8 @@ export function LoginForm() {
 
     try {
       const result = await signIn('credentials', {
-        tenantSlug: data.tenantSlug,
-        email: data.email,
+        tenantSlug: data.tenantSlug.trim().toLowerCase(),
+        email: data.email.trim().toLowerCase(),
         password: data.password,
         redirect: false,
       })
@@ -103,6 +108,10 @@ export function LoginForm() {
       if (result?.error) {
         setError('Credenciais inválidas ou organização não encontrada')
       } else {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('bscokr:lastTenantSlug', data.tenantSlug.trim().toLowerCase())
+        }
+
         const currentSession = await getSession()
         const mustChange = Boolean(currentSession?.user?.mustChangePassword)
 
@@ -125,17 +134,10 @@ export function LoginForm() {
   async function onMicrosoftSignIn() {
     setError('')
 
-    const tenantSlug = form.getValues('tenantSlug')?.trim()
-    if (!tenantSlug) {
-      setError('Informe o slug da organização para entrar com Microsoft Entra ID.')
-      return
-    }
-
     setIsMicrosoftLoading(true)
     try {
       await signIn('azure-ad', {
         callbackUrl: '/app/dashboard',
-        tenantSlug,
         scope: 'openid profile email offline_access User.Read',
       })
     } catch (_error) {
@@ -266,6 +268,7 @@ export function LoginForm() {
                     />
                   </FormControl>
                   <FormMessage />
+                  <p className="text-xs text-neutral-500">Usamos este slug para o login local e lembramos no próximo acesso.</p>
                 </FormItem>
               )}
             />
@@ -347,6 +350,21 @@ export function LoginForm() {
               disabled={isLoading || isMicrosoftLoading}
             >
               {isMicrosoftLoading ? 'Entrando com Microsoft...' : 'Entrar com Microsoft Entra ID'}
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full h-9 text-xs"
+              onClick={() => {
+                form.setValue('tenantSlug', '')
+                if (typeof window !== 'undefined') {
+                  window.localStorage.removeItem('bscokr:lastTenantSlug')
+                }
+              }}
+              disabled={isLoading || isMicrosoftLoading}
+            >
+              Trocar organização salva
             </Button>
 
             <p className="text-xs text-center text-neutral-500">

@@ -146,6 +146,7 @@ export async function GET(request: NextRequest) {
       <code id="token">${plainToken}</code>
       <div class="row" style="margin-top:12px">
         <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('token').innerText)">Copiar token</button>
+        <a href="/app/admin/config" style="color:#e87722;text-decoration:none;font-weight:700">Voltar para Admin &gt; Configuração</a>
         <a href="/login" style="color:#e87722;text-decoration:none;font-weight:700">Voltar para login</a>
       </div>
       `,
