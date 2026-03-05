@@ -445,55 +445,6 @@ export function MapEditor() {
         {/* Ambição Estratégica */}
         <div className="text-center mt-2 mb-2">
           <h2 className="text-sm font-bold text-gray-800">Ambição Estratégica</h2>
-          {editMode ? (
-            <div className="max-w-2xl mx-auto mt-1 bg-white rounded-md border border-gray-200 p-2">
-              {editingMeta === 'ambitionText' ? (
-                <div className="space-y-3">
-                  <textarea
-                    className="w-full p-3 border rounded-md text-lg"
-                    rows={4}
-                    value={editingMetaValue}
-                    onChange={(e) => setEditingMetaValue(e.target.value)}
-                    placeholder="Digite o texto da ambição estratégica..."
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      disabled={isSavingMeta}
-                      onClick={() => handleEditMeta('ambitionText', editingMetaValue)}
-                      className="bg-[#E87722] hover:bg-[#d06a1e]"
-                    >
-                      {isSavingMeta ? 'Salvando...' : 'Salvar'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={isSavingMeta}
-                      onClick={() => setEditingMeta(null)}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className="text-base text-gray-600 cursor-pointer hover:bg-gray-50 p-3 rounded-md"
-                  onClick={() => {
-                    setEditingMeta('ambitionText')
-                    setEditingMetaValue(data.meta?.ambitionText || '')
-                  }}
-                >
-                  {data.meta?.ambitionText || 'Clique para editar a ambição estratégica...'}
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="text-base text-gray-500 max-w-2xl mx-auto mt-4">
-              {data.meta?.ambitionText || 'Texto da ambição não definido'}
-            </p>
-          )}
-
           <div className="max-w-xl mx-auto mt-2 bg-white rounded-md border border-[#CFCFCF] p-1.5 shadow-sm">
             {data.regions?.ambition ? (
               <ObjectiveCard

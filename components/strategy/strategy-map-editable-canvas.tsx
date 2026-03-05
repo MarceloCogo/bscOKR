@@ -374,19 +374,6 @@ export function StrategyMapEditableCanvas({
     <>
       <div className="mt-2 mb-2 text-center">
         <h2 className="text-sm font-bold text-gray-800">Ambicao Estrategica</h2>
-        <div className="mx-auto mt-2 max-w-2xl rounded-md border border-gray-200 bg-white p-2">
-          <EditableMetaBlock
-            field="ambitionText"
-            value={data.meta?.ambitionText}
-            editable={editable}
-            isSaving={savingMetaField === 'ambitionText'}
-            isBlocked={hasPendingMutation && savingMetaField !== 'ambitionText'}
-            placeholder="Clique para editar a ambição estratégica..."
-            textClassName="text-base text-gray-600"
-            onSave={onSaveMeta}
-          />
-        </div>
-
         <div className="mx-auto mt-2 max-w-xl rounded-md border border-[#CFCFCF] bg-white p-1.5 shadow-sm">
           {data.regions.ambition ? (
             <ObjectiveCard

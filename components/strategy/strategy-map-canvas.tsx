@@ -245,10 +245,6 @@ export function StrategyMapCanvas({
     <>
       <div className={`${sectionGap} text-center`}>
         <h2 className="text-sm font-bold text-gray-800">Ambicao Estrategica</h2>
-        <p className={`mx-auto mt-2 max-w-2xl text-sm text-gray-500`}>
-          {data.meta?.ambitionText || 'Texto da ambição não definido'}
-        </p>
-
         <div className="mx-auto mt-2 max-w-xl">
           {data.regions.ambition ? (
             <div className={`rounded-md border border-[#CFCFCF] bg-white ${compact ? 'p-1.5' : 'p-2'} shadow-sm`}>
