@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getUserOrgContext } from '@/lib/actions/org'
+import { prisma } from '@/lib/db'
+import { getUserOrgScope } from '@/lib/domain/org-scope'
 
 export async function GET() {
   try {
@@ -10,9 +11,63 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const userContext = await getUserOrgContext()
+    const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
+    const availableNodes = await prisma.orgNode.findMany({
+      where: {
+        tenantId: session.user.tenantId,
+        id: { in: scope.viewableNodeIds },
+      },
+      select: {
+        id: true,
+        name: true,
+        parentId: true,
+        type: {
+          select: {
+            name: true,
+            key: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    })
 
-    const activeNode = userContext.availableNodes?.find((node) => node.id === userContext.activeOrgNodeId)
+    const preference = await prisma.userPreference.findUnique({
+      where: {
+        tenantId_userId: {
+          tenantId: session.user.tenantId,
+          userId: session.user.id,
+        },
+      },
+      select: { activeOrgNodeId: true },
+    })
+
+    const hasValidPreference = Boolean(
+      preference?.activeOrgNodeId && availableNodes.some((node) => node.id === preference.activeOrgNodeId),
+    )
+
+    const companyNode = availableNodes.find((node) => node.parentId === null && node.type.key === 'company')
+    const rootNode = companyNode || availableNodes.find((node) => node.parentId === null)
+    const fallbackActiveOrgNodeId = rootNode?.id || availableNodes[0]?.id || null
+    const activeOrgNodeId = hasValidPreference ? preference!.activeOrgNodeId! : fallbackActiveOrgNodeId
+
+    if (!hasValidPreference && activeOrgNodeId) {
+      await prisma.userPreference.upsert({
+        where: {
+          tenantId_userId: {
+            tenantId: session.user.tenantId,
+            userId: session.user.id,
+          },
+        },
+        update: { activeOrgNodeId },
+        create: {
+          tenantId: session.user.tenantId,
+          userId: session.user.id,
+          activeOrgNodeId,
+        },
+      })
+    }
+
+    const activeNode = availableNodes.find((node) => node.id === activeOrgNodeId)
 
     const activeContext = activeNode
       ? {
@@ -21,7 +76,15 @@ export async function GET() {
         }
       : null
 
-    return NextResponse.json({ activeContext })
+    return NextResponse.json({
+      activeContext,
+      activeOrgNodeId,
+      availableNodes: availableNodes.map((node) => ({
+        id: node.id,
+        name: node.name,
+        type: { name: node.type.name },
+      })),
+    })
   } catch (error) {
     console.error('Error fetching user context:', error)
     return NextResponse.json(

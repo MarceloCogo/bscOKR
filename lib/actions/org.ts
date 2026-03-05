@@ -453,6 +453,70 @@ export async function setActiveOrgNode(orgNodeId: string | null) {
   revalidatePath('/app/organization')
 }
 
+export async function getResolvedActiveOrgNodeId() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.tenantId || !session.user.id) {
+    throw new Error('Unauthorized')
+  }
+
+  const preference = await prisma.userPreference.findUnique({
+    where: {
+      tenantId_userId: {
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+      },
+    },
+    select: { activeOrgNodeId: true },
+  })
+
+  if (preference?.activeOrgNodeId) {
+    return preference.activeOrgNodeId
+  }
+
+  const scope = await getUserOrgScope(session.user.id, session.user.tenantId)
+  if (scope.viewableNodeIds.length === 0) {
+    return null
+  }
+
+  const availableNodes = await prisma.orgNode.findMany({
+    where: {
+      tenantId: session.user.tenantId,
+      id: { in: scope.viewableNodeIds },
+    },
+    select: {
+      id: true,
+      parentId: true,
+      type: { select: { key: true } },
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  const companyNode = availableNodes.find((node) => node.parentId === null && node.type.key === 'company')
+  const rootNode = companyNode || availableNodes.find((node) => node.parentId === null)
+  const resolvedActiveOrgNodeId = rootNode?.id || availableNodes[0]?.id || null
+
+  if (resolvedActiveOrgNodeId) {
+    await prisma.userPreference.upsert({
+      where: {
+        tenantId_userId: {
+          tenantId: session.user.tenantId,
+          userId: session.user.id,
+        },
+      },
+      update: {
+        activeOrgNodeId: resolvedActiveOrgNodeId,
+      },
+      create: {
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        activeOrgNodeId: resolvedActiveOrgNodeId,
+      },
+    })
+  }
+
+  return resolvedActiveOrgNodeId
+}
+
 // User picker
 export async function searchUsers(query: string) {
   const session = await getServerSession(authOptions)

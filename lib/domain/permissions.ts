@@ -1,6 +1,9 @@
 import { prisma } from '@/lib/db'
 import { OrgAccessGranteeType } from '@prisma/client'
 
+const PERMISSIONS_CACHE_TTL_MS = 30_000
+const permissionsCache = new Map<string, { expiresAt: number; value: AppPermissions }>()
+
 export interface AppPermissions {
   canManageUsers: boolean
   canManageConfig: boolean
@@ -44,6 +47,13 @@ export function normalizePermissions(raw: Partial<AppPermissions>): AppPermissio
 }
 
 export async function getUserPermissions(userId: string, tenantId: string): Promise<AppPermissions> {
+  const cacheKey = `${tenantId}:${userId}`
+  const now = Date.now()
+  const cached = permissionsCache.get(cacheKey)
+  if (cached && cached.expiresAt > now) {
+    return cached.value
+  }
+
   const [userRoles, membershipCount, leaderCount] = await Promise.all([
     prisma.userRole.findMany({
       where: {
@@ -91,6 +101,11 @@ export async function getUserPermissions(userId: string, tenantId: string): Prom
     normalized.canViewObjectives = true
     normalized.canViewKRs = true
   }
+
+  permissionsCache.set(cacheKey, {
+    expiresAt: now + PERMISSIONS_CACHE_TTL_MS,
+    value: normalized,
+  })
 
   return normalized
 }

@@ -2,12 +2,22 @@ import { prisma } from '@/lib/db'
 import { getUserPermissions } from '@/lib/domain/permissions'
 import { OrgAccessGranteeType, OrgAccessPermission } from '@prisma/client'
 
+const ORG_SCOPE_CACHE_TTL_MS = 30_000
+const orgScopeCache = new Map<string, { expiresAt: number; value: UserOrgScope }>()
+
 export interface UserOrgScope {
   viewableNodeIds: string[]
   editableNodeIds: string[]
 }
 
 export async function getUserOrgScope(userId: string, tenantId: string): Promise<UserOrgScope> {
+  const cacheKey = `${tenantId}:${userId}`
+  const now = Date.now()
+  const cached = orgScopeCache.get(cacheKey)
+  if (cached && cached.expiresAt > now) {
+    return cached.value
+  }
+
   const [permissions, allNodes, memberships, userRoles, leaderNodes] = await Promise.all([
     getUserPermissions(userId, tenantId),
     prisma.orgNode.findMany({
@@ -39,10 +49,15 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
   const nodeById = new Map(allNodes.map((node) => [node.id, node]))
 
   if (permissions.canManageConfig) {
-    return {
+    const fullScope = {
       viewableNodeIds: allNodeIds,
       editableNodeIds: allNodeIds,
     }
+    orgScopeCache.set(cacheKey, {
+      expiresAt: now + ORG_SCOPE_CACHE_TTL_MS,
+      value: fullScope,
+    })
+    return fullScope
   }
 
   const roleIds = userRoles.map((role) => role.roleId)
@@ -133,8 +148,15 @@ export async function getUserOrgScope(userId: string, tenantId: string): Promise
     collectAncestors(grant.orgNodeId).forEach((id) => viewable.add(id))
   }
 
-  return {
+  const scope = {
     viewableNodeIds: Array.from(viewable),
     editableNodeIds: Array.from(editable),
   }
+
+  orgScopeCache.set(cacheKey, {
+    expiresAt: now + ORG_SCOPE_CACHE_TTL_MS,
+    value: scope,
+  })
+
+  return scope
 }

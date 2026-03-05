@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { AppShell } from '@/components/layout/app-shell'
-import { getUserOrgContext } from '@/lib/actions/org'
+import { getResolvedActiveOrgNodeId } from '@/lib/actions/org'
 
 export default async function AppLayout({
   children,
@@ -15,8 +15,8 @@ export default async function AppLayout({
     redirect('/login')
   }
 
-  const orgContext = await getUserOrgContext()
-  if (!orgContext.activeOrgNodeId) {
+  const activeOrgNodeId = await getResolvedActiveOrgNodeId()
+  if (!activeOrgNodeId) {
     redirect('/login?message=Sem acesso ao contexto organizacional')
   }
 

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { getUserOrgContext } from '@/lib/actions/org'
 import { toast } from 'sonner'
 
 interface UserContext {
@@ -35,7 +34,12 @@ export function OrgContextSelector() {
 
   const loadContext = useCallback(async () => {
     try {
-      const ctx = await getUserOrgContext()
+      const response = await fetch('/api/user/context', { cache: 'no-store' })
+      if (!response.ok) {
+        throw new Error('Erro ao carregar contexto')
+      }
+
+      const ctx = await response.json()
       setContext(ctx)
       setSelectedContext(ctx.activeOrgNodeId || ctx.primaryOrgNode?.id || '')
     } catch (error) {
@@ -55,11 +59,9 @@ export function OrgContextSelector() {
     }
 
     window.addEventListener('org-context-changed', handleContextSync)
-    window.addEventListener('org-context-change-ended', handleContextSync)
 
     return () => {
       window.removeEventListener('org-context-changed', handleContextSync)
-      window.removeEventListener('org-context-change-ended', handleContextSync)
     }
   }, [loadContext])
 
@@ -82,7 +84,6 @@ export function OrgContextSelector() {
         throw new Error(data.error || 'Erro ao alterar contexto')
       }
 
-      await loadContext()
       router.refresh()
       window.dispatchEvent(new Event('org-context-changed'))
     } catch (error) {

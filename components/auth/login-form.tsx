@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { getSession, signIn, useSession } from 'next-auth/react'
+import { signIn, useSession } from 'next-auth/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -119,15 +119,6 @@ export function LoginForm() {
       } else {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem('bscokr:lastTenantSlug', data.tenantSlug.trim().toLowerCase())
-        }
-
-        const currentSession = await getSession()
-        const mustChange = Boolean(currentSession?.user?.mustChangePassword)
-
-        if (mustChange) {
-          setMustChangePassword(true)
-          setSuccessMessage('Autenticado. Defina sua nova senha para continuar.')
-          return
         }
 
         router.push('/app/dashboard')
