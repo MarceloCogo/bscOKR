@@ -55,6 +55,7 @@ interface ObjectiveResponsibility {
 interface StrategicObjective {
   id: string
   title: string
+  mapRegion?: string
   description?: string
   perspective: Perspective
   pillar?: Pillar | null
@@ -125,6 +126,8 @@ export function ObjectiveDrawer({
 
   if (!objective) return null
 
+  const isAmbitionObjective = objective.mapRegion === 'AMBITION'
+
   const handleSaveDetails = async () => {
     if (!formData.title.trim()) {
       toast.error('Informe um título para o objetivo')
@@ -136,8 +139,8 @@ export function ObjectiveDrawer({
       await updateObjectivePartial(objective.id, {
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
-        perspectiveId: formData.perspectiveId,
-        pillarId: formData.pillarId || undefined,
+        perspectiveId: isAmbitionObjective ? undefined : formData.perspectiveId,
+        pillarId: isAmbitionObjective ? undefined : formData.pillarId || undefined,
         statusId: formData.statusId,
         sponsorUserId: formData.sponsorUserId,
       })
@@ -197,17 +200,31 @@ export function ObjectiveDrawer({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Perspectiva</label>
-                    <select
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      value={formData.perspectiveId}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, perspectiveId: e.target.value }))}
-                    >
-                      {perspectives.map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
+                    {isAmbitionObjective ? (
+                      <div className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
+                        Ambição Estratégica (fixa)
+                      </div>
+                    ) : (
+                      <select
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={formData.perspectiveId}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, perspectiveId: e.target.value }))}
+                      >
+                        {perspectives
+                          .filter((p) =>
+                            p.name
+                              .normalize('NFD')
+                              .replace(/[\u0300-\u036f]/g, '')
+                              .toLowerCase()
+                              .trim() !== 'ambicao estrategica',
+                          )
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                      </select>
+                    )}
                   </div>
 
                   <div>
@@ -229,18 +246,24 @@ export function ObjectiveDrawer({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Pilar</label>
-                    <select
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      value={formData.pillarId}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, pillarId: e.target.value }))}
-                    >
-                      <option value="">Sem pilar</option>
-                      {pillars.map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
+                    {isAmbitionObjective ? (
+                      <div className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
+                        Não se aplica para Ambição Estratégica
+                      </div>
+                    ) : (
+                      <select
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={formData.pillarId}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, pillarId: e.target.value }))}
+                      >
+                        <option value="">Sem pilar</option>
+                        {pillars.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div>

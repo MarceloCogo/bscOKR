@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -44,6 +44,14 @@ interface ObjectiveFormDialogProps {
   onOpenChange?: (open: boolean) => void
 }
 
+function isAmbitionPerspectiveName(name: string) {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim() === 'ambicao estrategica'
+}
+
 export function ObjectiveFormDialog({
   perspectives,
   pillars,
@@ -69,6 +77,15 @@ export function ObjectiveFormDialog({
   })
 
   const router = useRouter()
+  const ambitionPerspective = useMemo(
+    () => perspectives.find((perspective) => isAmbitionPerspectiveName(perspective.name)),
+    [perspectives],
+  )
+  const nonAmbitionPerspectives = useMemo(
+    () => perspectives.filter((perspective) => !isAmbitionPerspectiveName(perspective.name)),
+    [perspectives],
+  )
+  const isAmbitionRegion = formData.mapRegion === 'AMBITION'
 
   // Set defaults when dialog opens
   useEffect(() => {
@@ -77,18 +94,21 @@ export function ObjectiveFormDialog({
         title: '',
         description: '',
         mapRegion: preselectedRegion || '',
-        perspectiveId: perspectives[0]?.id || '',
+        perspectiveId:
+          preselectedRegion === 'AMBITION'
+            ? ambitionPerspective?.id || ''
+            : nonAmbitionPerspectives[0]?.id || perspectives[0]?.id || '',
         pillarId: '',
         statusId: statuses[0]?.id || '',
         sponsorUserId: users[0]?.id || '',
       })
     }
-  }, [open, preselectedRegion, perspectives, statuses, users])
+  }, [open, preselectedRegion, perspectives, statuses, users, ambitionPerspective?.id, nonAmbitionPerspectives])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.title.trim() || !formData.mapRegion || !formData.perspectiveId || !formData.statusId) {
+    if (!formData.title.trim() || !formData.mapRegion || (!isAmbitionRegion && !formData.perspectiveId) || !formData.statusId) {
       toast.error('Preencha todos os campos obrigatórios')
       return
     }
@@ -100,8 +120,8 @@ export function ObjectiveFormDialog({
         mapRegion: formData.mapRegion,
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
-        perspectiveId: formData.perspectiveId,
-        pillarId: formData.pillarId || undefined,
+        perspectiveId: isAmbitionRegion ? undefined : formData.perspectiveId,
+        pillarId: isAmbitionRegion ? undefined : formData.pillarId || undefined,
         statusId: formData.statusId,
         sponsorUserId: formData.sponsorUserId,
       })
@@ -165,7 +185,19 @@ export function ObjectiveFormDialog({
               <Label htmlFor="mapRegion">Região do Mapa *</Label>
               <Select
                 value={formData.mapRegion}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, mapRegion: value }))}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    mapRegion: value,
+                    perspectiveId:
+                      value === 'AMBITION'
+                        ? ambitionPerspective?.id || ''
+                        : prev.perspectiveId && prev.perspectiveId !== ambitionPerspective?.id
+                          ? prev.perspectiveId
+                          : nonAmbitionPerspectives[0]?.id || '',
+                    pillarId: value === 'AMBITION' ? '' : prev.pillarId,
+                  }))
+                }
                 required
               >
                 <SelectTrigger>
@@ -186,41 +218,53 @@ export function ObjectiveFormDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="perspective">Perspectiva *</Label>
-                <Select
-                  value={formData.perspectiveId}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, perspectiveId: value }))}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {perspectives.map(perspective => (
-                      <SelectItem key={perspective.id} value={perspective.id}>
-                        {perspective.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isAmbitionRegion ? (
+                  <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
+                    Ambição Estratégica (fixa)
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.perspectiveId}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, perspectiveId: value }))}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {nonAmbitionPerspectives.map((perspective) => (
+                        <SelectItem key={perspective.id} value={perspective.id}>
+                          {perspective.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="pillar">Pilar</Label>
-                <Select
-                  value={formData.pillarId}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, pillarId: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Opcional" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pillars.map(pillar => (
-                      <SelectItem key={pillar.id} value={pillar.id}>
-                        {pillar.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isAmbitionRegion ? (
+                  <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
+                    Não se aplica para Ambição Estratégica
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.pillarId}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, pillarId: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Opcional" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pillars.map((pillar) => (
+                        <SelectItem key={pillar.id} value={pillar.id}>
+                          {pillar.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 

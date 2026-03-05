@@ -7,6 +7,64 @@ import { getServerSession } from 'next-auth'
 import { getUserPermissions as getResolvedPermissions } from '@/lib/domain/permissions'
 import { getUserOrgScope } from '@/lib/domain/org-scope'
 
+const AMBITION_PERSPECTIVE_NAME = 'Ambição Estratégica'
+
+function normalizeString(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function isAmbitionPerspectiveName(name: string) {
+  return normalizeString(name) === 'ambicao estrategica'
+}
+
+async function getOrCreateAmbitionPerspective(tenantId: string) {
+  const existing = await prisma.perspective.findFirst({
+    where: {
+      tenantId,
+      name: {
+        equals: AMBITION_PERSPECTIVE_NAME,
+        mode: 'insensitive',
+      },
+    },
+    select: { id: true },
+  })
+
+  if (existing) {
+    return existing
+  }
+
+  const maxOrder = await prisma.perspective.findFirst({
+    where: { tenantId },
+    orderBy: { order: 'desc' },
+    select: { order: true },
+  })
+
+  return prisma.perspective.create({
+    data: {
+      tenantId,
+      name: AMBITION_PERSPECTIVE_NAME,
+      order: (maxOrder?.order ?? 0) + 1,
+    },
+    select: { id: true },
+  })
+}
+
+async function isAmbitionPerspectiveId(tenantId: string, perspectiveId: string) {
+  const perspective = await prisma.perspective.findFirst({
+    where: {
+      id: perspectiveId,
+      tenantId,
+    },
+    select: { name: true },
+  })
+
+  return perspective ? isAmbitionPerspectiveName(perspective.name) : false
+}
+
 // Helper to check if user can manage objectives
 async function canManageObjectives(userId: string, tenantId: string, orgNodeId?: string) {
   const [perms, scope] = await Promise.all([
@@ -285,16 +343,36 @@ export async function updateObjectivePartial(id: string, data: {
     throw new Error('Insufficient permissions')
   }
 
+  if (existing.mapRegion !== 'AMBITION' && data.perspectiveId) {
+    const usingAmbitionPerspective = await isAmbitionPerspectiveId(session.user.tenantId, data.perspectiveId)
+    if (usingAmbitionPerspective) {
+      throw new Error('A perspectiva Ambição Estratégica é exclusiva para objetivos de Ambição')
+    }
+  }
+
+  const updateData: any = {
+    ...(data.title && { title: data.title }),
+    ...(data.description !== undefined && { description: data.description }),
+    ...(data.statusId && { statusId: data.statusId }),
+    ...(data.sponsorUserId && { sponsorUserId: data.sponsorUserId }),
+  }
+
+  if (existing.mapRegion === 'AMBITION') {
+    const ambitionPerspective = await getOrCreateAmbitionPerspective(session.user.tenantId)
+    updateData.perspectiveId = ambitionPerspective.id
+    updateData.pillarId = null
+  } else {
+    if (data.perspectiveId) {
+      updateData.perspectiveId = data.perspectiveId
+    }
+    if (data.pillarId !== undefined) {
+      updateData.pillarId = data.pillarId
+    }
+  }
+
   const result = await prisma.strategicObjective.update({
     where: { id },
-    data: {
-      ...(data.title && { title: data.title }),
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.perspectiveId && { perspectiveId: data.perspectiveId }),
-      ...(data.pillarId !== undefined && { pillarId: data.pillarId }),
-      ...(data.statusId && { statusId: data.statusId }),
-      ...(data.sponsorUserId && { sponsorUserId: data.sponsorUserId }),
-    },
+    data: updateData,
   })
 
   revalidatePath('/app/strategy')
@@ -358,6 +436,21 @@ export async function createObjectiveInRegion(data: {
     throw new Error('Insufficient permissions')
   }
 
+  if (data.mapRegion === 'AMBITION') {
+    const existingAmbition = await prisma.strategicObjective.findFirst({
+      where: {
+        tenantId: session.user.tenantId,
+        orgNodeId: targetOrgNodeId,
+        mapRegion: 'AMBITION',
+      },
+      select: { id: true },
+    })
+
+    if (existingAmbition) {
+      throw new Error('Já existe um objetivo de Ambição Estratégica neste contexto')
+    }
+  }
+
   // Get max orderIndex for the region
   const maxOrder = await prisma.strategicObjective.findFirst({
     where: {
@@ -372,10 +465,31 @@ export async function createObjectiveInRegion(data: {
   const orderIndex = (maxOrder?.orderIndex ?? 0) + 1
 
   // Set defaults if not provided
-  const perspectiveId = data.perspectiveId || (await prisma.perspective.findFirst({
-    where: { tenantId: session.user.tenantId },
-    select: { id: true },
-  }))?.id
+  let perspectiveId: string | undefined
+  if (data.mapRegion === 'AMBITION') {
+    perspectiveId = (await getOrCreateAmbitionPerspective(session.user.tenantId)).id
+  } else {
+    if (data.perspectiveId) {
+      const usingAmbitionPerspective = await isAmbitionPerspectiveId(session.user.tenantId, data.perspectiveId)
+      if (usingAmbitionPerspective) {
+        throw new Error('A perspectiva Ambição Estratégica é exclusiva para objetivos de Ambição')
+      }
+    }
+
+    perspectiveId = data.perspectiveId || (await prisma.perspective.findFirst({
+      where: {
+        tenantId: session.user.tenantId,
+        NOT: {
+          name: {
+            equals: AMBITION_PERSPECTIVE_NAME,
+            mode: 'insensitive',
+          },
+        },
+      },
+      orderBy: { order: 'asc' },
+      select: { id: true },
+    }))?.id
+  }
 
   const statusId = data.statusId || (await prisma.objectiveStatus.findFirst({
     where: { tenantId: session.user.tenantId },
@@ -396,7 +510,7 @@ export async function createObjectiveInRegion(data: {
       title: data.title,
       description: data.description,
       perspectiveId,
-      pillarId: data.pillarId,
+      pillarId: data.mapRegion === 'AMBITION' ? null : data.pillarId,
       statusId,
       sponsorUserId,
       orderIndex,

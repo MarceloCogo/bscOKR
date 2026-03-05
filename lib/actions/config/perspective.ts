@@ -11,6 +11,18 @@ const perspectiveSchema = z.object({
   order: z.number().int().min(0),
 })
 
+function normalizeString(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function isAmbitionPerspectiveName(name: string) {
+  return normalizeString(name) === 'ambicao estrategica'
+}
+
 export async function listPerspectives() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.tenantId) {
@@ -31,6 +43,10 @@ export async function createPerspective(data: z.infer<typeof perspectiveSchema>)
 
   const validatedData = perspectiveSchema.parse(data)
 
+  if (isAmbitionPerspectiveName(validatedData.name)) {
+    throw new Error('A perspectiva Ambição Estratégica é reservada pelo sistema')
+  }
+
   const result = await prisma.perspective.create({
     data: {
       tenantId: session.user.tenantId,
@@ -50,6 +66,26 @@ export async function updatePerspective(id: string, data: z.infer<typeof perspec
 
   const validatedData = perspectiveSchema.parse(data)
 
+  const existing = await prisma.perspective.findFirst({
+    where: {
+      id,
+      tenantId: session.user.tenantId,
+    },
+    select: { name: true },
+  })
+
+  if (!existing) {
+    throw new Error('Perspective not found')
+  }
+
+  if (isAmbitionPerspectiveName(existing.name)) {
+    throw new Error('A perspectiva Ambição Estratégica é reservada e não pode ser alterada')
+  }
+
+  if (isAmbitionPerspectiveName(validatedData.name)) {
+    throw new Error('A perspectiva Ambição Estratégica é reservada pelo sistema')
+  }
+
   const result = await prisma.perspective.update({
     where: {
       id,
@@ -66,6 +102,22 @@ export async function deletePerspective(id: string) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.tenantId) {
     throw new Error('Unauthorized')
+  }
+
+  const existing = await prisma.perspective.findFirst({
+    where: {
+      id,
+      tenantId: session.user.tenantId,
+    },
+    select: { name: true },
+  })
+
+  if (!existing) {
+    throw new Error('Perspective not found')
+  }
+
+  if (isAmbitionPerspectiveName(existing.name)) {
+    throw new Error('A perspectiva Ambição Estratégica é reservada e não pode ser excluída')
   }
 
   await prisma.perspective.delete({
