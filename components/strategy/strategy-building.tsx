@@ -186,6 +186,7 @@ export function StrategyBuilding() {
   }
 
   const mapRegionToKey = (mapRegion: string): keyof StrategyMapData['regions'] | null => {
+    if (mapRegion === 'AMBITION') return 'ambition'
     if (mapRegion === 'GROWTH_FOCUS') return 'growthFocus'
     if (mapRegion === 'PILLAR_OFFER') return 'pillarOffer'
     if (mapRegion === 'PILLAR_REVENUE') return 'pillarRevenue'
@@ -235,6 +236,16 @@ export function StrategyBuilding() {
             status: created.status ? { name: created.status.name, color: created.status.color } : null,
           }
 
+          if (targetKey === 'ambition') {
+            return {
+              ...current,
+              regions: {
+                ...current.regions,
+                ambition: normalizedCreated,
+              },
+            }
+          }
+
           const region = [...(current.regions[targetKey] as StrategicObjective[]), normalizedCreated]
           region.sort((a, b) => a.orderIndex - b.orderIndex)
           return {
@@ -269,6 +280,7 @@ export function StrategyBuilding() {
         ...current,
         regions: {
           ...current.regions,
+          ambition: current.regions.ambition?.id === id ? { ...current.regions.ambition, title } : current.regions.ambition,
           growthFocus: updateArray(current.regions.growthFocus),
           pillarOffer: updateArray(current.regions.pillarOffer),
           pillarRevenue: updateArray(current.regions.pillarRevenue),
@@ -304,6 +316,7 @@ export function StrategyBuilding() {
           ...current,
           regions: {
             ...current.regions,
+            ambition: current.regions.ambition?.id === id ? null : current.regions.ambition,
             growthFocus: removeFrom(current.regions.growthFocus),
             pillarOffer: removeFrom(current.regions.pillarOffer),
             pillarRevenue: removeFrom(current.regions.pillarRevenue),

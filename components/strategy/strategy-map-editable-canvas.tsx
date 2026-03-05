@@ -23,6 +23,7 @@ interface StrategyMapEditableCanvasProps {
       valuePropositionText?: string | null
     } | null
     regions: {
+      ambition: StrategicObjective | null
       growthFocus: StrategicObjective[]
       pillarOffer: StrategicObjective[]
       pillarRevenue: StrategicObjective[]
@@ -252,12 +253,16 @@ function ObjectiveCard({
 
         {editable && (
           <div className="ml-1 flex items-center gap-0.5">
-            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving || disabled} onClick={() => void onReorder?.('up')}>
-              <ArrowUp className="h-2.5 w-2.5" />
-            </Button>
-            <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving || disabled} onClick={() => void onReorder?.('down')}>
-              <ArrowDown className="h-2.5 w-2.5" />
-            </Button>
+            {onReorder && (
+              <>
+                <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving || disabled} onClick={() => void onReorder?.('up')}>
+                  <ArrowUp className="h-2.5 w-2.5" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving || disabled} onClick={() => void onReorder?.('down')}>
+                  <ArrowDown className="h-2.5 w-2.5" />
+                </Button>
+              </>
+            )}
             <Button variant="ghost" size="sm" className="h-5 w-5 p-0.5" disabled={isSaving || disabled} onClick={() => setIsEditingTitle(true)}>
               <Edit className="h-2.5 w-2.5" />
             </Button>
@@ -380,6 +385,27 @@ export function StrategyMapEditableCanvas({
             textClassName="text-base text-gray-600"
             onSave={onSaveMeta}
           />
+        </div>
+
+        <div className="mx-auto mt-2 max-w-xl rounded-md border border-[#CFCFCF] bg-white p-1.5 shadow-sm">
+          {data.regions.ambition ? (
+            <ObjectiveCard
+              objective={data.regions.ambition}
+              editable={editable}
+              style="default"
+              isSaving={savingObjectiveId === data.regions.ambition.id}
+              disabled={hasPendingMutation && savingObjectiveId !== data.regions.ambition.id}
+              hasKRs={objectiveKRStatus[data.regions.ambition.id] || false}
+              isSelected={selectedObjectiveId === data.regions.ambition.id}
+              onView={() => onObjectiveView?.(data.regions.ambition!)}
+              onRename={(title) => onRenameObjective?.(data.regions.ambition!.id, title)}
+              onDelete={() => onDeleteObjective?.(data.regions.ambition!.id)}
+            />
+          ) : (
+            renderInlineCreate('AMBITION', 'AMBITION', 'Digite o título da ambição estratégica...') || (
+              <div className="py-3 text-center text-sm text-gray-500">Defina o objetivo de ambição estratégica.</div>
+            )
+          )}
         </div>
       </div>
 

@@ -493,6 +493,80 @@ export function MapEditor() {
               {data.meta?.ambitionText || 'Texto da ambição não definido'}
             </p>
           )}
+
+          <div className="max-w-xl mx-auto mt-2 bg-white rounded-md border border-[#CFCFCF] p-1.5 shadow-sm">
+            {data.regions?.ambition ? (
+              <ObjectiveCard
+                objective={data.regions.ambition}
+                onEdit={() => handleOpenObjectiveModal(data.regions.ambition)}
+                onDelete={() => setObjectiveToDelete(data.regions.ambition.id)}
+                onView={() => handleOpenKRPanel(data.regions.ambition)}
+                canReorder={false}
+                showControls={editMode}
+                style="default"
+                hasKRs={objectiveKRStatus[data.regions.ambition.id] || false}
+                isSelected={selectedObjectiveForKR?.id === data.regions.ambition.id && krPanelOpen}
+              />
+            ) : editMode ? (
+              creatingInRegion === 'AMBITION' ? (
+                <div className="border border-[#E87722] rounded-md p-4">
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded text-sm"
+                    placeholder="Digite o título da ambição estratégica..."
+                    autoFocus
+                    value={inlineTitle}
+                    onChange={(e) => setInlineTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCreateInline('AMBITION', inlineTitle)
+                      } else if (e.key === 'Escape') {
+                        setCreatingInRegion(null)
+                        setInlineTitle('')
+                      }
+                    }}
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      size="sm"
+                      className="bg-[#E87722] hover:bg-[#d06a1e]"
+                      onClick={() => {
+                        if (inlineTitle.trim()) {
+                          handleCreateInline('AMBITION', inlineTitle.trim())
+                        }
+                      }}
+                    >
+                      Salvar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setCreatingInRegion(null)
+                        setInlineTitle('')
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-gray-300 text-gray-600"
+                    onClick={() => setCreatingInRegion('AMBITION')}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Definir ambição
+                  </Button>
+                </div>
+              )
+            ) : (
+              <div className="text-center py-3 text-gray-400 text-sm">Objetivo de ambição não definido</div>
+            )}
+          </div>
         </div>
 
         {/* Focos Estratégicos de Crescimento */}

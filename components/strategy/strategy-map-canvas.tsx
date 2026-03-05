@@ -157,12 +157,16 @@ function ObjectiveCard({
 
         {editable && (
           <div className="ml-1 flex items-center gap-0.5">
-            <Button variant="ghost" size="sm" onClick={() => onReorder?.('up')} className="h-5 w-5 p-0.5" disabled={busy}>
-              <ArrowUp className="h-2.5 w-2.5" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onReorder?.('down')} className="h-5 w-5 p-0.5" disabled={busy}>
-              <ArrowDown className="h-2.5 w-2.5" />
-            </Button>
+            {onReorder && (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => onReorder?.('up')} className="h-5 w-5 p-0.5" disabled={busy}>
+                  <ArrowUp className="h-2.5 w-2.5" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => onReorder?.('down')} className="h-5 w-5 p-0.5" disabled={busy}>
+                  <ArrowDown className="h-2.5 w-2.5" />
+                </Button>
+              </>
+            )}
             <Button variant="ghost" size="sm" onClick={() => setIsEditingTitle(true)} className="h-5 w-5 p-0.5" disabled={busy}>
               <Edit className="h-2.5 w-2.5" />
             </Button>
@@ -236,15 +240,52 @@ export function StrategyMapCanvas({
 
   const sectionGap = compact ? 'mb-2' : 'mb-3'
   const regionGap = compact ? 'gap-2' : 'gap-3'
-  const textMain = compact ? 'text-base' : 'text-lg'
 
   return (
     <>
       <div className={`${sectionGap} text-center`}>
         <h2 className="text-sm font-bold text-gray-800">Ambicao Estrategica</h2>
-        <p className={`mx-auto mt-2 max-w-2xl ${textMain} text-gray-500`}>
+        <p className={`mx-auto mt-2 max-w-2xl text-sm text-gray-500`}>
           {data.meta?.ambitionText || 'Texto da ambição não definido'}
         </p>
+
+        <div className="mx-auto mt-2 max-w-xl">
+          {data.regions.ambition ? (
+            <div className={`rounded-md border border-[#CFCFCF] bg-white ${compact ? 'p-1.5' : 'p-2'} shadow-sm`}>
+              <ObjectiveCard
+                objective={data.regions.ambition}
+                onView={onObjectiveView}
+                isSelected={selectedObjectiveId === data.regions.ambition.id}
+                hasKRs={objectiveKRStatus[data.regions.ambition.id] || false}
+                style="default"
+                editable={editable}
+                busy={busy}
+                onRename={(title) => onRenameObjective?.(data.regions.ambition!.id, title)}
+                onDelete={() => onDeleteObjective?.(data.regions.ambition!.id)}
+              />
+            </div>
+          ) : editable ? (
+            creatingSlot === 'AMBITION' ? (
+              <InlineCreate
+                busy={busy}
+                placeholder="Digite a ambição estratégica..."
+                onCreate={async (title) => {
+                  await onCreateObjective?.('AMBITION', title)
+                  setCreatingSlot(null)
+                }}
+              />
+            ) : (
+              <div className="py-2 text-center">
+                <Button variant="outline" size="sm" onClick={() => setCreatingSlot('AMBITION')} disabled={busy}>
+                  <Plus className="mr-1 h-3 w-3" />
+                  Definir ambição
+                </Button>
+              </div>
+            )
+          ) : (
+            <div className="py-2 text-sm text-gray-400">Objetivo de ambição não definido</div>
+          )}
+        </div>
       </div>
 
       <div className={sectionGap}>
