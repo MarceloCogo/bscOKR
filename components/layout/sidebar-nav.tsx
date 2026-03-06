@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Settings, Users, Target, Home, Map, Network, ChevronLeft, ChevronRight, BarChart3, Calendar, Columns2 } from 'lucide-react'
+import { Settings, Users, Target, Home, Map, Network, ChevronLeft, ChevronRight, BarChart3, Calendar, Columns2, BookOpen } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/app/dashboard', icon: Home },
@@ -12,6 +12,7 @@ const navigation = [
   { name: 'Strategy Building', href: '/app/strategy/building', icon: Columns2, permission: 'canViewStrategyMap' },
   { name: 'Objetivos', href: '/app/strategy/objectives', icon: Target, permission: 'canViewObjectives' },
   { name: 'Key Results', href: '/app/krs', icon: BarChart3, permission: 'canViewKRs' },
+  { name: 'Documentação', href: '/app/docs', icon: BookOpen },
   { name: 'Estrutura Organizacional', href: '/app/organization', icon: Network },
   { name: 'Administração', href: '/app/admin/config', icon: Settings, permission: 'canManageConfig' },
   { name: 'Ciclos', href: '/app/admin/cycles', icon: Calendar, permission: 'canManageConfig' },
