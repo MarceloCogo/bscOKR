@@ -12,11 +12,11 @@ const navigation = [
   { name: 'Strategy Building', href: '/app/strategy/building', icon: Columns2, permission: 'canViewStrategyMap' },
   { name: 'Objetivos', href: '/app/strategy/objectives', icon: Target, permission: 'canViewObjectives' },
   { name: 'Key Results', href: '/app/krs', icon: BarChart3, permission: 'canViewKRs' },
-  { name: 'Documentação', href: '/app/docs', icon: BookOpen },
   { name: 'Estrutura Organizacional', href: '/app/organization', icon: Network },
   { name: 'Administração', href: '/app/admin/config', icon: Settings, permission: 'canManageConfig' },
   { name: 'Ciclos', href: '/app/admin/cycles', icon: Calendar, permission: 'canManageConfig' },
   { name: 'Usuários', href: '/app/admin/users', icon: Users, permission: 'canManageUsers' },
+  { name: 'Documentação', href: '/app/docs', icon: BookOpen },
 ]
 
 interface SidebarNavProps {
